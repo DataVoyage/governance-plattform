@@ -52,6 +52,9 @@ exclude_lines = [
 [tool.ruff]
 line-length = 100
 target-version = "py312"
+# Migrationen erzeugt Alembic aus seiner eigenen Vorlage; sie werden nach dem
+# Generieren fachlich geprueft, aber nicht nach unserem Stil umformatiert.
+extend-exclude = ["alembic/versions"]
 
 [tool.ruff.lint]
 select = ["E", "F", "I", "UP", "B", "C4", "SIM"]
