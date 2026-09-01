@@ -9,7 +9,7 @@ abgeschlossen, wenn alle ihre Abnahmekriterien durch einen Test belegt sind.
 | 2 | Bewertung | ✅ abgeschlossen |
 | 3 | Asset-Management | ✅ abgeschlossen |
 | 4 | Selbstverpflichtung und Gates | ✅ abgeschlossen |
-| 5 | Compliance und Lenkung | ⏳ offen |
+| 5 | Compliance und Lenkung | ✅ abgeschlossen |
 | 6 | Cockpit | ⏳ offen |
 | 7 | Governance-Query-API | ⏳ offen |
 
@@ -130,3 +130,38 @@ durch Gate 1 — begründet in `docs/entscheidungen.md` (E-9).
 ### Abdeckung
 
 - Backend: 98 % · Frontend: 99 % Anweisungen · zwölf Playwright-Läufe, headless
+
+---
+
+## Phase 5 — Compliance und Lenkung
+
+**Enthalten:** Compliance-Zustand als Zeitreihe je Tool-Objekt, gespeist aus
+manuellen Meldungen; Lenkungs-Modul mit den drei Eskalationsstufen und den drei
+Auflösungswegen aus A.13.5/A.13.6.
+
+Automatisierte Telemetrie kommt erst mit künftigen Adaptern hinzu
+(Architektur 7.4) — die Meldewege sind so gebaut, dass ein solcher Adapter
+denselben Eintrag erzeugt wie eine Person.
+
+### Abnahmekriterien und Nachweis
+
+| # | Kriterium | Nachweis |
+|---|---|---|
+| 1 | Eine manuell erfasste Rahmenüberschreitung erzeugt automatisch einen Lenkungsvorgang in Stufe 1 mit der tier-abhängigen Frist | `backend/tests/test_lenkung.py::test_rahmenueberschreitung_erzeugt_stufe_1_mit_tier_frist`, `::test_frist_haengt_am_tier`, `frontend/e2e/phase5.spec.ts` |
+| 2 | Ein Vorgang ohne Auflösung wechselt nach Fristablauf automatisch in Stufe 2; die Führungskraft des betroffenen Owners wird benachrichtigt | `backend/tests/test_lenkung.py::test_fristablauf_rueckt_in_stufe_2_und_informiert_die_fuehrungskraft`, `::test_eskalation_endet_bei_stufe_3` |
+| 3 | Jede der drei Auflösungsarten ist eine eigene Aktion; „Rahmen erweitern" verlangt eine neue Bewertung und schließt erst nach deren Abschluss | `backend/tests/test_lenkung.py::test_rahmen_erweitern_verlangt_eine_neue_bewertung`, `::test_anpassen_schliesst_und_setzt_gruen`, `::test_stilllegen_setzt_das_tool_inaktiv`, `frontend/e2e/phase5.spec.ts` |
+
+### Hinweise
+
+Die Eskalation läuft als Kubernetes-`CronJob` (`python -m app.jobs
+eskalationen`) und ist idempotent. Stufe 3 kennzeichnet den Vorgang für eine
+technische Maßnahme; der eigentliche Zugriffsentzug erfolgt außerhalb dieser
+Anwendung, in der jeweiligen technischen Plattform.
+
+„Anpassen" und „Rahmen erweitern" führen das Tool auf grün zurück,
+„Stilllegen" nicht — ein stillgelegtes Tool ist nicht wieder konform, es ist
+außer Betrieb.
+
+### Abdeckung
+
+- Backend: 98 % · Frontend: 99 % Anweisungen · fünfzehn Playwright-Läufe, headless

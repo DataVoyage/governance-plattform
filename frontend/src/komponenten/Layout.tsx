@@ -27,7 +27,8 @@ export function Kopfzeile() {
         <Link to={pfad('/prozesse')}>{t('nav.prozesse')}</Link>{' '}
         <Link to={pfad('/tools')}>{t('nav.tools')}</Link>{' '}
         <Link to={pfad('/datenobjekte')}>{t('nav.datenobjekte')}</Link>{' '}
-        <Link to={pfad('/gates')}>{t('nav.gates')}</Link>
+        <Link to={pfad('/gates')}>{t('nav.gates')}</Link>{' '}
+        <Link to={pfad('/lenkung')}>{t('nav.lenkung')}</Link>
       </nav>
       <div className="kopfzeile-rechts">
         <label htmlFor="sprachwahl">{t('app.sprache')}</label>

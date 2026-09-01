@@ -11,7 +11,10 @@ import type {
   BewertungsModus,
   DatenObjekt,
   Datenkategorie,
+  Aufloesungsart,
   AussageEingabe,
+  ComplianceFarbe,
+  ComplianceZustand,
   Fachbereich,
   GateStatus,
   GateTyp,
@@ -22,6 +25,8 @@ import type {
   Profil,
   Prozess,
   ProzessEingabe,
+  Lenkungsvorgang,
+  Meldung,
   Selbstverpflichtung,
   ToolObjekt,
   Umsetzung,
@@ -179,6 +184,30 @@ export const api = {
     anfrage<GateVorgang>(`/api/v1/gates/${gateId}/entscheidung`, {
       methode: 'POST',
       koerper: { status, kommentar },
+      token,
+    }),
+  compliance: (token: string, toolId: string) =>
+    anfrage<ComplianceZustand[]>(`/api/v1/tools/${toolId}/compliance`, { token }),
+  complianceMelden: (
+    token: string,
+    toolId: string,
+    daten: { farbe: ComplianceFarbe; begruendung?: string; abweichung_art?: string | null },
+  ) =>
+    anfrage<Meldung>(`/api/v1/tools/${toolId}/compliance`, {
+      methode: 'POST',
+      koerper: daten,
+      token,
+    }),
+  lenkungsvorgaenge: (token: string, abfrage = '') =>
+    anfrage<Lenkungsvorgang[]>(`/api/v1/lenkungsvorgaenge${abfrage}`, { token }),
+  lenkungAufloesen: (
+    token: string,
+    vorgangId: string,
+    daten: { art: Aufloesungsart; bewertung_id?: string | null; kommentar?: string },
+  ) =>
+    anfrage<Lenkungsvorgang>(`/api/v1/lenkungsvorgaenge/${vorgangId}/aufloesung`, {
+      methode: 'POST',
+      koerper: daten,
       token,
     }),
   umsetzungAnlegen: (token: string, prozessId: string, landOrgId: string) =>

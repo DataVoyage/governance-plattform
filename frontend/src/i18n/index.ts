@@ -184,6 +184,44 @@ const de = {
   'gate.arbeitsvorratLeer': 'Es ist kein Gate-Vorgang offen.',
   'gate.prozess': 'Prozessobjekt',
 
+  'nav.lenkung': 'Lenkung',
+
+  'compliance.titel': 'Compliance-Zustand',
+  'compliance.hinweis':
+    'Jede Feststellung erzeugt einen neuen Eintrag; der aktuelle Zustand ist der oberste. Nichts wird überschrieben.',
+  'compliance.leer': 'Für dieses Tool-Objekt ist noch kein Zustand erfasst.',
+  'compliance.farbe': 'Zustand',
+  'compliance.farbe.gruen': 'Grün',
+  'compliance.farbe.gelb': 'Gelb',
+  'compliance.farbe.rot': 'Rot — Rahmenüberschreitung',
+  'compliance.begruendung': 'Begründung',
+  'compliance.abweichung': 'Art der Abweichung',
+  'compliance.melden': 'Zustand melden',
+  'compliance.festgestelltAm': 'Festgestellt am',
+  'compliance.rotHinweis':
+    'Eine rote Meldung eröffnet automatisch einen Lenkungsvorgang in Eskalationsstufe 1 mit der tier-abhängigen Frist.',
+
+  'lenkung.titel': 'Lenkungsvorgänge',
+  'lenkung.leer': 'Es ist kein Lenkungsvorgang offen.',
+  'lenkung.tool': 'Tool-Objekt',
+  'lenkung.stufe': 'Eskalationsstufe',
+  'lenkung.frist': 'Frist',
+  'lenkung.status': 'Status',
+  'lenkung.status.offen': 'Offen',
+  'lenkung.status.aufgeloest': 'Aufgelöst',
+  'lenkung.status.abgebrochen': 'Abgebrochen',
+  'lenkung.aufloesen': 'Auflösen',
+  'lenkung.art': 'Auflösungsart',
+  'lenkung.art.anpassen': 'Anpassen — Tool in den Rahmen zurückführen',
+  'lenkung.art.rahmen_erweitern': 'Rahmen erweitern — verlangt eine neue Bewertung',
+  'lenkung.art.stilllegen': 'Stilllegen — Tool außer Betrieb nehmen',
+  'lenkung.bewertung': 'Neue Bewertung',
+  'lenkung.bewertungPflicht':
+    'Der Vorgang schließt erst, wenn die neue Bewertung abgeschlossen ist.',
+  'lenkung.kommentar': 'Kommentar',
+  'lenkung.stufe3':
+    'Stufe 3 kennzeichnet den Vorgang für eine technische Maßnahme. Der Zugriffsentzug erfolgt außerhalb dieser Anwendung.',
+
   'ja': 'Ja',
   'nein': 'Nein',
 } as const;
@@ -360,6 +398,44 @@ const fr: Record<Schluessel, string> = {
   'gate.arbeitsvorrat': 'Procédures de porte ouvertes',
   'gate.arbeitsvorratLeer': 'Aucune procédure de porte ouverte.',
   'gate.prozess': 'Objet de processus',
+
+  'nav.lenkung': 'Pilotage',
+
+  'compliance.titel': 'État de conformité',
+  'compliance.hinweis':
+    "Chaque constat crée une nouvelle entrée ; l'état actuel est celui du haut. Rien n'est écrasé.",
+  'compliance.leer': "Aucun état n'est encore enregistré pour cet objet outil.",
+  'compliance.farbe': 'État',
+  'compliance.farbe.gruen': 'Vert',
+  'compliance.farbe.gelb': 'Jaune',
+  'compliance.farbe.rot': 'Rouge — dépassement du cadre',
+  'compliance.begruendung': 'Justification',
+  'compliance.abweichung': 'Type d’écart',
+  'compliance.melden': 'Signaler un état',
+  'compliance.festgestelltAm': 'Constaté le',
+  'compliance.rotHinweis':
+    "Un signalement rouge ouvre automatiquement une procédure de pilotage au niveau d'escalade 1, avec le délai lié au niveau.",
+
+  'lenkung.titel': 'Procédures de pilotage',
+  'lenkung.leer': 'Aucune procédure de pilotage ouverte.',
+  'lenkung.tool': 'Objet outil',
+  'lenkung.stufe': "Niveau d'escalade",
+  'lenkung.frist': 'Délai',
+  'lenkung.status': 'Statut',
+  'lenkung.status.offen': 'Ouverte',
+  'lenkung.status.aufgeloest': 'Résolue',
+  'lenkung.status.abgebrochen': 'Annulée',
+  'lenkung.aufloesen': 'Résoudre',
+  'lenkung.art': 'Mode de résolution',
+  'lenkung.art.anpassen': "Adapter — ramener l'outil dans le cadre",
+  'lenkung.art.rahmen_erweitern': 'Élargir le cadre — exige une nouvelle évaluation',
+  'lenkung.art.stilllegen': "Mettre hors service — arrêter l'outil",
+  'lenkung.bewertung': 'Nouvelle évaluation',
+  'lenkung.bewertungPflicht':
+    "La procédure ne se clôt qu'une fois la nouvelle évaluation terminée.",
+  'lenkung.kommentar': 'Commentaire',
+  'lenkung.stufe3':
+    "Le niveau 3 signale la procédure pour une mesure technique. Le retrait des accès a lieu en dehors de cette application.",
 
   'ja': 'Oui',
   'nein': 'Non',

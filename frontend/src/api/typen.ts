@@ -251,3 +251,39 @@ export interface GateVorgang {
   entschieden_am: string | null;
   erstellt_am: string;
 }
+
+// --- Compliance und Lenkung (Phase 5) --------------------------------------
+
+export type ComplianceFarbe = 'gruen' | 'gelb' | 'rot';
+export type LenkungStatus = 'offen' | 'aufgeloest' | 'abgebrochen';
+export type Aufloesungsart = 'anpassen' | 'rahmen_erweitern' | 'stilllegen';
+
+export interface ComplianceZustand {
+  id: string;
+  tool_objekt_id: string;
+  farbe: ComplianceFarbe;
+  begruendung: string;
+  abweichung_art: string | null;
+  festgestellt_am: string;
+  festgestellt_von: string | null;
+}
+
+export interface Lenkungsvorgang {
+  id: string;
+  tool_objekt_id: string;
+  compliance_zustand_id: string | null;
+  eskalationsstufe: number;
+  frist: string;
+  zugewiesen_an: string | null;
+  status: LenkungStatus;
+  aufloesungsart: Aufloesungsart | null;
+  aufloesung_bewertung_id: string | null;
+  aufgeloest_am: string | null;
+  beschreibung: string;
+  erstellt_am: string;
+}
+
+export interface Meldung {
+  zustand: ComplianceZustand;
+  lenkungsvorgang: Lenkungsvorgang | null;
+}

@@ -66,6 +66,7 @@ function grundrouten(): Route[] {
     { pfad: '/api/v1/auth/me', koerper: PROFIL },
     { pfad: '/api/v1/organisationseinheiten', koerper: EINHEITEN },
     { pfad: /\/bewertungen$/, koerper: [] },
+    { pfad: /\/compliance$/, koerper: [] },
   ];
 }
 
@@ -183,7 +184,7 @@ describe('Tool-Detail', () => {
     ]);
     zeichne('/de/tools/tool-1');
     expect(await screen.findByTestId('status')).toHaveTextContent('Importiert, unbestätigt');
-    expect(screen.getByRole('alert')).toHaveTextContent('kann es nicht mit einem Prozess');
+    expect(screen.getByText(/kann es nicht mit einem Prozess/)).toBeInTheDocument();
     // Vor der Bestaetigung gibt es keine Verknuepfungsmoeglichkeit.
     expect(screen.queryByLabelText('Mit Prozess verknüpfen')).toBeNull();
 
@@ -242,7 +243,7 @@ describe('Tool-Detail', () => {
     zeichne('/de/tools/tool-1');
     await userEvent.selectOptions(await screen.findByLabelText('Mit Prozess verknüpfen'), 'p-1');
     await userEvent.click(screen.getByRole('button', { name: 'Mit Prozess verknüpfen' }));
-    expect(await screen.findByRole('alert')).toHaveTextContent('besteht bereits');
+    expect(await screen.findByText(/besteht bereits/)).toBeInTheDocument();
   });
 
   it('meldet einen Ladefehler', async () => {

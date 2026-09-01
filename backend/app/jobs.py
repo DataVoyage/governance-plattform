@@ -15,7 +15,7 @@ from app.db import get_sessionmaker
 
 logger = logging.getLogger("jobs")
 
-LAEUFE = ("erinnerungen",)
+LAEUFE = ("erinnerungen", "eskalationen")
 
 
 def erinnerungen() -> int:
@@ -33,12 +33,23 @@ def erinnerungen() -> int:
     return 0
 
 
+def eskalationen() -> int:
+    """Rueckt faellige Lenkungsvorgaenge in die naechste Eskalationsstufe."""
+    from app.services import lenkung
+
+    with get_sessionmaker()() as session:
+        gerueckt = lenkung.eskaliere_faellige(session)
+        session.commit()
+    logger.info("Eskalationen: %s Vorgaenge weitergerueckt", len(gerueckt))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(message)s")
     parser = argparse.ArgumentParser(description="Geplante Laeufe der Governance-Plattform")
     parser.add_argument("lauf", choices=LAEUFE)
     args = parser.parse_args(argv)
-    return {"erinnerungen": erinnerungen}[args.lauf]()
+    return {"erinnerungen": erinnerungen, "eskalationen": eskalationen}[args.lauf]()
 
 
 if __name__ == "__main__":  # pragma: no cover

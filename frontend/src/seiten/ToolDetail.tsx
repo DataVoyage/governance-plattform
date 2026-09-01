@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import { ApiFehler, api } from '@/api/client';
 import type { Prozess, ToolObjekt } from '@/api/typen';
+import { ToolCompliance } from '@/komponenten/ToolCompliance';
 import { useSprache } from '@/i18n/SprachKontext';
 import { useSitzung } from '@/zustand/Sitzung';
 
@@ -145,6 +146,8 @@ export function ToolDetail() {
           </>
         )}
       </section>
+
+      <ToolCompliance toolId={tool.id} />
 
       {fehler !== null && <p role="alert">{fehler}</p>}
     </article>

@@ -7,6 +7,7 @@ import { Anmeldung } from '@/seiten/Anmeldung';
 import { BewertungsWizard } from '@/seiten/BewertungsWizard';
 import { DatenobjektListe } from '@/seiten/DatenobjektListe';
 import { Gates } from '@/seiten/Gates';
+import { Lenkung } from '@/seiten/Lenkung';
 import { ProzessDetail } from '@/seiten/ProzessDetail';
 import { ProzessFormular } from '@/seiten/ProzessFormular';
 import { ProzessListe } from '@/seiten/ProzessListe';
@@ -48,6 +49,7 @@ export function App() {
             element={<SelbstverpflichtungSeite />}
           />
           <Route path="gates" element={<Gates />} />
+          <Route path="lenkung" element={<Lenkung />} />
           <Route path="tools" element={<ToolListe />} />
           <Route path="tools/:id" element={<ToolDetail />} />
           <Route path="datenobjekte" element={<DatenobjektListe />} />
