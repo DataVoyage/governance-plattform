@@ -70,7 +70,7 @@ und `besondere_kategorie` gesetzt. Sie sind bewusst nullable, damit die
 Cockpit-Ansicht „Datenobjekte ohne Kategorie" (Architektur 8.7) überhaupt
 etwas zu zeigen hat.
 
-## E-8 — Fragen des Bewertungsbaums und Bedingungen der K-Klassen
+## E-7 — Fragen des Bewertungsbaums und Bedingungen der K-Klassen
 
 Das Leitdokument (A.8.5, A.9.2) liegt diesem Repository nicht bei. Der Baum ist
 deshalb in `app/services/bewertungsbaum.py` ausformuliert, die Bedingungen der
@@ -90,7 +90,7 @@ mit, der Server bestimmt daraus die nächste Frage. Damit liegt die Reihenfolge
 in der Geschäftslogik und nicht in der Oberfläche, ohne dass eine serverseitige
 Wizard-Sitzung nötig wäre.
 
-## E-9 — Zeitstempel kommen immer zeitzonenbehaftet zurück
+## E-8 — Zeitstempel kommen immer zeitzonenbehaftet zurück
 
 `app.db.TZDateTime` normalisiert Zeitstempel beim Lesen auf UTC.
 PostgreSQL liefert `timestamptz` von sich aus mit Zeitzone, SQLite nicht — ohne
@@ -98,7 +98,7 @@ diese Angleichung würde ein Vergleich zwischen einem frisch geschriebenen und
 einem neu geladenen Zeitstempel je nach Dialekt fehlschlagen. Dieser Unterschied
 darf die Fachlogik nichts angehen; er bleibt deshalb im Typ-Adapter.
 
-## E-7 — Offene Punkte der Architektur
+## E-9 — Offene Punkte der Architektur
 
 Die fünf offenen Punkte aus Architektur 12 bleiben offen; die Umsetzung nimmt
 keine Entscheidung vorweg:

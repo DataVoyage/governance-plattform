@@ -69,7 +69,7 @@ sagt, welche Klassen ausgelöst sind — nicht, ob ein konkretes Tool sie erfül
 ### Hinweis zur Ableitung
 
 Die konkreten Fragen des Baums und die Bedingungen der zehn Maßnahmenklassen
-sind in `docs/entscheidungen.md` (E-8) festgehalten, weil das Leitdokument
+sind in `docs/entscheidungen.md` (E-7) festgehalten, weil das Leitdokument
 diesem Repository nicht beiliegt. Es gibt genau **eine** Implementierung: der
 Wizard, die Historie und später die Governance-Query-API rufen dieselben
 Funktionen in `app/services/bewertung.py`.
