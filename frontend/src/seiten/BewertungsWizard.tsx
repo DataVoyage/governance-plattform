@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 
 import { ApiFehler, api } from '@/api/client';
@@ -30,15 +30,25 @@ export function BewertungsWizard() {
   const [verboten, setVerboten] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
 
+  // Laufende Nummer der Abfrage. Antwortet der Server auf einen älteren
+  // Schritt später als auf einen neueren — bei langsamer Verbindung oder
+  // schnellem Klicken —, würde die veraltete Antwort sonst den aktuellen
+  // Schritt überschreiben und der Wizard spränge zurück.
+  const laufendeNummer = useRef(0);
+
   const schritt = useCallback(
     async (gewaehlterModus: BewertungsModus, bisher: Record<string, boolean>) => {
       if (token === null || id === undefined) return;
+      laufendeNummer.current += 1;
+      const meine = laufendeNummer.current;
       try {
         const stand = await api.wizardSchritt(token, id, gewaehlterModus, bisher);
+        if (meine !== laufendeNummer.current) return;
         setFrage(stand.naechste_frage);
         setVerboten(stand.verboten);
         setErgebnis(stand.vorschau);
       } catch (ausnahme) {
+        if (meine !== laufendeNummer.current) return;
         setFehler(ausnahme instanceof ApiFehler ? ausnahme.message : t('app.fehler'));
       }
     },
@@ -55,6 +65,7 @@ export function BewertungsWizard() {
   }
 
   function vonVorn() {
+    laufendeNummer.current += 1;
     setAntworten({});
     setFrage(null);
     setErgebnis(null);

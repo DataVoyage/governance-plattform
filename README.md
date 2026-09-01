@@ -57,10 +57,13 @@ docker compose run --rm sync-worker \
 ## Entwicklung ohne Container
 
 ```bash
+# Datenbank
+docker compose up -d datenbank
+
 # Backend
 cd backend
 uv sync --all-groups
-GP_DATABASE_URL="sqlite:///./lokal.db" uv run python -m app.devserver --frisch
+uv run python -m app.devserver
 
 # Frontend
 cd frontend
@@ -69,6 +72,12 @@ VITE_API_BASIS=http://127.0.0.1:8100 npm run dev
 ```
 
 ## Tests
+
+Alle Tests brauchen eine laufende PostgreSQL:
+
+```bash
+docker compose up -d datenbank
+```
 
 | Was | Befehl | Mindestabdeckung |
 |---|---|---|
@@ -81,10 +90,15 @@ Die Oberflächentests laufen ausschließlich gegen einen **headless** Chromium
 angesteuert. Playwright startet dafür selbst ein Backend mit temporärer
 SQLite-Datenbank und die gebaute Single-Page-Application.
 
-Die Backend-Testsuite läuft gegen SQLite, damit sie ohne Container-Start
-reproduzierbar ist; produktiv ist PostgreSQL gesetzt. Alles Dialektspezifische
-ist auf den Typ-Adapter `app.db.GUID` beschränkt, und das Testschema entsteht
-aus denselben Alembic-Migrationen wie in Produktion.
+Die Testsuite läuft gegen **dieselbe PostgreSQL** wie Entwicklung und
+Produktion — es gibt keine abweichende Testdatenbank (Architektur 6.5). Jede
+Ebene benutzt eine eigene Datenbank auf demselben Server: `governance` für die
+Entwicklung, `governance_test` für die Backend-Tests, `governance_e2e` für die
+Oberflächentests. Übersteuerbar über `GP_TEST_DATABASE_URL` beziehungsweise
+`GP_E2E_DATABASE_URL`.
+
+Das Schema entsteht einmal je Testlauf aus denselben Alembic-Migrationen wie in
+Produktion; zwischen den Tests werden die Tabellen geleert.
 
 ## Konfiguration
 
@@ -99,7 +113,9 @@ Zwei getrennte Mechanismen für zwei Arten von Einstellungen (Architektur 6.6):
 
 | ENV-Variable | Bedeutung |
 |---|---|
-| `GP_DATABASE_URL` | Verbindungszeichenfolge (PostgreSQL produktiv) |
+| `GP_DATABASE_URL` | Verbindungszeichenfolge zur PostgreSQL |
+| `GP_TEST_DATABASE_URL` | Datenbank der Backend-Tests |
+| `GP_E2E_DATABASE_URL` | Datenbank der Oberflächentests |
 | `GP_OIDC_ISSUER`, `GP_OIDC_JWKS_URL`, `GP_OIDC_AUDIENCE` | Zentrale Unternehmensidentität |
 | `GP_AUTH_DEV_MODE` | Nur Entwicklung: lokal ausgestellte Token statt OIDC |
 | `GP_BOOTSTRAP_ADMIN_SUBJECTS` | Subjects, die beim Erstzugang die Startrollen erhalten |

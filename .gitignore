@@ -31,9 +31,8 @@ Thumbs.db
 .idea/
 .vscode/
 
-# Playwright
-frontend/e2e.db
 
 # Interne Vorgabedokumente gehoeren nicht ins Repository
 docs/architektur.md
 docs/leitdokument.md
+frontend/tsconfig.tsbuildinfo

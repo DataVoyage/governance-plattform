@@ -9,6 +9,8 @@
 
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test';
 
+import { json } from './hilfen';
+
 const API = 'http://127.0.0.1:8100';
 const ADMIN = 'e2e-admin';
 
@@ -40,20 +42,22 @@ async function kopf(anfrage: APIRequestContext) {
 async function tier3Tool(anfrage: APIRequestContext) {
   const h = await kopf(anfrage);
   const kennung = Math.random().toString(36).slice(2, 8);
-  const fachbereich = await (
+  const fachbereich = await json<{ id: string }>(
     await anfrage.post(`${API}/api/v1/fachbereiche`, {
       headers: h,
       data: { name: `Bereich ${kennung}`, code: `fb-${kennung}` },
-    })
-  ).json();
-  const int = await (
+    }),
+    'Fachbereich anlegen',
+  );
+  const int = await json<{ id: string }>(
     await anfrage.post(`${API}/api/v1/organisationseinheiten`, {
       headers: h,
       data: { fachbereich_id: fachbereich.id, ebene: 'INT' },
-    })
-  ).json();
+    }),
+    'Organisationseinheit anlegen',
+  );
   const ich = await (await anfrage.get(`${API}/api/v1/auth/me`, { headers: h })).json();
-  const prozess = await (
+  const prozess = await json<{ id: string }>(
     await anfrage.post(`${API}/api/v1/prozesse`, {
       headers: h,
       data: {
@@ -68,12 +72,16 @@ async function tier3Tool(anfrage: APIRequestContext) {
         customer: 'bereich',
         ausfallfolge: 'gering',
       },
-    })
-  ).json();
-  await anfrage.post(`${API}/api/v1/prozesse/${prozess.id}/bewertungen`, {
-    headers: h,
-    data: { modus: 'vollstaendig', antworten: TIER3_ANTWORTEN },
-  });
+    }),
+    'Prozessobjekt anlegen',
+  );
+  await json(
+    await anfrage.post(`${API}/api/v1/prozesse/${prozess.id}/bewertungen`, {
+      headers: h,
+      data: { modus: 'vollstaendig', antworten: TIER3_ANTWORTEN },
+    }),
+    'Bewertung im Aufbau',
+  );
   const tool = await (
     await anfrage.post(`${API}/api/v1/tools`, {
       headers: h,
@@ -175,13 +183,15 @@ test.describe('Phase 5 in der Oberflaeche', () => {
     await expect(meine).toBeVisible();
 
     // Nach einer neuen Bewertung schliesst er.
-    const neue = await (
+    const neue = await json<{ bewertung: { id: string } | null }>(
       await request.post(`${API}/api/v1/prozesse/${prozessId}/bewertungen`, {
         headers: kopfzeilen,
         data: { modus: 'vollstaendig', antworten: { ...TIER3_ANTWORTEN, '4b': true } },
-      })
-    ).json();
-    await meine.getByLabel(/^Neue Bewertung/).fill(neue.bewertung.id);
+      }),
+      'Neue Bewertung fuer Rahmenerweiterung',
+    );
+    expect(neue.bewertung, 'Der Durchlauf muss eine Bewertung liefern').not.toBeNull();
+    await meine.getByLabel(/^Neue Bewertung/).fill(neue.bewertung!.id);
     await meine.getByRole('button', { name: 'Auflösen' }).click();
     await expect(meine).toHaveCount(0);
   });

@@ -1,10 +1,19 @@
 """Gemeinsame Testeinrichtung.
 
-Die Tests laufen gegen eine SQLite-Datei je Test. Produktiv ist PostgreSQL
-gesetzt (Architektur 6.3); alles Dialektspezifische ist auf den Typ-Adapter
-``app.db.GUID`` beschraenkt, sodass die Fachlogik in beiden Faellen dieselbe
-ist. Das Schema entsteht in den Tests aus denselben Alembic-Migrationen wie in
-Produktion — ein ``create_all`` wuerde sonst Schemafehler verdecken.
+Die Tests laufen gegen **PostgreSQL** — dieselbe Datenbank wie in Entwicklung
+und Produktion (Architektur 6.3 und 6.5). Eine abweichende Testdatenbank waere
+genau die Sonderumgebung, die Abschnitt 6.5 ausschliesst, und wuerde das
+Risiko, das sie abdecken soll, gerade nicht abdecken: kein Test liefe je gegen
+die Zieldatenbank.
+
+Die Verbindung kommt aus ``GP_TEST_DATABASE_URL``. Lokal genuegt
+``docker compose up -d datenbank``; in der Pipeline stellt ein
+Service-Container dieselbe Datenbank bereit.
+
+Das Schema entsteht einmal je Testlauf aus denselben Alembic-Migrationen wie in
+Produktion. Zwischen den Tests werden die Tabellen geleert, statt das Schema
+neu aufzubauen — das ist deutlich schneller und prueft die Migrationen trotzdem
+bei jedem Lauf einmal vollstaendig durch.
 """
 
 from __future__ import annotations
@@ -17,21 +26,100 @@ from pathlib import Path
 import pytest
 from alembic.config import Config
 from fastapi.testclient import TestClient
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
 from alembic import command
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 
+#: Fallback fuer den lokalen Lauf gegen `docker compose up -d datenbank`.
+STANDARD_TEST_URL = "postgresql+psycopg://governance:governance@localhost:5432/governance_test"
+
+
+def _test_datenbank_url() -> str:
+    return os.environ.get("GP_TEST_DATABASE_URL", STANDARD_TEST_URL)
+
+
+def _verwaltungs_url(url: str) -> tuple[str, str]:
+    """Zerlegt die URL in eine Verbindung zur ``postgres``-Datenbank und den Namen."""
+    basis, _, name = url.rpartition("/")
+    return f"{basis}/postgres", name
+
+
+@pytest.fixture(scope="session")
+def datenbank_url() -> str:
+    """Legt die Testdatenbank an, falls sie noch nicht existiert."""
+    url = _test_datenbank_url()
+    verwaltung, name = _verwaltungs_url(url)
+    motor = create_engine(verwaltung, isolation_level="AUTOCOMMIT")
+    try:
+        with motor.connect() as verbindung:
+            vorhanden = verbindung.execute(
+                text("SELECT 1 FROM pg_database WHERE datname = :name"), {"name": name}
+            ).scalar_one_or_none()
+            if vorhanden is None:
+                verbindung.execute(text(f'CREATE DATABASE "{name}"'))
+    except Exception as fehler:  # pragma: no cover - nur ohne erreichbare Datenbank
+        pytest.exit(
+            f"Keine Verbindung zu PostgreSQL unter {verwaltung}: {fehler}\n"
+            "Lokal starten mit: docker compose up -d datenbank",
+            returncode=1,
+        )
+    finally:
+        motor.dispose()
+    return url
+
+
+@pytest.fixture(scope="session")
+def schema(datenbank_url: str) -> str:
+    """Spielt die Migrationen einmal je Testlauf auf leerem Schema ein."""
+    motor = create_engine(datenbank_url, isolation_level="AUTOCOMMIT")
+    with motor.connect() as verbindung:
+        verbindung.execute(text("DROP SCHEMA public CASCADE; CREATE SCHEMA public;"))
+    motor.dispose()
+
+    config = Config(str(BACKEND_DIR / "alembic.ini"))
+    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
+    alt = os.environ.get("GP_DATABASE_URL")
+    os.environ["GP_DATABASE_URL"] = datenbank_url
+    try:
+        from app.config import get_settings
+        from app.db import reset_engine
+
+        get_settings.cache_clear()
+        reset_engine()
+        command.upgrade(config, "head")
+    finally:
+        if alt is not None:
+            os.environ["GP_DATABASE_URL"] = alt
+        else:
+            os.environ.pop("GP_DATABASE_URL", None)
+    return datenbank_url
+
+
+@pytest.fixture(scope="session")
+def leer_anweisung(schema: str) -> str:
+    """Eine TRUNCATE-Anweisung ueber alle Tabellen ausser der Alembic-Version."""
+    motor = create_engine(schema)
+    with motor.connect() as verbindung:
+        namen = [
+            zeile[0]
+            for zeile in verbindung.execute(
+                text(
+                    "SELECT tablename FROM pg_tables "
+                    "WHERE schemaname = 'public' AND tablename <> 'alembic_version'"
+                )
+            )
+        ]
+    motor.dispose()
+    tabellen = ", ".join(f'"{name}"' for name in namen)
+    return f"TRUNCATE TABLE {tabellen} RESTART IDENTITY CASCADE"
+
 
 @pytest.fixture
-def datenbank_url(tmp_path: Path) -> str:
-    return f"sqlite:///{(tmp_path / 'test.db').as_posix()}"
-
-
-@pytest.fixture
-def umgebung(datenbank_url: str, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
-    monkeypatch.setenv("GP_DATABASE_URL", datenbank_url)
+def umgebung(schema: str, monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    monkeypatch.setenv("GP_DATABASE_URL", schema)
     monkeypatch.setenv("GP_AUTH_DEV_MODE", "true")
     monkeypatch.setenv("GP_AUTH_DEV_SECRET", "test-secret")
     monkeypatch.setenv("GP_QUERY_API_SERVICE_TOKENS", "self-service-frontend:service-token-1")
@@ -46,17 +134,18 @@ def umgebung(datenbank_url: str, monkeypatch: pytest.MonkeyPatch) -> Iterator[No
 
 
 @pytest.fixture
-def migriert(umgebung: None, datenbank_url: str) -> None:
+def migriert(umgebung: None, leer_anweisung: str) -> Iterator[None]:
+    """Leert die Tabellen vor jedem Test.
+
+    ``RESTART IDENTITY`` setzt auch den ``change_log``-Cursor zurueck, damit
+    Tests auf konkrete Cursorwerte nicht von ihrer Reihenfolge abhaengen.
+    """
     del umgebung
-    config = Config(str(BACKEND_DIR / "alembic.ini"))
-    config.set_main_option("script_location", str(BACKEND_DIR / "alembic"))
-    alt = os.environ.get("GP_DATABASE_URL")
-    os.environ["GP_DATABASE_URL"] = datenbank_url
-    try:
-        command.upgrade(config, "head")
-    finally:
-        if alt is not None:
-            os.environ["GP_DATABASE_URL"] = alt
+    from app.db import get_engine
+
+    with get_engine().begin() as verbindung:
+        verbindung.execute(text(leer_anweisung))
+    yield
 
 
 @pytest.fixture

@@ -6,6 +6,10 @@ abgeschlossen, wenn alle ihre Abnahmekriterien durch einen Test belegt sind.
 Die Abnahmekriterien stammen aus dem internen Architekturdokument, das nicht in
 diesem Repository liegt; sie sind unten je Phase im Wortlaut wiedergegeben.
 
+Alle Tests — Backend, Oberfläche und Pipeline — laufen gegen dieselbe
+PostgreSQL wie Entwicklung und Produktion. Die Angaben zur Abdeckung je Phase
+beziehen sich auf diesen Stand.
+
 | Phase | Inhalt | Stand |
 |---|---|---|
 | 1 | Fundament | ✅ abgeschlossen |

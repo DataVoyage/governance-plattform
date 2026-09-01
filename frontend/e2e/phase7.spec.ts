@@ -40,30 +40,40 @@ async function kopf(anfrage: APIRequestContext) {
   return { Authorization: `Bearer ${(await antwort.json()).access_token}` };
 }
 
+/** Prueft jede Aufbau-Antwort, damit ein Fehler dort sofort sichtbar wird. */
+async function json(antwort: Awaited<ReturnType<APIRequestContext['post']>>) {
+  const koerper = await antwort.json();
+  expect(
+    antwort.ok(),
+    `Aufbau fehlgeschlagen (${antwort.status()}): ${JSON.stringify(koerper)}`,
+  ).toBeTruthy();
+  return koerper;
+}
+
 /** Legt ein bewertetes Prozessobjekt samt verknuepftem Tool an. */
 async function landschaft(anfrage: APIRequestContext) {
   const h = await kopf(anfrage);
   const kennung = Math.random().toString(36).slice(2, 8);
-  const fachbereich = await (
+  const fachbereich = await json(
     await anfrage.post(`${API}/api/v1/fachbereiche`, {
       headers: h,
       data: { name: `Bereich ${kennung}`, code: `fb-${kennung}` },
-    })
-  ).json();
-  const int = await (
+    }),
+  );
+  const int = await json(
     await anfrage.post(`${API}/api/v1/organisationseinheiten`, {
       headers: h,
       data: { fachbereich_id: fachbereich.id, ebene: 'INT' },
-    })
-  ).json();
+    }),
+  );
   const ich = await (await anfrage.get(`${API}/api/v1/auth/me`, { headers: h })).json();
-  const datenobjekt = await (
+  const datenobjekt = await json(
     await anfrage.post(`${API}/api/v1/datenobjekte`, {
       headers: h,
       data: { name: `Kreditorenstamm ${kennung}` },
-    })
-  ).json();
-  const prozess = await (
+    }),
+  );
+  const prozess = await json(
     await anfrage.post(`${API}/api/v1/prozesse`, {
       headers: h,
       data: {
@@ -78,19 +88,21 @@ async function landschaft(anfrage: APIRequestContext) {
         customer: 'bereich',
         ausfallfolge: 'gering',
       },
-    })
-  ).json();
-  await anfrage.post(`${API}/api/v1/prozesse/${prozess.id}/bewertungen`, {
-    headers: h,
-    data: { modus: 'vollstaendig', antworten: TIER3_ANTWORTEN },
-  });
+    }),
+  );
+  await json(
+    await anfrage.post(`${API}/api/v1/prozesse/${prozess.id}/bewertungen`, {
+      headers: h,
+      data: { modus: 'vollstaendig', antworten: TIER3_ANTWORTEN },
+    }),
+  );
   await anfrage.patch(`${API}/api/v1/prozesse/${prozess.id}`, {
     headers: h,
     data: { erlaubte_externe_ziele: ['sftp.partner.example'] },
   });
-  const tool = await (
-    await anfrage.post(`${API}/api/v1/tools`, { headers: h, data: { name: `Tool ${kennung}` } })
-  ).json();
+  const tool = await json(
+    await anfrage.post(`${API}/api/v1/tools`, { headers: h, data: { name: `Tool ${kennung}` } }),
+  );
   await anfrage.post(`${API}/api/v1/tools/${tool.id}/prozesse`, {
     headers: h,
     data: { prozessobjekt_id: prozess.id },

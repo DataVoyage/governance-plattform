@@ -16,6 +16,20 @@ jobs:
     defaults:
       run:
         working-directory: backend
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: governance
+          POSTGRES_PASSWORD: governance
+          POSTGRES_DB: governance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U governance"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -28,11 +42,13 @@ jobs:
           uv run ruff format --check .
       - name: Migrationen vorwaerts und rueckwaerts
         env:
-          GP_DATABASE_URL: sqlite:///./ci.db
+          GP_DATABASE_URL: postgresql+psycopg://governance:governance@localhost:5432/governance
         run: |
           uv run alembic upgrade head
           uv run alembic downgrade base
       - name: Tests mit Mindestabdeckung 90 %
+        env:
+          GP_TEST_DATABASE_URL: postgresql+psycopg://governance:governance@localhost:5432/governance_test
         run: uv run pytest --cov --cov-report=xml
       - uses: actions/upload-artifact@v4
         if: always()
@@ -59,8 +75,23 @@ jobs:
         run: npm run coverage
 
   oberflaeche:
-    # Oberflaechentests laufen ausschliesslich headless (Playwright/Chromium).
+    # Oberflaechentests laufen ausschliesslich headless (Playwright/Chromium),
+    # gegen dieselbe PostgreSQL wie Entwicklung und Produktion.
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: governance
+          POSTGRES_PASSWORD: governance
+          POSTGRES_DB: governance
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U governance"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v5
@@ -79,6 +110,8 @@ jobs:
         working-directory: frontend
       - run: npm run e2e
         working-directory: frontend
+        env:
+          GP_E2E_DATABASE_URL: postgresql+psycopg://governance:governance@localhost:5432/governance_e2e
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

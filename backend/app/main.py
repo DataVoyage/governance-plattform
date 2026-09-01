@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 from app.api.routers import api_router
 from app.config import get_settings
 from app.core.permissions import Verboten
+from app.db import get_sessionmaker
 from app.services.prozess import NichtGefunden, Ungueltig
 
 
@@ -33,6 +34,32 @@ def erstelle_app() -> FastAPI:
         openapi_url="/api/v1/openapi.json",
         docs_url="/api/v1/docs",
     )
+
+    @app.middleware("http")
+    async def sitzungs_middleware(request: Request, call_next):
+        """Eine Datenbanksitzung je Anfrage — Commit noch innerhalb der Anfrage.
+
+        Die Arbeitseinheit ist die Anfrage: sie wird hier geoeffnet und hier
+        abgeschlossen. Laege der Commit im Abbau der FastAPI-Abhaengigkeit,
+        liefe er, nachdem die Antwort die Anwendung verlassen hat — ein Client,
+        der auf ein ``201`` sofort mit einer Folgeanfrage reagiert, saehe den
+        eben angelegten Datensatz dann gelegentlich noch nicht.
+
+        Ab Status 400 wird zurueckgerollt: eine abgewiesene Anfrage darf keine
+        halben Aenderungen hinterlassen.
+        """
+        with get_sessionmaker()() as sitzung:
+            request.state.db = sitzung
+            try:
+                antwort = await call_next(request)
+            except Exception:
+                sitzung.rollback()
+                raise
+            if antwort.status_code < 400:
+                sitzung.commit()
+            else:
+                sitzung.rollback()
+            return antwort
 
     app.add_middleware(
         CORSMiddleware,

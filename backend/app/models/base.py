@@ -21,8 +21,8 @@ def uuid_pk() -> Mapped[uuid.UUID]:
 
 class TimestampMixin:
     erstellt_am: Mapped[datetime] = mapped_column(
-        TZDateTime(), default=now_utc, server_default=func.now()
+        TZDateTime, default=now_utc, server_default=func.now()
     )
     geaendert_am: Mapped[datetime] = mapped_column(
-        TZDateTime(), default=now_utc, onupdate=now_utc, server_default=func.now()
+        TZDateTime, default=now_utc, onupdate=now_utc, server_default=func.now()
     )

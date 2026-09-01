@@ -68,14 +68,23 @@ async function anmelden(seite: Page) {
   await expect(seite.getByRole('heading', { name: 'Prozessobjekte' })).toBeVisible();
 }
 
-/** Beantwortet die aktuelle Frage und wartet, bis der Bildschirm wechselt.
+/** Beantwortet die aktuelle Frage und wartet auf die Antwort des Servers.
 
-    Der Wechsel wird an der Frage-ID festgemacht, nicht am Fragetext: die ID
-    ist stabil und eindeutig, waehrend ein Text sich zwischen zwei Schritten
-    theoretisch wiederholen koennte. */
+    Gewartet wird auf den Netzaufruf, nicht auf eine Aenderung im DOM: so
+    steht bei einem Fehlschlag der Statuscode des Servers in der Meldung,
+    statt dass nur eine Zusicherung ins Leere laeuft. Der anschliessende
+    Abgleich der Frage-ID stellt sicher, dass der Wizard tatsaechlich
+    weitergerueckt ist. */
 async function antworte(seite: Page, antwort: 'Ja' | 'Nein') {
   const vorher = await seite.getByTestId('frage').getAttribute('data-frage-id');
-  await seite.getByRole('button', { name: antwort, exact: true }).click();
+  const [ruf] = await Promise.all([
+    seite.waitForResponse(
+      (r) => r.url().includes('/bewertung/wizard') && r.request().method() === 'POST',
+    ),
+    seite.getByRole('button', { name: antwort, exact: true }).click(),
+  ]);
+  expect(ruf.ok(), `Wizard-Schritt fehlgeschlagen: ${ruf.status()} ${await ruf.text()}`).toBeTruthy();
+
   await expect
     .poll(async () => {
       if ((await seite.getByTestId('frage').count()) === 0) return '__ende__';

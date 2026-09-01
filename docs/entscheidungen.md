@@ -58,15 +58,34 @@ der Produktionsfall —, antwortet die Route `POST /api/v1/auth/dev-token` mit
 404, damit es keinen zweiten Anmeldeweg neben der zentralen Identität gibt
 (Architektur 10.1). Ein Test hält das fest.
 
-## E-5 — SQLite in der Testsuite, PostgreSQL in Produktion
+## E-5 — Tests laufen gegen PostgreSQL, nicht gegen eine Ersatzdatenbank
 
-Die Backend-Tests laufen gegen eine SQLite-Datei je Test, damit sie ohne
-Container-Start reproduzierbar sind. Damit das keine Schemafehler verdeckt,
-entsteht das Testschema aus denselben Alembic-Migrationen wie in Produktion, und
-alles Dialektspezifische ist auf den Typ-Adapter `app.db.GUID` beschränkt.
-Arrays und JSON-Spalten sind generisch (`JSON`) statt PostgreSQL-spezifisch
-(`JSONB`, `ARRAY`) modelliert — der Preis dafür sind fehlende
-GIN-Indizes, die bei den erwarteten Datenmengen nicht ins Gewicht fallen.
+Die Testsuite, die Oberflächentests und die Pipeline laufen gegen dieselbe
+PostgreSQL wie Entwicklung und Produktion. Die Verbindung kommt aus
+`GP_TEST_DATABASE_URL` beziehungsweise `GP_E2E_DATABASE_URL`; lokal genügt
+`docker compose up -d datenbank`, in der Pipeline stellt ein Service-Container
+dieselbe Datenbank bereit.
+
+**Diese Entscheidung war zwischenzeitlich anders und wurde korrigiert.** Die
+Tests liefen zunächst gegen SQLite, mit dem Argument, sie seien so ohne
+Container-Start reproduzierbar. Das Argument hält gegen Abschnitt 6.5 nicht
+stand — dort steht ausdrücklich, dass es keine abweichende lokale Umgebung
+geben soll — und es war auch sachlich falsch:
+
+- Zwei Typ-Adapter (`GUID`, `TZDateTime`) existierten allein, um
+  Dialektunterschiede auszugleichen. Beide sind mit der Umstellung entfallen.
+- Kein einziger Test lief je gegen die Zieldatenbank. Genau die Fehler, die
+  eine Testsuite finden soll, blieben deshalb verborgen: der Wechsel auf
+  PostgreSQL deckte sofort eine Wettlaufsituation im Sitzungsumgang auf
+  (siehe E-15), die jeden echten Client getroffen hätte.
+- Die Migrationen hingen an App-Code (`app.db.GUID`). Sie referenzieren jetzt
+  den SQLAlchemy-Dialekttyp direkt und sind damit unabhängig davon, wie die
+  Anwendung ihre Typen benennt.
+
+Das Schema entsteht einmal je Testlauf aus den Migrationen; zwischen den Tests
+werden die Tabellen mit `TRUNCATE … RESTART IDENTITY` geleert. Das ist
+schneller als der bisherige Weg über eine Datei je Test und prüft die
+Migrationen trotzdem bei jedem Lauf einmal vollständig durch.
 
 ## E-6 — Datenkategorien
 
@@ -96,13 +115,12 @@ mit, der Server bestimmt daraus die nächste Frage. Damit liegt die Reihenfolge
 in der Geschäftslogik und nicht in der Oberfläche, ohne dass eine serverseitige
 Wizard-Sitzung nötig wäre.
 
-## E-8 — Zeitstempel kommen immer zeitzonenbehaftet zurück
+## E-8 — Zeitstempel sind `timestamptz`
 
-`app.db.TZDateTime` normalisiert Zeitstempel beim Lesen auf UTC.
-PostgreSQL liefert `timestamptz` von sich aus mit Zeitzone, SQLite nicht — ohne
-diese Angleichung würde ein Vergleich zwischen einem frisch geschriebenen und
-einem neu geladenen Zeitstempel je nach Dialekt fehlschlagen. Dieser Unterschied
-darf die Fachlogik nichts angehen; er bleibt deshalb im Typ-Adapter.
+Alle Zeitstempel sind `TIMESTAMP WITH TIME ZONE`; PostgreSQL liefert sie
+zeitzonenbehaftet zurück. Ein eigener Typ-Adapter dafür ist entfallen, seit die
+Tests gegen dieselbe Datenbank laufen (E-5) — er hatte nur den Unterschied zu
+SQLite ausgeglichen. Die Fachlogik rechnet durchgehend in UTC.
 
 ## E-9 — Aktivierung eines Tier-3-Prozessobjekts
 
@@ -179,7 +197,36 @@ entsteht. Genau das verbietet Abnahmekriterium 7.4 („ohne Lücken"). Die
 Funktion heißt deshalb `changelog.eintraege_ab` und nicht `…_seit`: der Name
 soll die Lesart tragen.
 
-## E-15 — Offene Punkte der Architektur
+## E-15 — Die Arbeitseinheit ist die Anfrage, nicht der Abbau der Abhängigkeit
+
+Die Datenbanksitzung wird von einer Middleware je Anfrage geöffnet und dort
+auch abgeschlossen: bei einer Antwort unter Status 400 mit `commit`, sonst mit
+`rollback`.
+
+Zuvor lag der Commit im Abbau der FastAPI-Abhängigkeit `get_db`. Der läuft,
+nachdem die Antwort die Anwendung verlassen hat — ein Client, der auf ein `201`
+sofort mit einer Folgeanfrage reagiert, fand den eben angelegten Datensatz
+deshalb gelegentlich noch nicht. Unter PostgreSQL war das reproduzierbar: in
+einer Schleife über 200 Aufrufe „Fachbereich anlegen, sofort darauf verweisen"
+scheiterte einer mit `404 Fachbereich nicht gefunden`. Nach der Umstellung
+blieben 1000 von 1000 Aufrufen fehlerfrei.
+
+Das war kein Testartefakt, sondern ein Fehler, der jeden echten Client
+getroffen hätte — gefunden erst, als die Tests gegen die Zieldatenbank liefen.
+
+## E-16 — Der Bewertungs-Wizard verwirft verspätete Antworten
+
+Jeder Schritt des Wizards fragt den Server; die Antwort trägt die nächste
+Frage. Trifft die Antwort auf einen älteren Schritt später ein als die auf
+einen neueren — bei langsamer Verbindung oder schnellem Klicken —, würde sie
+den aktuellen Schritt überschreiben und der Wizard spränge zurück.
+
+Die Komponente führt deshalb eine laufende Nummer mit und verwirft jede
+Antwort, die nicht zur zuletzt gestellten Abfrage gehört. Ohne diese Sicherung
+war der Oberflächentest sporadisch rot; sie behebt aber nicht nur den Test,
+sondern das Verhalten für jeden Nutzer mit träger Verbindung.
+
+## E-17 — Offene Punkte der Architektur
 
 Die fünf offenen Punkte aus Architektur 12 bleiben offen; die Umsetzung nimmt
 keine Entscheidung vorweg:

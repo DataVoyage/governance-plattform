@@ -35,7 +35,7 @@ class ChangeLog(Base):
         GUID, ForeignKey("users.id"), nullable=True
     )
     akteur_beschreibung: Mapped[str] = mapped_column(String(255), default="")
-    zeitpunkt: Mapped[datetime] = mapped_column(TZDateTime(), index=True)
+    zeitpunkt: Mapped[datetime] = mapped_column(TZDateTime, index=True)
 
 
 class Konfiguration(Base, TimestampMixin):

@@ -4,10 +4,13 @@ import { defineConfig, devices } from '@playwright/test';
  * Oberflaechentests laufen ausschliesslich gegen einen headless Browser —
  * kein realer, vom Entwickler bedienter Browser wird angesteuert.
  *
- * Playwright startet dazu selbst zwei Prozesse: das Backend mit einer
- * temporaeren SQLite-Datenbank und Entwicklungsanmeldung sowie die gebaute
- * Single-Page-Application. Damit prueft der Test dieselbe Container-Topologie
- * wie in Produktion, nur ohne Docker-Umweg in der Pipeline.
+ * Playwright startet dazu selbst zwei Prozesse: das Backend gegen eine eigene
+ * Datenbank in derselben PostgreSQL, die auch Entwicklung und Produktion
+ * benutzen (Architektur 6.5), sowie die gebaute Single-Page-Application.
+ *
+ * Lokal genuegt `docker compose up -d datenbank`; in der Pipeline stellt ein
+ * Service-Container dieselbe Datenbank bereit. Die Verbindung laesst sich ueber
+ * GP_E2E_DATABASE_URL uebersteuern.
  */
 export default defineConfig({
   testDir: './e2e',
@@ -30,7 +33,9 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 180_000,
       env: {
-        GP_DATABASE_URL: 'sqlite:///./e2e.db',
+        GP_DATABASE_URL:
+          process.env.GP_E2E_DATABASE_URL ??
+          'postgresql+psycopg://governance:governance@localhost:5432/governance_e2e',
         GP_AUTH_DEV_MODE: 'true',
         GP_AUTH_DEV_SECRET: 'e2e-geheimnis',
         GP_CORS_ORIGINS: 'http://127.0.0.1:4173,http://localhost:4173',

@@ -1,82 +1,35 @@
-"""Datenbank-Session und Basisklasse (Schicht ``Datenzugriff``, Abschnitt 6.4)."""
+"""Datenbank-Session und Basisklasse (Schicht ``Datenzugriff``, Abschnitt 6.4).
+
+Die Anwendung laeuft auf PostgreSQL — in Produktion, in der Entwicklung und in
+den Tests. Es gibt keinen zweiten Dialekt und deshalb auch keine
+Dialektweichen: UUID-Spalten sind native ``uuid``, Zeitstempel sind
+``timestamptz``.
+"""
 
 from __future__ import annotations
 
 import uuid
-from collections.abc import Iterator
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
-from sqlalchemy import CHAR, DateTime, String, TypeDecorator, create_engine
+from fastapi import Request
+from sqlalchemy import DateTime, String, create_engine
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import get_settings
 
+#: UUID-Primaerschluessel, nativ in PostgreSQL.
+GUID = PGUUID(as_uuid=True)
 
-class GUID(TypeDecorator):
-    """UUID-Spalte, die auf PostgreSQL nativ und sonst als CHAR(36) arbeitet.
-
-    Die Anwendung laeuft produktiv auf PostgreSQL; die Testsuite laeuft gegen
-    SQLite, damit sie ohne Container-Start reproduzierbar ist. Nur dieser
-    Typ-Adapter, nicht die Fachlogik, kennt den Unterschied.
-    """
-
-    impl = CHAR
-    cache_ok = True
-
-    def load_dialect_impl(self, dialect: Any) -> Any:
-        if dialect.name == "postgresql":
-            return dialect.type_descriptor(PGUUID(as_uuid=True))
-        return dialect.type_descriptor(CHAR(36))
-
-    def process_bind_param(self, value: Any, dialect: Any) -> Any:
-        if value is None:
-            return None
-        if not isinstance(value, uuid.UUID):
-            value = uuid.UUID(str(value))
-        if dialect.name == "postgresql":
-            return value
-        return str(value)
-
-    def process_result_value(self, value: Any, dialect: Any) -> uuid.UUID | None:
-        if value is None:
-            return None
-        if isinstance(value, uuid.UUID):
-            return value
-        return uuid.UUID(str(value))
-
-
-class TZDateTime(TypeDecorator):
-    """Zeitstempel, die immer zeitzonenbehaftet zurueckkommen.
-
-    PostgreSQL liefert ``timestamptz`` von sich aus mit Zeitzone; SQLite kennt
-    keine und gibt naive Werte zurueck. Ohne diese Angleichung wuerden
-    Vergleiche zwischen einem frisch geschriebenen und einem neu geladenen
-    Zeitstempel je nach Dialekt fehlschlagen — ein Unterschied, der die
-    Fachlogik nichts angehen darf.
-    """
-
-    impl = DateTime
-    cache_ok = True
-
-    def __init__(self) -> None:
-        super().__init__(timezone=True)
-
-    def process_bind_param(self, value: Any, dialect: Any) -> Any:
-        if isinstance(value, datetime) and value.tzinfo is None:
-            return value.replace(tzinfo=UTC)
-        return value
-
-    def process_result_value(self, value: Any, dialect: Any) -> datetime | None:
-        if isinstance(value, datetime) and value.tzinfo is None:
-            return value.replace(tzinfo=UTC)
-        return value
+#: Zeitstempel mit Zeitzone; PostgreSQL liefert sie zeitzonenbehaftet zurueck.
+TZDateTime = DateTime(timezone=True)
 
 
 class Base(DeclarativeBase):
     type_annotation_map = {  # noqa: RUF012
-        uuid.UUID: GUID,
+        uuid.UUID: PGUUID(as_uuid=True),
+        datetime: DateTime(timezone=True),
         str: String,
     }
 
@@ -88,11 +41,8 @@ _SessionLocal: sessionmaker[Session] | None = None
 def get_engine():
     global _engine
     if _engine is None:
-        url = get_settings().database_url
         kwargs: dict[str, Any] = {"pool_pre_ping": True, "future": True}
-        if url.startswith("sqlite"):
-            kwargs.pop("pool_pre_ping")
-        _engine = create_engine(url, **kwargs)
+        _engine = create_engine(get_settings().database_url, **kwargs)
     return _engine
 
 
@@ -112,13 +62,14 @@ def reset_engine() -> None:
     _SessionLocal = None
 
 
-def get_db() -> Iterator[Session]:
-    session = get_sessionmaker()()
-    try:
-        yield session
-        session.commit()
-    except Exception:
-        session.rollback()
-        raise
-    finally:
-        session.close()
+def get_db(request: Request) -> Session:
+    """Liefert die Sitzung dieser Anfrage.
+
+    Angelegt und abgeschlossen wird sie von ``sitzungs_middleware`` in
+    ``app.main``. Der Commit gehoert dorthin und nicht in den Abbau dieser
+    Abhaengigkeit: der laeuft, nachdem die Antwort die Anwendung verlassen hat.
+    Ein Client, der auf ein ``201`` sofort mit einer Folgeanfrage reagiert,
+    faende den eben angelegten Datensatz dann gelegentlich noch nicht — genau
+    dieser Fehler war unter PostgreSQL reproduzierbar.
+    """
+    return request.state.db
