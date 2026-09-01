@@ -638,3 +638,23 @@ def test_assetaenderungen_landen_im_nachweis(client: TestClient, governance, db)
         for e in db.query(ChangeLog).filter(ChangeLog.entity_type == "tool_objekte").all()
     ]
     assert aktionen == ["erstellt", "geaendert"]
+
+
+def test_datenobjekt_ohne_fachbereich_bleibt_global(
+    client: TestClient, governance, anmelden, rolle_geben, organisation
+) -> None:
+    """Ein nicht zugeordnetes Datenobjekt ist nicht fuer jeden sichtbar.
+
+    Sonst waere die Sichtbarkeitsregel aus Architektur 4.3 ausgehebelt: wer
+    keine Rolle hat, saehe alles, was noch keinem Fachbereich zugeordnet ist.
+    """
+    client.post("/api/v1/datenobjekte", json={"name": "Herrenlos"}, headers=governance.kopf)
+    fremder = anmelden("Ohne Rolle")
+    assert client.get("/api/v1/datenobjekte", headers=fremder.kopf).json() == []
+
+    im_bereich = anmelden("Im Fachbereich")
+    rolle_geben(
+        im_bereich.user_id, "prozess_owner", "organisationseinheit", organisation["fin_int"]
+    )
+    assert client.get("/api/v1/datenobjekte", headers=im_bereich.kopf).json() == []
+    assert len(client.get("/api/v1/datenobjekte", headers=governance.kopf).json()) == 1

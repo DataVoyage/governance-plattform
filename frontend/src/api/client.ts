@@ -14,6 +14,8 @@ import type {
   Aufloesungsart,
   AussageEingabe,
   ComplianceFarbe,
+  CockpitZeile,
+  CockpitZeilenkopf,
   ComplianceZustand,
   Fachbereich,
   GateStatus,
@@ -210,6 +212,10 @@ export const api = {
       koerper: daten,
       token,
     }),
+  cockpit: (token: string, abfrage = '') =>
+    anfrage<CockpitZeilenkopf[]>(`/api/v1/cockpit${abfrage}`, { token }),
+  cockpitZeile: (token: string, schluessel: string, abfrage = '') =>
+    anfrage<CockpitZeile>(`/api/v1/cockpit/${schluessel}${abfrage}`, { token }),
   umsetzungAnlegen: (token: string, prozessId: string, landOrgId: string) =>
     anfrage<Umsetzung>(`/api/v1/prozesse/${prozessId}/umsetzungen`, {
       methode: 'POST',

@@ -5,6 +5,7 @@ import { SprachAnbieter, useSprache } from '@/i18n/SprachKontext';
 import { Layout } from '@/komponenten/Layout';
 import { Anmeldung } from '@/seiten/Anmeldung';
 import { BewertungsWizard } from '@/seiten/BewertungsWizard';
+import { Cockpit, CockpitZeileAnsicht } from '@/seiten/Cockpit';
 import { DatenobjektListe } from '@/seiten/DatenobjektListe';
 import { Gates } from '@/seiten/Gates';
 import { Lenkung } from '@/seiten/Lenkung';
@@ -48,6 +49,8 @@ export function App() {
             path="prozesse/:id/selbstverpflichtung"
             element={<SelbstverpflichtungSeite />}
           />
+          <Route path="cockpit" element={<Cockpit />} />
+          <Route path="cockpit/:schluessel" element={<CockpitZeileAnsicht />} />
           <Route path="gates" element={<Gates />} />
           <Route path="lenkung" element={<Lenkung />} />
           <Route path="tools" element={<ToolListe />} />

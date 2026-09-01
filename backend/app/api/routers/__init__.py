@@ -7,6 +7,7 @@ from app.api.routers import (
     assets,
     auth,
     bewertungen,
+    cockpit,
     integration,
     lenkung,
     organisation,
@@ -23,6 +24,7 @@ api_router.include_router(bewertungen.router)
 api_router.include_router(assets.router)
 api_router.include_router(verpflichtung.router)
 api_router.include_router(lenkung.router)
+api_router.include_router(cockpit.router)
 api_router.include_router(integration.router)
 
 __all__ = ["api_router"]

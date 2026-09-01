@@ -287,3 +287,25 @@ export interface Meldung {
   zustand: ComplianceZustand;
   lenkungsvorgang: Lenkungsvorgang | null;
 }
+
+// --- Cockpit (Phase 6) -----------------------------------------------------
+
+export interface CockpitEintrag {
+  id: string;
+  titel: string;
+  hinweis: string;
+  ziel_modul: string;
+  ziel_filter: Record<string, string>;
+}
+
+export interface CockpitZeilenkopf {
+  schluessel: string;
+  titel: string;
+  beschreibung: string;
+  anzahl: number;
+  aggregat: Record<string, Record<string, Record<string, number>>> | null;
+}
+
+export interface CockpitZeile extends CockpitZeilenkopf {
+  eintraege: CockpitEintrag[];
+}

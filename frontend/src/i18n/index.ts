@@ -222,6 +222,22 @@ const de = {
   'lenkung.stufe3':
     'Stufe 3 kennzeichnet den Vorgang für eine technische Maßnahme. Der Zugriffsentzug erfolgt außerhalb dieser Anwendung.',
 
+  'nav.cockpit': 'Cockpit',
+
+  'cockpit.titel': 'Cockpit',
+  'cockpit.hinweis':
+    'Jede Zeile ist eine Handlungsaufforderung: ein Klick führt direkt in das Modul, in dem der Eintrag abgearbeitet wird.',
+  'cockpit.leer': 'In Ihrem Bereich ist zu dieser Zeile nichts offen.',
+  'cockpit.anzahl': 'Offen',
+  'cockpit.oeffnen': 'Ansehen',
+  'cockpit.zurueck': 'Zurück zur Übersicht',
+  'cockpit.fachbereich': 'Fachbereich',
+  'cockpit.alleFachbereiche': 'Alle Fachbereiche',
+  'cockpit.eintrag': 'Eintrag',
+  'cockpit.hinweisSpalte': 'Hinweis',
+  'cockpit.ziel': 'Ziel',
+  'cockpit.aggregat': 'Verteilung',
+
   'ja': 'Ja',
   'nein': 'Nein',
 } as const;
@@ -436,6 +452,22 @@ const fr: Record<Schluessel, string> = {
   'lenkung.kommentar': 'Commentaire',
   'lenkung.stufe3':
     "Le niveau 3 signale la procédure pour une mesure technique. Le retrait des accès a lieu en dehors de cette application.",
+
+  'nav.cockpit': 'Cockpit',
+
+  'cockpit.titel': 'Cockpit',
+  'cockpit.hinweis':
+    "Chaque ligne appelle une action : un clic mène directement au module où l'entrée se traite.",
+  'cockpit.leer': "Rien n'est ouvert sur cette ligne dans votre domaine.",
+  'cockpit.anzahl': 'Ouvert',
+  'cockpit.oeffnen': 'Consulter',
+  'cockpit.zurueck': "Retour à la vue d'ensemble",
+  'cockpit.fachbereich': 'Domaine',
+  'cockpit.alleFachbereiche': 'Tous les domaines',
+  'cockpit.eintrag': 'Entrée',
+  'cockpit.hinweisSpalte': 'Indication',
+  'cockpit.ziel': 'Cible',
+  'cockpit.aggregat': 'Répartition',
 
   'ja': 'Oui',
   'nein': 'Non',

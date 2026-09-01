@@ -124,7 +124,31 @@ Cockpit und Lenkung später auswerten müssen. Die Oberfläche baut ihre
 Checkliste aus dem Katalog-Endpunkt, damit Wortlaut und Reihenfolge an genau
 einer Stelle stehen.
 
-## E-11 — Offene Punkte der Architektur
+## E-11 — Definition zweier Cockpit-Zeilen
+
+Zwei der zehn Zeilen aus A.14 lassen sich nicht unmittelbar aus dem Datenmodell
+ablesen und sind deshalb hier definiert:
+
+- **Prozesse ohne Owner.** `owner_user_id` ist ein Pflichtfeld und nie leer.
+  Die Zeile zeigt deshalb Prozesse, deren eingetragener Owner deaktiviert ist
+  oder keine Prozess-Owner-Rolle besitzt — beides führt dazu, dass niemand den
+  Prozess tatsächlich verantwortet.
+- **Widersprüche zwischen Erklärung und Telemetrie.** Telemetrie kommt erst mit
+  künftigen Adaptern (Architektur 7.4). Bis dahin ist der Widerspruch die
+  Kombination aus bestätigter Aussage T1 („das Tool-Objekt läuft im
+  vorgesehenen Rahmen") und einem aktuellen Compliance-Zustand auf rot. Sobald
+  ein Adapter rote Zustände selbst meldet, trägt dieselbe Zeile ohne Änderung.
+
+## E-12 — Datenobjekte ohne Fachbereich sind nicht öffentlich
+
+Ein Datenobjekt ist bereichsweit sichtbar, damit es von vielen Tool-Objekten
+wiederverwendet werden kann (Leitdokument A.4.5). Ein Datenobjekt **ohne**
+Fachbereich ist aber niemandem zugeordnet; es bleibt den global lesenden Rollen
+und seinem Owner vorbehalten. Wäre es für jeden Angemeldeten sichtbar, ließe
+sich die Sichtbarkeitsregel aus Architektur 4.3 dadurch aushebeln, dass man die
+Zuordnung einfach wegließe.
+
+## E-13 — Offene Punkte der Architektur
 
 Die fünf offenen Punkte aus Architektur 12 bleiben offen; die Umsetzung nimmt
 keine Entscheidung vorweg:

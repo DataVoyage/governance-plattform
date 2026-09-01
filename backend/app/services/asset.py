@@ -164,7 +164,10 @@ def datenobjekt_sichtbarkeitsbedingung(
 
     Ein Datenobjekt wird einmal klassifiziert und von vielen Tool-Objekten
     referenziert (Leitdokument A.4.5); eine engere Sicht wuerde genau diese
-    Wiederverwendung behindern.
+    Wiederverwendung behindern. Ein Datenobjekt **ohne** Fachbereich ist
+    dagegen niemandem zugeordnet und bleibt den global lesenden Rollen und
+    seinem Owner vorbehalten — sonst waere es fuer jeden Angemeldeten sichtbar
+    und die Sichtbarkeitsregel aus Architektur 4.3 ausgehebelt.
     """
     if principal.sieht_global:
         return None
@@ -180,7 +183,6 @@ def datenobjekt_sichtbarkeitsbedingung(
         )
     return or_(
         Datenobjekt.fachbereich_id.in_(fachbereiche) if fachbereiche else False,
-        Datenobjekt.fachbereich_id.is_(None),
         Datenobjekt.owner_user_id == principal.user_id,
     )
 

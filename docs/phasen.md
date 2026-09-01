@@ -10,7 +10,7 @@ abgeschlossen, wenn alle ihre Abnahmekriterien durch einen Test belegt sind.
 | 3 | Asset-Management | ✅ abgeschlossen |
 | 4 | Selbstverpflichtung und Gates | ✅ abgeschlossen |
 | 5 | Compliance und Lenkung | ✅ abgeschlossen |
-| 6 | Cockpit | ⏳ offen |
+| 6 | Cockpit | ✅ abgeschlossen |
 | 7 | Governance-Query-API | ⏳ offen |
 
 ---
@@ -165,3 +165,39 @@ außer Betrieb.
 ### Abdeckung
 
 - Backend: 98 % · Frontend: 99 % Anweisungen · fünfzehn Playwright-Läufe, headless
+
+---
+
+## Phase 6 — Cockpit
+
+**Enthalten:** die zehn Zeilen aus Leitdokument A.14 als je eigene, aufrufbare
+Ansicht, mit Filterung nach Fachbereich und unter Beachtung der
+Sichtbarkeitsregel aus Architektur 4.3.
+
+Jeder Eintrag trägt sein Zielmodul samt Filter mit sich — ein Klick landet
+direkt dort, wo die Sache abgearbeitet wird, statt in einer allgemeinen Liste.
+
+### Abnahmekriterien und Nachweis
+
+| # | Kriterium | Nachweis |
+|---|---|---|
+| 1 | Jede in A.14 genannte Zeile ist als eigene, aufrufbare Ansicht vorhanden | `backend/tests/test_cockpit.py::test_jede_zeile_aus_a14_ist_aufrufbar`, `frontend/e2e/phase6.spec.ts` |
+| 2 | Ein Klick auf einen Cockpit-Eintrag führt zum korrekt vorgefilterten Zielmodul | `backend/tests/test_cockpit.py::test_eintraege_verweisen_auf_das_vorgefilterte_zielmodul`, `frontend/tests/cockpit.test.tsx`, `frontend/e2e/phase6.spec.ts` |
+| 3 | Ein Nutzer mit LAND-Scope sieht nur Daten seines Bereichs; Governance sieht global | `backend/tests/test_cockpit.py::test_land_scope_sieht_nur_den_eigenen_bereich`, `::test_ohne_rolle_ist_das_cockpit_leer`, `frontend/e2e/phase6.spec.ts` |
+
+### Auslegungen
+
+Zwei Zeilen aus A.14 brauchen eine Definition, weil das Datenmodell sie nicht
+unmittelbar hergibt — beide sind in `docs/entscheidungen.md` (E-11 und E-12) begründet:
+
+- **„Prozesse ohne Owner"** — das Feld ist Pflicht und nie leer; gemeint sind
+  Prozesse, deren eingetragener Owner deaktiviert ist oder gar keine
+  Prozess-Owner-Rolle hat.
+- **„Widersprüche zwischen Erklärung und Telemetrie"** — solange keine
+  Telemetrie-Adapter angebunden sind, ist der Widerspruch die Kombination aus
+  bestätigter Aussage T1 („läuft im vorgesehenen Rahmen") und einem aktuellen
+  Compliance-Zustand auf rot.
+
+### Abdeckung
+
+- Backend: 98 % · Frontend: 99 % Anweisungen · achtzehn Playwright-Läufe, headless
