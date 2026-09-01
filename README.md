@@ -30,7 +30,8 @@ Systeme docken über die Adapter- und Integrationsschicht an (Architektur 7).
 
 Drei getrennte Images, wie in Architektur 6.2 festgelegt: Backend, Frontend,
 Sync-Worker. Das Registry-Ziel ist über `GP_IMAGE_REGISTRY` konfigurierbar und
-nirgends im Code verankert.
+nirgends im Code verankert; `./pruefen.sh --images` baut alle drei gegen zwei
+verschiedene Ziele, ohne dass sich am Code etwas ändert.
 
 ## Schnellstart mit Docker Compose
 
@@ -73,7 +74,17 @@ VITE_API_BASIS=http://127.0.0.1:8100 npm run dev
 
 ## Tests
 
-Alle Tests brauchen eine laufende PostgreSQL:
+Alles auf einmal — Stil, Migrationen, beide Testsuiten und die
+Oberflächentests:
+
+```bash
+./pruefen.sh              # ohne Images
+./pruefen.sh --images     # zusätzlich die drei Images gegen zwei Registry-Ziele
+```
+
+Es gibt bewusst keine Pipeline: geprüft wird lokal, mit genau diesem Skript.
+
+Einzeln ausgeführt brauchen alle Tests eine laufende PostgreSQL:
 
 ```bash
 docker compose up -d datenbank

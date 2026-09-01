@@ -60,11 +60,11 @@ der Produktionsfall —, antwortet die Route `POST /api/v1/auth/dev-token` mit
 
 ## E-5 — Tests laufen gegen PostgreSQL, nicht gegen eine Ersatzdatenbank
 
-Die Testsuite, die Oberflächentests und die Pipeline laufen gegen dieselbe
-PostgreSQL wie Entwicklung und Produktion. Die Verbindung kommt aus
-`GP_TEST_DATABASE_URL` beziehungsweise `GP_E2E_DATABASE_URL`; lokal genügt
-`docker compose up -d datenbank`, in der Pipeline stellt ein Service-Container
-dieselbe Datenbank bereit.
+Die Testsuite und die Oberflächentests laufen gegen dieselbe PostgreSQL wie
+Entwicklung und Produktion, jede Ebene mit einer eigenen Datenbank auf
+demselben Server. Die Verbindung kommt aus `GP_TEST_DATABASE_URL`
+beziehungsweise `GP_E2E_DATABASE_URL`; gestartet wird sie mit
+`docker compose up -d datenbank`.
 
 **Diese Entscheidung war zwischenzeitlich anders und wurde korrigiert.** Die
 Tests liefen zunächst gegen SQLite, mit dem Argument, sie seien so ohne
@@ -226,7 +226,19 @@ Antwort, die nicht zur zuletzt gestellten Abfrage gehört. Ohne diese Sicherung
 war der Oberflächentest sporadisch rot; sie behebt aber nicht nur den Test,
 sondern das Verhalten für jeden Nutzer mit träger Verbindung.
 
-## E-17 — Offene Punkte der Architektur
+## E-17 — Keine Pipeline, sondern ein lokales Prüfskript
+
+Geprüft wird lokal mit `./pruefen.sh`: Stil, Migrationen vorwärts und rückwärts,
+beide Testsuiten mit ihren Abdeckungsschwellen, die headless-Oberflächentests
+und auf Wunsch die drei Images gegen zwei Registry-Ziele.
+
+Eine CI/CD-Pipeline ist ausdrücklich nicht gewollt. Damit verliert Architektur
+11 keinen Abnahmenachweis — die Kriterien bleiben dieselben und sind weiterhin
+durch Tests belegt —, aber sie werden auf Zuruf geprüft statt bei jedem Push.
+Wer das Skript nicht laufen lässt, bekommt kein Signal; diese Verantwortung
+liegt bewusst bei der Person, die committet.
+
+## E-18 — Offene Punkte der Architektur
 
 Die fünf offenen Punkte aus Architektur 12 bleiben offen; die Umsetzung nimmt
 keine Entscheidung vorweg:

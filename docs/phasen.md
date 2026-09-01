@@ -6,9 +6,10 @@ abgeschlossen, wenn alle ihre Abnahmekriterien durch einen Test belegt sind.
 Die Abnahmekriterien stammen aus dem internen Architekturdokument, das nicht in
 diesem Repository liegt; sie sind unten je Phase im Wortlaut wiedergegeben.
 
-Alle Tests — Backend, Oberfläche und Pipeline — laufen gegen dieselbe
-PostgreSQL wie Entwicklung und Produktion. Die Angaben zur Abdeckung je Phase
-beziehen sich auf diesen Stand.
+Alle Tests — Backend und Oberfläche — laufen gegen dieselbe PostgreSQL wie
+Entwicklung und Produktion. Geprüft wird lokal mit `./pruefen.sh`; eine
+Pipeline gibt es bewusst nicht. Die Angaben zur Abdeckung je Phase beziehen
+sich auf diesen Stand.
 
 | Phase | Inhalt | Stand |
 |---|---|---|
@@ -24,7 +25,8 @@ beziehen sich auf diesen Stand.
 
 ## Phase 1 — Fundament
 
-**Enthalten:** containerisierte Entwicklungsumgebung und CI/CD-Pipeline,
+**Enthalten:** containerisierte Entwicklungsumgebung und reproduzierbarer
+Build,
 Datenmodell als Alembic-Migration einschließlich `change_log` und
 `konfiguration`, Authentifizierung über die zentrale Unternehmensidentität,
 Rollen- und Rechte-Grundgerüst, erster Import-Adapter (Fachbereiche,
@@ -42,12 +44,12 @@ Frontend-Grundgerüst mit Sprachpfad-Routing für Deutsch und Französisch.
 | 3 | Prozess-Owner legt ein Prozessobjekt mit allen zehn Feldern an; Speichern ohne Stellvertretung wird abgelehnt | `backend/tests/test_prozess.py::test_owner_legt_prozess_mit_allen_zehn_feldern_an`, `::test_speichern_ohne_stellvertretung_wird_abgelehnt`, `frontend/e2e/phase1.spec.ts` |
 | 4 | Ohne Rollenzuweisung im betroffenen Scope weder Ändern noch Löschen (Test je Rolle) | `backend/tests/test_prozess.py::test_ohne_rolle_kein_anlegen_und_kein_aendern`, `::test_owner_eines_anderen_fachbereichs_darf_nicht_schreiben`, `::test_umsetzer_pflegt_nur_die_lokale_abweichung`, `::test_auditor_sieht_global_und_darf_nicht_schreiben` |
 | 5 | Ein Prozessobjekt ist mit zwei LAND-Organisationseinheiten verknüpfbar | `backend/tests/test_prozess.py::test_prozess_in_zwei_laendern_umsetzen`, `frontend/e2e/phase1.spec.ts` |
-| 6 | Alle drei Images bauen gegen ein umkonfiguriertes Registry-Ziel, ohne Codeänderung | `.github/workflows/ci.yml`, Job `images` mit Matrix über zwei Registry-Ziele |
+| 6 | Alle drei Images bauen gegen ein umkonfiguriertes Registry-Ziel, ohne Codeänderung | `./pruefen.sh --images` baut Backend, Frontend und Sync-Worker gegen zwei verschiedene Registry-Ziele; der Unterschied liegt allein im Zielnamen |
 | 7 | Sprachwechsel ändert die Anzeigesprache, nicht die sichtbaren Datensätze | `frontend/tests/sprache.test.tsx::aendert beim Sprachwechsel die Anzeige, aber nicht die Datensaetze`, `frontend/e2e/phase1.spec.ts` |
 
 ### Abdeckung
 
-- Backend: 97 % (Schwelle 90 %, erzwungen über `fail_under` in `pyproject.toml`)
+- Backend: 99 % (Schwelle 90 %, erzwungen über `fail_under` in `pyproject.toml`)
 - Frontend: 99 % Anweisungen (Schwelle 90 %, erzwungen über `vite.config.ts`)
 - Oberfläche: drei Playwright-Läufe, ausschließlich headless
 
