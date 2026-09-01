@@ -11,7 +11,7 @@ abgeschlossen, wenn alle ihre Abnahmekriterien durch einen Test belegt sind.
 | 4 | Selbstverpflichtung und Gates | ✅ abgeschlossen |
 | 5 | Compliance und Lenkung | ✅ abgeschlossen |
 | 6 | Cockpit | ✅ abgeschlossen |
-| 7 | Governance-Query-API | ⏳ offen |
+| 7 | Governance-Query-API | ✅ abgeschlossen |
 
 ---
 
@@ -201,3 +201,40 @@ unmittelbar hergibt — beide sind in `docs/entscheidungen.md` (E-11 und E-12) b
 ### Abdeckung
 
 - Backend: 98 % · Frontend: 99 % Anweisungen · achtzehn Playwright-Läufe, headless
+
+---
+
+## Phase 7 — Governance-Query-API
+
+**Enthalten:** die vier Endpunkte aus Architektur 7.3 — drei Vollabfragen und
+die Delta-Abfrage —, OpenAPI-dokumentiert, mit eigenem Authentifizierungsschema
+für andockende Anwendungen (Service-Token, konsistent mit Architektur 10.3).
+
+Die API liefert **nur Auskünfte**: sie provisioniert nichts, sie sagt nur, was
+der aus dem Prozess abgeleitete Rahmen ist. Ein Test hält fest, dass sie
+ausschließlich `GET` kennt.
+
+### Abnahmekriterien und Nachweis
+
+| # | Kriterium | Nachweis |
+|---|---|---|
+| 1 | Die Vollabfragen liefern exakt die Werte, die die Fachlogik aus Phase 2 auch im Wizard zeigt — keine zweite Implementierung | `backend/tests/test_query_api.py::test_tier_und_profil_entsprechen_dem_wizard`, `::test_k_klassen_entsprechen_dem_wizard`, `frontend/e2e/phase7.spec.ts` |
+| 2 | Ein Aufruf ohne gültige Service-Authentifizierung wird abgewiesen | `backend/tests/test_query_api.py::test_ohne_service_token_wird_abgewiesen`, `::test_nutzer_token_genuegt_nicht`, `frontend/e2e/phase7.spec.ts` |
+| 3 | Die automatisch erzeugte Dokumentation ist ohne Nacharbeit verständlich — geprüft durch eine Probeintegration mit Platzhalter-Client | `backend/tests/test_query_api.py::test_openapi_dokumentiert_die_vier_endpunkte`, `::test_probeintegration_mit_platzhalter_client`, `frontend/e2e/phase7.spec.ts` |
+| 4 | `GET /changes?since={cursor}` liefert genau die seither entstandenen Einträge, in Reihenfolge, ohne Duplikate und ohne Lücken; derselbe Cursor liefert dasselbe Ergebnis | `backend/tests/test_query_api.py::test_delta_liefert_lueckenlos_und_in_reihenfolge`, `::test_derselbe_cursor_liefert_dasselbe`, `frontend/e2e/phase7.spec.ts` |
+
+### Hinweise
+
+Der Cursor wird **einschließend** gelesen: der in einer Antwort gelieferte
+`naechster_cursor` geht beim nächsten Lauf unverändert als `since` wieder
+hinein. Wäre er ausschließend, würde genau dieser eine Eintrag übersprungen —
+und die Lückenlosigkeit wäre dahin. Begründet in `docs/entscheidungen.md`
+(E-14).
+
+Für den erklärten Rahmen externer Ziele trägt das Prozessobjekt ein eigenes
+Feld `erlaubte_externe_ziele`; ein neues Ziel dort löst Gate 2 aus (A.11).
+Siehe `docs/entscheidungen.md` (E-13).
+
+### Abdeckung
+
+- Backend: 99 % · Frontend: 99 % Anweisungen · zweiundzwanzig Playwright-Läufe, headless

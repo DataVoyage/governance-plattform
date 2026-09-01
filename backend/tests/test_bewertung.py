@@ -341,7 +341,9 @@ def test_verbotstatbestand_speichert_keine_bewertung(
     assert db.query(Bewertung).count() == 0
     alarm = db.query(Alarm).one()
     assert alarm.prozessobjekt_id is not None
-    assert client.get(f"/api/v1/prozesse/{prozess['id']}", headers=owner.kopf).json()["tier"] is None
+    assert (
+        client.get(f"/api/v1/prozesse/{prozess['id']}", headers=owner.kopf).json()["tier"] is None
+    )
 
 
 def test_neubewertung_erzeugt_neuen_datensatz(client: TestClient, owner, prozess) -> None:
@@ -374,7 +376,9 @@ def test_nur_der_prozess_owner_darf_bewerten(
     client: TestClient, prozess, anmelden, rolle_geben, organisation
 ) -> None:
     umsetzer = anmelden("Umsetzer DE")
-    rolle_geben(umsetzer.user_id, "prozess_umsetzer", "organisationseinheit", organisation["fin_de"])
+    rolle_geben(
+        umsetzer.user_id, "prozess_umsetzer", "organisationseinheit", organisation["fin_de"]
+    )
     antwort = abschliessen(client, umsetzer, prozess["id"], antworten_fuer(profil_von(ds=1)))
     assert antwort.status_code in (403,)
 
@@ -427,9 +431,7 @@ def test_ablauf_wird_erkannt(db, client: TestClient, owner, prozess) -> None:
     aktuelle = bewertung_service.aktuelle(db, __import__("uuid").UUID(prozess["id"]))
     assert aktuelle is not None
     assert not bewertung_service.ist_abgelaufen(aktuelle)
-    assert bewertung_service.ist_abgelaufen(
-        aktuelle, datetime.now(UTC) + timedelta(days=400)
-    )
+    assert bewertung_service.ist_abgelaufen(aktuelle, datetime.now(UTC) + timedelta(days=400))
 
 
 def test_ohne_frist_laeuft_nichts_ab(db, client: TestClient, owner, prozess) -> None:

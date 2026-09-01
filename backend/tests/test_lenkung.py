@@ -90,9 +90,7 @@ def melde(client: TestClient, anmeldung, tool_id: str, farbe: str, **daten):
 def test_zustand_ist_eine_zeitreihe(client: TestClient, governance, tool) -> None:
     melde(client, governance, tool["id"], "gruen", begruendung="Erstpruefung")
     melde(client, governance, tool["id"], "gelb", begruendung="Beobachtung")
-    verlauf = client.get(
-        f"/api/v1/tools/{tool['id']}/compliance", headers=governance.kopf
-    ).json()
+    verlauf = client.get(f"/api/v1/tools/{tool['id']}/compliance", headers=governance.kopf).json()
     assert [z["farbe"] for z in verlauf] == ["gelb", "gruen"]
     assert verlauf[0]["begruendung"] == "Beobachtung"
 
@@ -166,9 +164,7 @@ def test_frist_haengt_am_tier(
     assert 89 <= (frist - erstellt).days <= 90
 
 
-def test_zweite_meldung_verdoppelt_den_vorgang_nicht(
-    client: TestClient, governance, tool
-) -> None:
+def test_zweite_meldung_verdoppelt_den_vorgang_nicht(client: TestClient, governance, tool) -> None:
     erste = melde(client, governance, tool["id"], "rot").json()["lenkungsvorgang"]
     zweite = melde(client, governance, tool["id"], "rot").json()["lenkungsvorgang"]
     assert erste["id"] == zweite["id"]
@@ -177,9 +173,7 @@ def test_zweite_meldung_verdoppelt_den_vorgang_nicht(
 
 
 def test_vorgang_ohne_owner_bleibt_unzugewiesen(client: TestClient, governance) -> None:
-    tool = client.post(
-        "/api/v1/tools", json={"name": "Ohne Owner"}, headers=governance.kopf
-    ).json()
+    tool = client.post("/api/v1/tools", json={"name": "Ohne Owner"}, headers=governance.kopf).json()
     vorgang = melde(client, governance, tool["id"], "rot").json()["lenkungsvorgang"]
     assert vorgang["zugewiesen_an"] is None
 
@@ -286,9 +280,7 @@ def test_anpassen_schliesst_und_setzt_gruen(client: TestClient, governance, tool
     assert antwort.json()["status"] == "aufgeloest"
     assert antwort.json()["aufloesungsart"] == "anpassen"
 
-    verlauf = client.get(
-        f"/api/v1/tools/{tool['id']}/compliance", headers=governance.kopf
-    ).json()
+    verlauf = client.get(f"/api/v1/tools/{tool['id']}/compliance", headers=governance.kopf).json()
     assert verlauf[0]["farbe"] == "gruen"
 
 
@@ -320,9 +312,7 @@ def test_rahmen_erweitern_verlangt_eine_neue_bewertung(
     assert antwort.json()["status"] == "aufgeloest"
 
 
-def test_rahmen_erweitern_mit_unbekannter_bewertung(
-    client: TestClient, governance, tool
-) -> None:
+def test_rahmen_erweitern_mit_unbekannter_bewertung(client: TestClient, governance, tool) -> None:
     vorgang = melde(client, governance, tool["id"], "rot").json()["lenkungsvorgang"]
     antwort = loese_auf(
         client,
@@ -342,9 +332,7 @@ def test_stilllegen_setzt_das_tool_inaktiv(client: TestClient, governance, tool)
     aktuell = client.get(f"/api/v1/tools/{tool['id']}", headers=governance.kopf).json()
     assert aktuell["status"] == "inaktiv"
     # Stilllegen bedeutet nicht "wieder konform": kein gruener Eintrag.
-    verlauf = client.get(
-        f"/api/v1/tools/{tool['id']}/compliance", headers=governance.kopf
-    ).json()
+    verlauf = client.get(f"/api/v1/tools/{tool['id']}/compliance", headers=governance.kopf).json()
     assert verlauf[0]["farbe"] == "rot"
 
 
@@ -412,9 +400,7 @@ def test_abgeschlossener_vorgang_wird_nicht_abgebrochen(
     assert antwort.status_code == 422
 
 
-def test_liste_filtert_nach_stufe_und_status(
-    client: TestClient, governance, tool, db
-) -> None:
+def test_liste_filtert_nach_stufe_und_status(client: TestClient, governance, tool, db) -> None:
     from app.models.governance import Lenkungsvorgang
     from app.services import lenkung
 
@@ -435,9 +421,7 @@ def test_liste_filtert_nach_stufe_und_status(
 
     loese_auf(client, governance, str(vorgang.id), "anpassen")
     assert client.get("/api/v1/lenkungsvorgaenge", headers=governance.kopf).json() == []
-    alle = client.get(
-        "/api/v1/lenkungsvorgaenge?nur_offen=false", headers=governance.kopf
-    ).json()
+    alle = client.get("/api/v1/lenkungsvorgaenge?nur_offen=false", headers=governance.kopf).json()
     assert len(alle) == 1
 
 
@@ -446,9 +430,7 @@ def test_fremder_sieht_keine_vorgaenge(client: TestClient, governance, tool, anm
     fremder = anmelden("Ohne Rolle")
     assert client.get("/api/v1/lenkungsvorgaenge", headers=fremder.kopf).json() == []
     assert (
-        client.get(
-            f"/api/v1/lenkungsvorgaenge/{vorgang['id']}", headers=fremder.kopf
-        ).status_code
+        client.get(f"/api/v1/lenkungsvorgaenge/{vorgang['id']}", headers=fremder.kopf).status_code
         == 403
     )
 

@@ -49,13 +49,14 @@ def test_delta_abfrage_ist_zustandslos(db: Session) -> None:
             aktion=ChangeAktion.ERSTELLT,
             nachher={"i": i},
         )
-    alle = changelog.eintraege_seit(db, since=0)
+    alle = changelog.eintraege_ab(db, ab_cursor=0)
     assert len(alle) == 3
-    ab_erstem = changelog.eintraege_seit(db, since=alle[0].cursor)
-    assert [e.cursor for e in ab_erstem] == [alle[1].cursor, alle[2].cursor]
+    # Einschliessend: ab dem zweiten Cursor kommen der zweite und dritte.
+    ab_zweitem = changelog.eintraege_ab(db, ab_cursor=alle[1].cursor)
+    assert [e.cursor for e in ab_zweitem] == [alle[1].cursor, alle[2].cursor]
     # Derselbe Cursor liefert erneut dasselbe Ergebnis.
-    assert [e.cursor for e in changelog.eintraege_seit(db, since=alle[0].cursor)] == [
-        e.cursor for e in ab_erstem
+    assert [e.cursor for e in changelog.eintraege_ab(db, ab_cursor=alle[1].cursor)] == [
+        e.cursor for e in ab_zweitem
     ]
 
 
@@ -68,7 +69,7 @@ def test_delta_abfrage_filtert_nach_typ(db: Session) -> None:
     changelog.protokolliere(
         db, entity_type="tool_objekte", entity_id=uuid.uuid4(), aktion=ChangeAktion.ERSTELLT
     )
-    treffer = changelog.eintraege_seit(db, since=0, entity_types=["tool_objekte"])
+    treffer = changelog.eintraege_ab(db, ab_cursor=0, entity_types=["tool_objekte"])
     assert [e.entity_type for e in treffer] == ["tool_objekte"]
 
 

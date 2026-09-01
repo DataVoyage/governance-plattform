@@ -70,9 +70,7 @@ def gib_selbstverpflichtung(client: TestClient, anmeldung, prozess_id: str, auss
 
 
 def gate_einreichen(client: TestClient, anmeldung, prozess_id: str, **daten):
-    return client.post(
-        f"/api/v1/prozesse/{prozess_id}/gates", json=daten, headers=anmeldung.kopf
-    )
+    return client.post(f"/api/v1/prozesse/{prozess_id}/gates", json=daten, headers=anmeldung.kopf)
 
 
 def gate_entscheiden(client: TestClient, anmeldung, gate_id: str, status: str, kommentar=""):
@@ -159,13 +157,9 @@ def test_ohne_bewertung_kein_aktiver_prozess(client: TestClient, owner, prozess)
     assert "Bewertung" in antwort.json()["detail"]
 
 
-def test_erneutes_setzen_auf_aktiv_prueft_nicht_erneut(
-    client: TestClient, owner, prozess
-) -> None:
+def test_erneutes_setzen_auf_aktiv_prueft_nicht_erneut(client: TestClient, owner, prozess) -> None:
     bewerte(client, owner, prozess["id"], ds=1)
-    client.patch(
-        f"/api/v1/prozesse/{prozess['id']}", json={"status": "aktiv"}, headers=owner.kopf
-    )
+    client.patch(f"/api/v1/prozesse/{prozess['id']}", json={"status": "aktiv"}, headers=owner.kopf)
     nochmal = client.patch(
         f"/api/v1/prozesse/{prozess['id']}",
         json={"status": "aktiv", "supplier": "Neu"},
@@ -177,9 +171,7 @@ def test_erneutes_setzen_auf_aktiv_prueft_nicht_erneut(
 # --- Selbstverpflichtung --------------------------------------------------
 
 
-def test_selbstverpflichtung_ab_tier_3_ist_befristet(
-    client: TestClient, owner, prozess
-) -> None:
+def test_selbstverpflichtung_ab_tier_3_ist_befristet(client: TestClient, owner, prozess) -> None:
     bewerte(client, owner, prozess["id"], ds=3)
     eintrag = gib_selbstverpflichtung(client, owner, prozess["id"]).json()
     assert eintrag["gueltig_bis"] is not None
@@ -259,7 +251,9 @@ def test_tool_selbstverpflichtung_erbt_die_befristung_des_prozesses(
     client: TestClient, governance, owner, prozess
 ) -> None:
     bewerte(client, owner, prozess["id"], ds=3)
-    tool = client.post("/api/v1/tools", json={"name": "Tier-3-Tool"}, headers=governance.kopf).json()
+    tool = client.post(
+        "/api/v1/tools", json={"name": "Tier-3-Tool"}, headers=governance.kopf
+    ).json()
     client.post(
         f"/api/v1/tools/{tool['id']}/prozesse",
         json={"prozessobjekt_id": prozess["id"]},
@@ -359,18 +353,12 @@ def test_kein_zweites_offenes_gate_desselben_typs(client: TestClient, owner, pro
     assert zweites.status_code == 422
 
 
-def test_gate_historie_und_arbeitsvorrat(
-    client: TestClient, owner, governance, prozess
-) -> None:
+def test_gate_historie_und_arbeitsvorrat(client: TestClient, owner, governance, prozess) -> None:
     erstes = gate_einreichen(client, owner, prozess["id"], gate_typ="1").json()
     gate_entscheiden(client, governance, erstes["id"], "abgelehnt")
-    gate_einreichen(
-        client, owner, prozess["id"], gate_typ="2", ausloeser="reichweitenerweiterung"
-    )
+    gate_einreichen(client, owner, prozess["id"], gate_typ="2", ausloeser="reichweitenerweiterung")
 
-    historie = client.get(
-        f"/api/v1/prozesse/{prozess['id']}/gates", headers=owner.kopf
-    ).json()
+    historie = client.get(f"/api/v1/prozesse/{prozess['id']}/gates", headers=owner.kopf).json()
     assert len(historie) == 2
 
     offen = client.get("/api/v1/gates", headers=governance.kopf).json()
@@ -382,9 +370,7 @@ def test_fremder_sieht_keine_gates(client: TestClient, owner, prozess, anmelden)
     fremder = anmelden("Ohne Rolle")
     assert client.get("/api/v1/gates", headers=fremder.kopf).json() == []
     assert (
-        client.get(
-            f"/api/v1/prozesse/{prozess['id']}/gates", headers=fremder.kopf
-        ).status_code
+        client.get(f"/api/v1/prozesse/{prozess['id']}/gates", headers=fremder.kopf).status_code
         == 403
     )
     assert gate_einreichen(client, fremder, prozess["id"], gate_typ="1").status_code == 403

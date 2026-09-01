@@ -56,6 +56,7 @@ class ProzessAendern(BaseModel):
     customer: Kundenkreis | None = None
     ausfallfolge: Ausfallfolge | None = None
     status: ProzessStatus | None = None
+    erlaubte_externe_ziele: list[str] | None = None
     vorgelagert_ids: list[uuid.UUID] | None = None
     nachgelagert_ids: list[uuid.UUID] | None = None
 
@@ -92,6 +93,7 @@ class ProzessAus(BaseModel):
     customer: Kundenkreis
     ausfallfolge: Ausfallfolge
     status: ProzessStatus
+    erlaubte_externe_ziele: list[str] = Field(default_factory=list)
     erstellt_am: datetime
     geaendert_am: datetime
 

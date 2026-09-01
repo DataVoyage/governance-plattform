@@ -32,9 +32,7 @@ def owner(anmelden, rolle_geben, organisation):
 @pytest.fixture
 def techniker(anmelden, rolle_geben, organisation):
     nutzer = anmelden("Technischer Owner", subject="sub-technik")
-    rolle_geben(
-        nutzer.user_id, "technischer_owner", "organisationseinheit", organisation["fin_de"]
-    )
+    rolle_geben(nutzer.user_id, "technischer_owner", "organisationseinheit", organisation["fin_de"])
     return nutzer
 
 
@@ -98,9 +96,7 @@ def test_importiertes_tool_ist_unbestaetigt_und_nicht_verknuepfbar(
     assert verweigert.status_code == 422
     assert "bestaetigt" in verweigert.json()["detail"]
 
-    bestaetigt = client.post(
-        f"/api/v1/tools/{tool['id']}/bestaetigung", headers=governance.kopf
-    )
+    bestaetigt = client.post(f"/api/v1/tools/{tool['id']}/bestaetigung", headers=governance.kopf)
     assert bestaetigt.status_code == 200
     assert bestaetigt.json()["status"] == "bestaetigt"
 
@@ -157,9 +153,7 @@ def test_zweiter_import_laesst_die_kategorie_unberuehrt(
 def test_stammdatenfelder_eines_importierten_tools_sind_gesperrt(
     client: TestClient, plattform, governance
 ) -> None:
-    importiere(
-        client, plattform, [{"typ": "tool", "externe_id": "TOOL-3", "name": "Importiert"}]
-    )
+    importiere(client, plattform, [{"typ": "tool", "externe_id": "TOOL-3", "name": "Importiert"}])
     tool = client.get("/api/v1/tools", headers=governance.kopf).json()[0]
     assert set(tool["schreibgeschuetzte_felder"]) == {"name", "metadaten", "technologie"}
 
@@ -486,15 +480,9 @@ def test_prozess_owner_sieht_tools_seiner_prozesse(
 
 
 def test_nur_governance_entfernt_tools(client: TestClient, governance, techniker) -> None:
-    tool = client.post(
-        "/api/v1/tools", json={"name": "Wegwerf"}, headers=governance.kopf
-    ).json()
-    assert (
-        client.delete(f"/api/v1/tools/{tool['id']}", headers=techniker.kopf).status_code == 403
-    )
-    assert (
-        client.delete(f"/api/v1/tools/{tool['id']}", headers=governance.kopf).status_code == 204
-    )
+    tool = client.post("/api/v1/tools", json={"name": "Wegwerf"}, headers=governance.kopf).json()
+    assert client.delete(f"/api/v1/tools/{tool['id']}", headers=techniker.kopf).status_code == 403
+    assert client.delete(f"/api/v1/tools/{tool['id']}", headers=governance.kopf).status_code == 204
     assert client.get(f"/api/v1/tools/{tool['id']}", headers=governance.kopf).status_code == 404
 
 
@@ -531,9 +519,7 @@ def test_datenobjekt_owner_darf_kategorisieren(
 def test_unbekanntes_asset_liefert_404(client: TestClient, governance) -> None:
     fehlt = "00000000-0000-0000-0000-000000000000"
     assert client.get(f"/api/v1/tools/{fehlt}", headers=governance.kopf).status_code == 404
-    assert (
-        client.get(f"/api/v1/datenobjekte/{fehlt}", headers=governance.kopf).status_code == 404
-    )
+    assert client.get(f"/api/v1/datenobjekte/{fehlt}", headers=governance.kopf).status_code == 404
 
 
 # --- Filter und Tool-Datenobjekt-Kanten ----------------------------------
@@ -603,17 +589,13 @@ def test_tool_liest_und_schreibt_datenobjekte(client: TestClient, governance) ->
     )
     assert doppelt.status_code == 422
 
-    kanten = client.get(
-        f"/api/v1/tools/{tool['id']}/datenobjekte", headers=governance.kopf
-    ).json()
+    kanten = client.get(f"/api/v1/tools/{tool['id']}/datenobjekte", headers=governance.kopf).json()
     assert len(kanten) == 1
     assert kanten[0]["datenobjekt_id"] == datenobjekt["id"]
 
 
 def test_datenobjekt_bestaetigen(client: TestClient, plattform, governance) -> None:
-    importiere(
-        client, plattform, [{"typ": "datenobjekt", "externe_id": "DO-9", "name": "Neu"}]
-    )
+    importiere(client, plattform, [{"typ": "datenobjekt", "externe_id": "DO-9", "name": "Neu"}])
     datenobjekt = client.get("/api/v1/datenobjekte", headers=governance.kopf).json()[0]
     assert datenobjekt["status"] == "importiert_unbestaetigt"
     antwort = client.post(
@@ -634,8 +616,7 @@ def test_assetaenderungen_landen_im_nachweis(client: TestClient, governance, db)
     )
     db.expire_all()
     aktionen = [
-        e.aktion
-        for e in db.query(ChangeLog).filter(ChangeLog.entity_type == "tool_objekte").all()
+        e.aktion for e in db.query(ChangeLog).filter(ChangeLog.entity_type == "tool_objekte").all()
     ]
     assert aktionen == ["erstellt", "geaendert"]
 

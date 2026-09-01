@@ -101,3 +101,31 @@ Zwei getrennte Mechanismen für zwei Arten von Einstellungen (Architektur 6.6):
 | `GP_CORS_ORIGINS` | Erlaubte Herkünfte der Single-Page-Application |
 | `GP_CA_BUNDLE_PATH` | Zusätzliches CA-Bundle für ausgehende Verbindungen |
 | `GP_IMAGE_REGISTRY` | Registry-Ziel der Images |
+
+## Geplante Läufe
+
+Zwei idempotente Läufe, produktiv als Kubernetes-`CronJob` (Architektur 6.2):
+
+```bash
+python -m app.jobs erinnerungen   # erinnert an ablaufende Selbstverpflichtungen
+python -m app.jobs eskalationen   # rückt fällige Lenkungsvorgänge weiter
+```
+
+## Governance-Query-API
+
+Der Anschlusspunkt für die später andockende Infrastruktur-Provisionierung
+(Architektur 7.3). Vier Endpunkte, ausschließlich lesend, authentifiziert über
+ein Service-Token aus `GP_QUERY_API_SERVICE_TOKENS`:
+
+```
+GET /api/v1/query/prozess/{id}/tier
+GET /api/v1/query/prozess/{id}/k-klassen
+GET /api/v1/query/tool/{id}/erlaubnisrahmen
+GET /api/v1/query/changes?since={cursor}&entity_type=bewertung
+```
+
+Sie liefern nur Auskünfte und provisionieren nichts; jede
+Provisionierungsentscheidung bleibt bei der andockenden Anwendung. Der Cursor
+der Delta-Abfrage ist eine Sequenznummer und wird einschließend gelesen: der
+gelieferte `naechster_cursor` geht beim nächsten Lauf unverändert als `since`
+wieder hinein.

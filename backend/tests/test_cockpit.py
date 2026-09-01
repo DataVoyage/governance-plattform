@@ -116,9 +116,7 @@ def test_eintraege_verweisen_auf_das_vorgefilterte_zielmodul(
 def test_assets_ohne_prozess_zeigen_auf_das_tool(
     client: TestClient, governance, owner, vertretung, prozess_daten
 ) -> None:
-    waise = client.post(
-        "/api/v1/tools", json={"name": "Waise"}, headers=governance.kopf
-    ).json()
+    waise = client.post("/api/v1/tools", json={"name": "Waise"}, headers=governance.kopf).json()
     prozess = lege_prozess_an(client, owner, vertretung, prozess_daten)
     verknuepft = client.post(
         "/api/v1/tools", json={"name": "Verknuepft"}, headers=governance.kopf
@@ -191,9 +189,7 @@ def test_non_compliant_je_stufe_und_filter(
 
     prozess = lege_prozess_an(client, owner, vertretung, prozess_daten)
     bewerte(client, owner, prozess["id"], ds=3)
-    tool = client.post(
-        "/api/v1/tools", json={"name": "Auffaellig"}, headers=governance.kopf
-    ).json()
+    tool = client.post("/api/v1/tools", json={"name": "Auffaellig"}, headers=governance.kopf).json()
     client.post(
         f"/api/v1/tools/{tool['id']}/prozesse",
         json={"prozessobjekt_id": prozess["id"]},
@@ -223,9 +219,7 @@ def test_non_compliant_je_stufe_und_filter(
     assert nur_2["anzahl"] == 1
 
 
-def test_rahmenabweichungen_zeigen_nur_nicht_gruene(
-    client: TestClient, governance
-) -> None:
+def test_rahmenabweichungen_zeigen_nur_nicht_gruene(client: TestClient, governance) -> None:
     gruen = client.post("/api/v1/tools", json={"name": "Gruen"}, headers=governance.kopf).json()
     gelb = client.post("/api/v1/tools", json={"name": "Gelb"}, headers=governance.kopf).json()
     client.post(
@@ -363,9 +357,7 @@ def test_ueberfaellige_selbstverpflichtungen(
     assert treffer["eintraege"][0]["ziel_modul"] == "prozesse"
 
 
-def test_ueberfaellige_selbstverpflichtung_eines_tools(
-    client: TestClient, governance, db
-) -> None:
+def test_ueberfaellige_selbstverpflichtung_eines_tools(client: TestClient, governance, db) -> None:
     from app.models.governance import Selbstverpflichtung
 
     tool = client.post(
@@ -390,9 +382,7 @@ def test_ueberfaellige_selbstverpflichtung_eines_tools(
     assert treffer["eintraege"][0]["ziel_modul"] == "tools"
 
 
-def test_widerspruch_zwischen_erklaerung_und_zustand(
-    client: TestClient, governance
-) -> None:
+def test_widerspruch_zwischen_erklaerung_und_zustand(client: TestClient, governance) -> None:
     tool = client.post(
         "/api/v1/tools", json={"name": "Widerspruch"}, headers=governance.kopf
     ).json()
@@ -419,9 +409,7 @@ def test_widerspruch_zwischen_erklaerung_und_zustand(
 
 
 def test_verneinte_aussage_ist_kein_widerspruch(client: TestClient, governance) -> None:
-    tool = client.post(
-        "/api/v1/tools", json={"name": "Ehrlich"}, headers=governance.kopf
-    ).json()
+    tool = client.post("/api/v1/tools", json={"name": "Ehrlich"}, headers=governance.kopf).json()
     client.post(
         f"/api/v1/tools/{tool['id']}/compliance",
         json={"farbe": "rot"},
@@ -441,7 +429,13 @@ def test_verneinte_aussage_ist_kein_widerspruch(client: TestClient, governance) 
 
 
 def test_land_scope_sieht_nur_den_eigenen_bereich(
-    client: TestClient, governance, owner, vertretung, prozess_daten, anmelden, rolle_geben,
+    client: TestClient,
+    governance,
+    owner,
+    vertretung,
+    prozess_daten,
+    anmelden,
+    rolle_geben,
     organisation,
 ) -> None:
     lege_prozess_an(
@@ -504,9 +498,7 @@ def test_fachbereichsfilter(
 def test_uebersicht_beachtet_den_fachbereichsfilter(
     client: TestClient, governance, owner, vertretung, prozess_daten, organisation
 ) -> None:
-    lege_prozess_an(
-        client, owner, vertretung, prozess_daten, owner_user_id=vertretung.user_id
-    )
+    lege_prozess_an(client, owner, vertretung, prozess_daten, owner_user_id=vertretung.user_id)
     uebersicht = client.get(
         f"/api/v1/cockpit?fachbereich_id={organisation['fachbereich_hr']}",
         headers=governance.kopf,

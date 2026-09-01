@@ -139,19 +139,24 @@ def protokolliere_loeschung(
     )
 
 
-def eintraege_seit(
+def eintraege_ab(
     db: Session,
     *,
-    since: int = 0,
+    ab_cursor: int = 0,
     entity_types: list[str] | None = None,
     limit: int = 500,
 ) -> list[ChangeLog]:
-    """Delta-Abfrage (Architektur 7.3): alles mit ``cursor > since``.
+    """Delta-Abfrage (Architektur 7.3): alles mit ``cursor >= ab_cursor``.
 
-    Der Cursor ist zustandslos: derselbe ``since``-Wert liefert bei
-    unveraenderter Datenlage dasselbe Ergebnis.
+    Der Cursor wird **einschliessend** gelesen, passend zum Vertrag der
+    Query-API: dort gibt eine andockende Anwendung den zuletzt gelieferten
+    ``naechster_cursor`` beim naechsten Lauf unveraendert als ``since`` mit.
+    Waere er ausschliessend, wuerde genau dieser eine Eintrag uebersprungen.
+
+    Der Cursor ist zustandslos: derselbe Wert liefert bei unveraenderter
+    Datenlage dasselbe Ergebnis.
     """
-    stmt = select(ChangeLog).where(ChangeLog.cursor > since)
+    stmt = select(ChangeLog).where(ChangeLog.cursor >= ab_cursor)
     if entity_types:
         stmt = stmt.where(ChangeLog.entity_type.in_(entity_types))
     stmt = stmt.order_by(ChangeLog.cursor).limit(limit)

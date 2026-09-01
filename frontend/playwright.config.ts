@@ -35,6 +35,7 @@ export default defineConfig({
         GP_AUTH_DEV_SECRET: 'e2e-geheimnis',
         GP_CORS_ORIGINS: 'http://127.0.0.1:4173,http://localhost:4173',
         GP_BOOTSTRAP_ADMIN_SUBJECTS: 'e2e-admin',
+        GP_QUERY_API_SERVICE_TOKENS: 'self-service-frontend:e2e-service-token',
       },
     },
     {

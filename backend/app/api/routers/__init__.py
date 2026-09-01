@@ -12,6 +12,7 @@ from app.api.routers import (
     lenkung,
     organisation,
     prozesse,
+    query,
     verpflichtung,
 )
 
@@ -25,6 +26,7 @@ api_router.include_router(assets.router)
 api_router.include_router(verpflichtung.router)
 api_router.include_router(lenkung.router)
 api_router.include_router(cockpit.router)
+api_router.include_router(query.router)
 api_router.include_router(integration.router)
 
 __all__ = ["api_router"]

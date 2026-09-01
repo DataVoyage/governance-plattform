@@ -103,6 +103,11 @@ class Prozessobjekt(Base, TimestampMixin):
     ausfallfolge: Mapped[Ausfallfolge] = mapped_column(String(24), default=Ausfallfolge.KEINE)
     status: Mapped[ProzessStatus] = mapped_column(String(24), default=ProzessStatus.ENTWURF)
 
+    # Erklaerter Rahmen (Leitdokument A.13.2, Schicht 1): welche externen Ziele
+    # der Prozess ansprechen darf. Kein SIPOC-Feld, sondern eine
+    # Governance-Angabe — ein neues Ziel loest Gate 2 aus (A.11).
+    erlaubte_externe_ziele: Mapped[list[str]] = mapped_column(JSON, default=list)
+
     # Abgeleitet, nie eingegeben (Leitdokument P1, Architektur 8.1).
     reichweite: Mapped[Reichweite | None] = mapped_column(String(24), nullable=True)
     kritikalitaet: Mapped[int] = mapped_column(Integer, default=0)

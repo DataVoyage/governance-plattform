@@ -148,7 +148,32 @@ und seinem Owner vorbehalten. Wäre es für jeden Angemeldeten sichtbar, ließe
 sich die Sichtbarkeitsregel aus Architektur 4.3 dadurch aushebeln, dass man die
 Zuordnung einfach wegließe.
 
-## E-13 — Offene Punkte der Architektur
+## E-13 — Erklärter Rahmen externer Ziele
+
+Die Query-API muss zum Erlaubnisrahmen eines Tool-Objekts sagen können, welche
+externen Ziele erlaubt sind (Architektur 7.3, Leitdokument A.13.2 Schicht 1).
+Gate 2 kennt dafür den Auslöser „neues externes Ziel" — es muss also einen Ort
+geben, an dem der erlaubte Stand steht.
+
+Das Prozessobjekt trägt deshalb das Feld `erlaubte_externe_ziele` (Liste von
+Zeichenketten). Es ist **kein** SIPOC-Feld: das Anlageformular fragt weiterhin
+genau zehn Felder ab. Es ist eine Governance-Angabe, die nach der Bewertung
+gepflegt wird — und deren Änderung ein Gate-2-Verfahren nach sich zieht.
+
+## E-14 — Der Cursor der Delta-Abfrage wird einschließend gelesen
+
+`GET /changes?since={cursor}` liefert alle Einträge mit `cursor >= since`, und
+die Antwort nennt als `naechster_cursor` die Sequenznummer des letzten
+gelieferten Eintrags plus eins. Eine andockende Anwendung gibt diesen Wert beim
+nächsten Lauf unverändert wieder hinein.
+
+Die Alternative — ausschließendes Lesen — hätte zur Folge, dass der Eintrag mit
+genau dieser Nummer übersprungen wird, sobald er nach der letzten Antwort
+entsteht. Genau das verbietet Abnahmekriterium 7.4 („ohne Lücken"). Die
+Funktion heißt deshalb `changelog.eintraege_ab` und nicht `…_seit`: der Name
+soll die Lesart tragen.
+
+## E-15 — Offene Punkte der Architektur
 
 Die fünf offenen Punkte aus Architektur 12 bleiben offen; die Umsetzung nimmt
 keine Entscheidung vorweg:

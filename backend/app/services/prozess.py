@@ -175,6 +175,7 @@ def zu_schema(prozess: Prozessobjekt) -> ProzessAus:
         customer=prozess.customer,
         ausfallfolge=prozess.ausfallfolge,
         status=prozess.status,
+        erlaubte_externe_ziele=list(prozess.erlaubte_externe_ziele or []),
         erstellt_am=prozess.erstellt_am,
         geaendert_am=prozess.geaendert_am,
         reichweite=prozess.reichweite,
