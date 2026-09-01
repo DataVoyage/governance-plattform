@@ -43,6 +43,7 @@ function grundrouten(bewertungen: Bewertung[] = []): Route[] {
     { pfad: '/api/v1/auth/me', koerper: PROFIL },
     { pfad: '/api/v1/organisationseinheiten', koerper: EINHEITEN },
     { pfad: '/api/v1/prozesse/p-1/bewertungen', koerper: bewertungen },
+    { pfad: '/api/v1/tools', koerper: [] },
     { pfad: '/api/v1/prozesse/p-1', koerper: prozess() },
   ];
 }

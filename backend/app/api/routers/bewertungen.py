@@ -77,9 +77,7 @@ def wizard_schritt(
     )
 
 
-@router.post(
-    "/bewertungen", response_model=BewertungAbschluss, status_code=status.HTTP_201_CREATED
-)
+@router.post("/bewertungen", response_model=BewertungAbschluss, status_code=status.HTTP_201_CREATED)
 def abschliessen(
     prozess_id: uuid.UUID,
     anfrage: WizardAnfrage,
@@ -87,9 +85,7 @@ def abschliessen(
     db: DbSession,
 ) -> BewertungAbschluss:
     prozess = prozess_service.hole_sichtbar(db, principal, prozess_id)
-    ergebnis = bewertung_service.speichere(
-        db, principal, prozess, anfrage.antworten, anfrage.modus
-    )
+    ergebnis = bewertung_service.speichere(db, principal, prozess, anfrage.antworten, anfrage.modus)
     if isinstance(ergebnis, Alarm):
         return BewertungAbschluss(alarm=AlarmAus.model_validate(ergebnis))
     return BewertungAbschluss(bewertung=BewertungAus.model_validate(ergebnis))

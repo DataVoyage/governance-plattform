@@ -23,8 +23,10 @@ export function Kopfzeile() {
       <Link className="marke" to={pfad('/prozesse')}>
         {t('app.titel')}
       </Link>
-      <nav aria-label={t('nav.prozesse')}>
-        <Link to={pfad('/prozesse')}>{t('nav.prozesse')}</Link>
+      <nav aria-label={t('app.titel')}>
+        <Link to={pfad('/prozesse')}>{t('nav.prozesse')}</Link>{' '}
+        <Link to={pfad('/tools')}>{t('nav.tools')}</Link>{' '}
+        <Link to={pfad('/datenobjekte')}>{t('nav.datenobjekte')}</Link>
       </nav>
       <div className="kopfzeile-rechts">
         <label htmlFor="sprachwahl">{t('app.sprache')}</label>

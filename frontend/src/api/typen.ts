@@ -148,3 +148,58 @@ export interface BewertungAbschluss {
   bewertung: Bewertung | null;
   alarm: Alarm | null;
 }
+
+// --- Assets (Phase 3) ------------------------------------------------------
+
+export type Herkunft = 'importiert' | 'manuell';
+export type AssetStatus = 'importiert_unbestaetigt' | 'bestaetigt' | 'inaktiv';
+export type Datenkategorie =
+  | 'oeffentlich'
+  | 'intern'
+  | 'vertraulich'
+  | 'personenbezogen'
+  | 'mitarbeiterbezogen'
+  | 'besondere_kategorie';
+
+export interface Geerbt {
+  kritikalitaet: number;
+  reichweite: string | null;
+  tier: number | null;
+  mitbestimmung_flag: boolean;
+  k_klassen: string[];
+  quelle_prozess_ids: string[];
+}
+
+export interface ToolObjekt {
+  id: string;
+  name: string;
+  beschreibung: string;
+  technologie: string | null;
+  kategorie: string | null;
+  technischer_owner_user_id: string | null;
+  organisationseinheit_id: string | null;
+  herkunft: Herkunft;
+  quelle: string | null;
+  externe_id: string | null;
+  status: AssetStatus;
+  metadaten: Record<string, unknown>;
+  letzte_aktivitaet_am: string | null;
+  prozessobjekt_ids: string[];
+  geerbt: Geerbt;
+  schreibgeschuetzte_felder: string[];
+}
+
+export interface DatenObjekt {
+  id: string;
+  name: string;
+  beschreibung: string;
+  kategorie: Datenkategorie | null;
+  owner_user_id: string | null;
+  fachbereich_id: string | null;
+  herkunft: Herkunft;
+  quelle: string | null;
+  externe_id: string | null;
+  status: AssetStatus;
+  metadaten: Record<string, unknown>;
+  schreibgeschuetzte_felder: string[];
+}

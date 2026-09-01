@@ -7,7 +7,7 @@ abgeschlossen, wenn alle ihre Abnahmekriterien durch einen Test belegt sind.
 |---|---|---|
 | 1 | Fundament | ✅ abgeschlossen |
 | 2 | Bewertung | ✅ abgeschlossen |
-| 3 | Asset-Management | ⏳ offen |
+| 3 | Asset-Management | ✅ abgeschlossen |
 | 4 | Selbstverpflichtung und Gates | ⏳ offen |
 | 5 | Compliance und Lenkung | ⏳ offen |
 | 6 | Cockpit | ⏳ offen |
@@ -77,3 +77,24 @@ Funktionen in `app/services/bewertung.py`.
 ### Abdeckung
 
 - Backend: 98 % · Frontend: 99 % Anweisungen · sechs Playwright-Läufe, headless
+
+---
+
+## Phase 3 — Asset-Management
+
+**Enthalten:** Verwaltung von Tool-Objekten und Datenobjekten, n:m-Verknüpfung
+zu Prozessobjekten mit Anzeige der maximum-vererbten Klassifikation, Erweiterung
+des Import-Adapters um die Typen `tool` und `datenobjekt`.
+
+### Abnahmekriterien und Nachweis
+
+| # | Kriterium | Nachweis |
+|---|---|---|
+| 1 | Importiertes Tool mit unbekannter `externe_id` erscheint als „importiert, unbestätigt" und ist erst nach manueller Bestätigung verknüpfbar | `backend/tests/test_asset.py::test_importiertes_tool_ist_unbestaetigt_und_nicht_verknuepfbar`, `frontend/e2e/phase3.spec.ts` |
+| 2 | Zweiter Import überschreibt die governance-seitig gesetzte Kategorie **nicht**, aktualisiert aber Name und technische Metadaten | `backend/tests/test_asset.py::test_zweiter_import_laesst_die_kategorie_unberuehrt`, `::test_importiertes_datenobjekt_behaelt_seine_kategorie` |
+| 3 | Ein Tool an zwei Prozessen unterschiedlicher Kritikalität zeigt die höhere geerbte Einstufung | `backend/tests/test_asset.py::test_tool_zeigt_die_hoechste_geerbte_einstufung`, `::test_tool_erbt_tier_und_k_klassen_der_bewertungen`, `frontend/e2e/phase3.spec.ts` |
+| 4 | Eine Datenobjekt-Kategorisierung ist im verknüpften Prozessobjekt sichtbar, ohne dort erneut gepflegt zu werden | `backend/tests/test_asset.py::test_kategorie_des_datenobjekts_wirkt_im_prozess`, `frontend/e2e/phase3.spec.ts` |
+
+### Abdeckung
+
+- Backend: 98 % · Frontend: 99 % Anweisungen · neun Playwright-Läufe, headless

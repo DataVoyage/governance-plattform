@@ -9,12 +9,15 @@ import type {
   Bewertung,
   BewertungAbschluss,
   BewertungsModus,
+  DatenObjekt,
+  Datenkategorie,
   Fachbereich,
   Nutzer,
   Organisationseinheit,
   Profil,
   Prozess,
   ProzessEingabe,
+  ToolObjekt,
   Umsetzung,
   WizardSchritt,
 } from './typen';
@@ -108,6 +111,34 @@ export const api = {
     }),
   bewertungen: (token: string, prozessId: string) =>
     anfrage<Bewertung[]>(`/api/v1/prozesse/${prozessId}/bewertungen`, { token }),
+  tools: (token: string, abfrage = '') =>
+    anfrage<ToolObjekt[]>(`/api/v1/tools${abfrage}`, { token }),
+  tool: (token: string, id: string) => anfrage<ToolObjekt>(`/api/v1/tools/${id}`, { token }),
+  toolAnlegen: (token: string, daten: { name: string; beschreibung?: string }) =>
+    anfrage<ToolObjekt>('/api/v1/tools', { methode: 'POST', koerper: daten, token }),
+  toolBestaetigen: (token: string, id: string) =>
+    anfrage<ToolObjekt>(`/api/v1/tools/${id}/bestaetigung`, { methode: 'POST', token }),
+  toolMitProzessVerknuepfen: (token: string, id: string, prozessId: string) =>
+    anfrage<ToolObjekt>(`/api/v1/tools/${id}/prozesse`, {
+      methode: 'POST',
+      koerper: { prozessobjekt_id: prozessId },
+      token,
+    }),
+  toolVonProzessLoesen: (token: string, id: string, prozessId: string) =>
+    anfrage<ToolObjekt>(`/api/v1/tools/${id}/prozesse/${prozessId}`, {
+      methode: 'DELETE',
+      token,
+    }),
+  datenobjekte: (token: string, abfrage = '') =>
+    anfrage<DatenObjekt[]>(`/api/v1/datenobjekte${abfrage}`, { token }),
+  datenobjektAnlegen: (token: string, daten: { name: string; beschreibung?: string }) =>
+    anfrage<DatenObjekt>('/api/v1/datenobjekte', { methode: 'POST', koerper: daten, token }),
+  datenobjektKategorisieren: (token: string, id: string, kategorie: Datenkategorie | null) =>
+    anfrage<DatenObjekt>(`/api/v1/datenobjekte/${id}`, {
+      methode: 'PATCH',
+      koerper: { kategorie },
+      token,
+    }),
   umsetzungAnlegen: (token: string, prozessId: string, landOrgId: string) =>
     anfrage<Umsetzung>(`/api/v1/prozesse/${prozessId}/umsetzungen`, {
       methode: 'POST',

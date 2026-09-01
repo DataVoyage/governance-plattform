@@ -19,6 +19,7 @@ function grundrouten() {
     { pfad: '/api/v1/organisationseinheiten', koerper: EINHEITEN },
     { pfad: '/api/v1/admin/users', koerper: NUTZER },
     { pfad: /\/bewertungen$/, koerper: [] },
+    { pfad: '/api/v1/tools', koerper: [] },
   ];
 }
 

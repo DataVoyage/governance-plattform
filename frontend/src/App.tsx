@@ -5,9 +5,12 @@ import { SprachAnbieter, useSprache } from '@/i18n/SprachKontext';
 import { Layout } from '@/komponenten/Layout';
 import { Anmeldung } from '@/seiten/Anmeldung';
 import { BewertungsWizard } from '@/seiten/BewertungsWizard';
+import { DatenobjektListe } from '@/seiten/DatenobjektListe';
 import { ProzessDetail } from '@/seiten/ProzessDetail';
 import { ProzessFormular } from '@/seiten/ProzessFormular';
 import { ProzessListe } from '@/seiten/ProzessListe';
+import { ToolDetail } from '@/seiten/ToolDetail';
+import { ToolListe } from '@/seiten/ToolListe';
 
 export function NichtGefunden() {
   const { t } = useSprache();
@@ -38,6 +41,9 @@ export function App() {
           <Route path="prozesse/neu" element={<ProzessFormular />} />
           <Route path="prozesse/:id" element={<ProzessDetail />} />
           <Route path="prozesse/:id/bewertung" element={<BewertungsWizard />} />
+          <Route path="tools" element={<ToolListe />} />
+          <Route path="tools/:id" element={<ToolDetail />} />
+          <Route path="datenobjekte" element={<DatenobjektListe />} />
         </Route>
         <Route path="*" element={<NichtGefunden />} />
       </Route>

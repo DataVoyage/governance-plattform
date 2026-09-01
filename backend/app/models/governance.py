@@ -249,9 +249,7 @@ class ToolObjekt(Base, TimestampMixin):
     externe_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[AssetStatus] = mapped_column(String(32), default=AssetStatus.BESTAETIGT)
     metadaten: Mapped[dict] = mapped_column(JSON, default=dict)
-    letzte_aktivitaet_am: Mapped[datetime | None] = mapped_column(
-        TZDateTime(), nullable=True
-    )
+    letzte_aktivitaet_am: Mapped[datetime | None] = mapped_column(TZDateTime(), nullable=True)
 
     prozessobjekte: Mapped[list[Prozessobjekt]] = relationship(
         secondary=prozess_tool, back_populates="tool_objekte"
@@ -282,9 +280,7 @@ class Selbstverpflichtung(Base, TimestampMixin):
     abgegeben_von: Mapped[uuid.UUID] = mapped_column(GUID, ForeignKey("users.id"))
     abgegeben_am: Mapped[datetime] = mapped_column(TZDateTime())
     gueltig_bis: Mapped[datetime | None] = mapped_column(TZDateTime(), nullable=True)
-    erinnerung_gesendet_am: Mapped[datetime | None] = mapped_column(
-        TZDateTime(), nullable=True
-    )
+    erinnerung_gesendet_am: Mapped[datetime | None] = mapped_column(TZDateTime(), nullable=True)
 
 
 class GateVorgang(Base, TimestampMixin):

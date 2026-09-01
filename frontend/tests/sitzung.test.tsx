@@ -23,6 +23,7 @@ describe('Anmeldung', () => {
       { pfad: '/api/v1/auth/me', koerper: PROFIL },
       { pfad: '/api/v1/prozesse', koerper: [prozess()] },
     { pfad: /\/bewertungen$/, koerper: [] },
+    { pfad: '/api/v1/tools', koerper: [] },
 
       { pfad: '/api/v1/organisationseinheiten', koerper: EINHEITEN },
     ]);

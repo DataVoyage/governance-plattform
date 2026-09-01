@@ -107,8 +107,7 @@ BAUM: tuple[Themenblock, ...] = (
         (
             Frage(
                 "3a",
-                "Ist eine Verhaltens- oder Leistungskontrolle von Beschaeftigten "
-                "moeglich?",
+                "Ist eine Verhaltens- oder Leistungskontrolle von Beschaeftigten moeglich?",
                 stufe_bei_ja=3,
             ),
             Frage("3b", "Werden mitarbeiterbezogene Daten verarbeitet?", stufe_bei_ja=2),
@@ -169,8 +168,7 @@ BAUM: tuple[Themenblock, ...] = (
         (
             Frage(
                 "6a",
-                "Gefaehrdet ein Ausfall den Geschaeftsbetrieb oder wesentliche "
-                "Umsaetze?",
+                "Gefaehrdet ein Ausfall den Geschaeftsbetrieb oder wesentliche Umsaetze?",
                 stufe_bei_ja=3,
             ),
             Frage(

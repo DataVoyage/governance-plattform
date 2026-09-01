@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 
 import { api } from '@/api/client';
-import type { Bewertung, Organisationseinheit, Prozess } from '@/api/typen';
+import type { Bewertung, Organisationseinheit, Prozess, ToolObjekt } from '@/api/typen';
 import { useSprache } from '@/i18n/SprachKontext';
 import { useSitzung } from '@/zustand/Sitzung';
 
@@ -18,6 +18,7 @@ export function ProzessDetail() {
   const [prozess, setProzess] = useState<Prozess | null>(null);
   const [einheiten, setEinheiten] = useState<Organisationseinheit[]>([]);
   const [bewertungen, setBewertungen] = useState<Bewertung[]>([]);
+  const [tools, setTools] = useState<ToolObjekt[]>([]);
   const [fehler, setFehler] = useState<string | null>(null);
 
   useEffect(() => {
@@ -26,11 +27,13 @@ export function ProzessDetail() {
       api.prozess(token, id),
       api.organisationseinheiten(token),
       api.bewertungen(token, id),
+      api.tools(token),
     ])
-      .then(([geladen, orgs, historie]) => {
+      .then(([geladen, orgs, historie, alleTools]) => {
         setProzess(geladen);
         setEinheiten(orgs);
         setBewertungen(historie);
+        setTools(alleTools.filter((tool) => tool.prozessobjekt_ids.includes(geladen.id)));
       })
       .catch(() => setFehler(t('app.fehler')));
   }, [token, id, t]);
@@ -103,6 +106,21 @@ export function ProzessDetail() {
               ))}
             </tbody>
           </table>
+        )}
+      </section>
+
+      <section>
+        <h2>{t('asset.tools.amProzess')}</h2>
+        {tools.length === 0 ? (
+          <p>{t('asset.tools.amProzessLeer')}</p>
+        ) : (
+          <ul>
+            {tools.map((tool) => (
+              <li key={tool.id}>
+                <Link to={pfad(`/tools/${tool.id}`)}>{tool.name}</Link>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 
