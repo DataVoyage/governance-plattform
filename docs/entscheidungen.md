@@ -1,8 +1,14 @@
 # Entwurfsentscheidungen und Auslegungen
 
-Dieses Dokument hält fest, wo die Umsetzung die Architekturvorgabe
-(`docs/architektur.md`) auslegt, präzisiert oder bewusst von ihr abweicht. Alles
-andere folgt der Vorgabe unverändert.
+Dieses Dokument hält fest, wo die Umsetzung die Architekturvorgabe auslegt,
+präzisiert oder bewusst von ihr abweicht. Alles andere folgt der Vorgabe
+unverändert.
+
+Die Vorgabe selbst — das interne Dokument „Governance-Plattform — Technische
+Architektur" und das übergeordnete Leitdokument — liegt nicht in diesem
+Repository. Verweise darauf erfolgen über Abschnittsnummern: `Architektur 7.3`
+meint Abschnitt 7.3 des Architekturdokuments, `Leitdokument A.13.5` den
+entsprechenden Abschnitt des Leitdokuments.
 
 ## E-1 — `customer` und `ausfallfolge` sind kontrollierte Listen, kein Freitext
 

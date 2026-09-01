@@ -4,9 +4,15 @@ Verwaltungsschicht der Governance: das System, in dem Prozessobjekte,
 Tool-Objekte und Datenobjekte geführt, bewertet, verknüpft und in ihrem
 Compliance-Zustand nachverfolgt werden.
 
-Die verbindliche Vorgabe ist [`docs/architektur.md`](docs/architektur.md).
-Dieses Repository setzt sie in sieben einzeln abnehmbaren Phasen um; Stand und
-Abnahmenachweis je Phase stehen in [`docs/phasen.md`](docs/phasen.md),
+Die verbindliche Vorgabe ist das interne Architekturdokument
+„Governance-Plattform — Technische Architektur"; es liegt **nicht** in diesem
+Repository. Code, Tests und Dokumentation verweisen darauf über
+Abschnittsnummern (`Architektur 8.2`) und auf das übergeordnete Leitdokument
+„Governance by Design für Citizen Development und Custom Code" (`Leitdokument
+A.13.5`).
+
+Dieses Repository setzt die Vorgabe in sieben einzeln abnehmbaren Phasen um;
+Stand und Abnahmenachweis je Phase stehen in [`docs/phasen.md`](docs/phasen.md),
 Abweichungen und Auslegungen in [`docs/entscheidungen.md`](docs/entscheidungen.md).
 
 **Was diese Anwendung nicht ist:** Sie provisioniert keine Infrastruktur — keine
@@ -19,7 +25,7 @@ Systeme docken über die Adapter- und Integrationsschicht an (Architektur 7).
 |---|---|
 | `backend/` | FastAPI-API, Geschäftslogik, Datenmodell, Alembic-Migrationen, Sync-Worker |
 | `frontend/` | React-Single-Page-Application (TypeScript, Vite), Sprachpfad-Routing |
-| `docs/` | Architekturvorgabe, Phasenstand, Entwurfsentscheidungen |
+| `docs/` | Phasenstand und Entwurfsentscheidungen (die Architekturvorgabe selbst liegt intern) |
 | `beispieldaten/` | Beispielexport im Import-Vertragsformat (Architektur 7.2) |
 
 Drei getrennte Images, wie in Architektur 6.2 festgelegt: Backend, Frontend,

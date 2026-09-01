@@ -3,6 +3,9 @@
 Sieben Phasen, jede einzeln abnehmbar (Architektur 11). Eine Phase gilt erst als
 abgeschlossen, wenn alle ihre Abnahmekriterien durch einen Test belegt sind.
 
+Die Abnahmekriterien stammen aus dem internen Architekturdokument, das nicht in
+diesem Repository liegt; sie sind unten je Phase im Wortlaut wiedergegeben.
+
 | Phase | Inhalt | Stand |
 |---|---|---|
 | 1 | Fundament | ✅ abgeschlossen |
