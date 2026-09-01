@@ -1,0 +1,92 @@
+:root {
+  --grund: #ffffff;
+  --schrift: #1c2024;
+  --gedaempft: #5b6672;
+  --linie: #d7dce1;
+  --akzent: #1f5f8b;
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --grund: #14171a;
+    --schrift: #e7ebef;
+    --gedaempft: #9aa5b1;
+    --linie: #2b3238;
+    --akzent: #6fb3dd;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--grund);
+  color: var(--schrift);
+  font: 15px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+.huelle { max-width: 68rem; margin: 0 auto; padding: 0 1.25rem 3rem; }
+
+.kopfzeile {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--linie);
+  flex-wrap: wrap;
+}
+
+.marke { font-weight: 650; text-decoration: none; color: var(--schrift); }
+.kopfzeile-rechts { margin-left: auto; display: flex; align-items: center; gap: 0.75rem; }
+.nutzer { color: var(--gedaempft); }
+
+a { color: var(--akzent); }
+
+table { border-collapse: collapse; width: 100%; margin-top: 1rem; }
+th, td { text-align: left; padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--linie); }
+th { color: var(--gedaempft); font-weight: 600; }
+
+.formular { display: grid; gap: 0.35rem; max-width: 34rem; }
+.formular label { font-weight: 600; margin-top: 0.6rem; }
+.formular small { color: var(--gedaempft); }
+input, select, textarea {
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--linie);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+textarea { min-height: 5rem; }
+
+button, .knopf {
+  display: inline-block;
+  margin-top: 1rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--akzent);
+  border-radius: 4px;
+  background: var(--akzent);
+  color: #fff;
+  font: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.kopfzeile button { margin-top: 0; background: transparent; color: var(--akzent); }
+
+.felder { display: grid; grid-template-columns: 14rem 1fr; gap: 0.35rem 1rem; }
+.felder dt { color: var(--gedaempft); }
+.felder dd { margin: 0; }
+
+.abgeleitet {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  border: 1px dashed var(--linie);
+  border-radius: 6px;
+}
+
+[role='alert'] { color: #b3261e; }
+
+fieldset { border: 1px solid var(--linie); border-radius: 6px; margin-top: 1rem; }
+fieldset label { display: block; font-weight: 400; }

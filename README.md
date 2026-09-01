@@ -1,0 +1,103 @@
+# Governance-Plattform
+
+Verwaltungsschicht der Governance: das System, in dem Prozessobjekte,
+Tool-Objekte und Datenobjekte geführt, bewertet, verknüpft und in ihrem
+Compliance-Zustand nachverfolgt werden.
+
+Die verbindliche Vorgabe ist [`docs/architektur.md`](docs/architektur.md).
+Dieses Repository setzt sie in sieben einzeln abnehmbaren Phasen um; Stand und
+Abnahmenachweis je Phase stehen in [`docs/phasen.md`](docs/phasen.md),
+Abweichungen und Auslegungen in [`docs/entscheidungen.md`](docs/entscheidungen.md).
+
+**Was diese Anwendung nicht ist:** Sie provisioniert keine Infrastruktur — keine
+GCP-Projekte, keine Kubernetes-Namespaces, keine Apps-Script-Deployments. Solche
+Systeme docken über die Adapter- und Integrationsschicht an (Architektur 7).
+
+## Aufbau
+
+| Verzeichnis | Inhalt |
+|---|---|
+| `backend/` | FastAPI-API, Geschäftslogik, Datenmodell, Alembic-Migrationen, Sync-Worker |
+| `frontend/` | React-Single-Page-Application (TypeScript, Vite), Sprachpfad-Routing |
+| `docs/` | Architekturvorgabe, Phasenstand, Entwurfsentscheidungen |
+| `beispieldaten/` | Beispielexport im Import-Vertragsformat (Architektur 7.2) |
+
+Drei getrennte Images, wie in Architektur 6.2 festgelegt: Backend, Frontend,
+Sync-Worker. Das Registry-Ziel ist über `GP_IMAGE_REGISTRY` konfigurierbar und
+nirgends im Code verankert.
+
+## Schnellstart mit Docker Compose
+
+```bash
+docker compose up --build
+```
+
+- Oberfläche: <http://localhost:5173/de/prozesse>
+- API-Dokumentation (OpenAPI): <http://localhost:8000/api/v1/docs>
+
+Für den Erstzugang eine Kennung in `GP_BOOTSTRAP_ADMIN_SUBJECTS` eintragen;
+dieses Subject erhält bei seiner ersten Anmeldung global die Rollen
+App-Administrator und Governance. Ohne diesen Startpunkt könnte niemand die
+erste Rollenzuweisung vornehmen, weil Rollen nur ein App-Administrator vergibt.
+
+Beispieldaten einspielen (Sync-Worker als eigener Container):
+
+```bash
+docker compose run --rm sync-worker \
+  --api http://backend:8000 --token "<Token der Plattform-Rolle>" \
+  --datei /daten/zentrale-entwicklungsplattform.json
+```
+
+## Entwicklung ohne Container
+
+```bash
+# Backend
+cd backend
+uv sync --all-groups
+GP_DATABASE_URL="sqlite:///./lokal.db" uv run python -m app.devserver --frisch
+
+# Frontend
+cd frontend
+npm ci
+VITE_API_BASIS=http://127.0.0.1:8100 npm run dev
+```
+
+## Tests
+
+| Was | Befehl | Mindestabdeckung |
+|---|---|---|
+| Backend | `cd backend && uv run pytest --cov` | 90 % (erzwungen) |
+| Frontend | `cd frontend && npm run coverage` | 90 % (erzwungen) |
+| Oberfläche, headless | `cd frontend && npm run e2e` | — |
+
+Die Oberflächentests laufen ausschließlich gegen einen **headless** Chromium
+(Playwright); es wird kein realer, vom Entwickler bedienter Browser
+angesteuert. Playwright startet dafür selbst ein Backend mit temporärer
+SQLite-Datenbank und die gebaute Single-Page-Application.
+
+Die Backend-Testsuite läuft gegen SQLite, damit sie ohne Container-Start
+reproduzierbar ist; produktiv ist PostgreSQL gesetzt. Alles Dialektspezifische
+ist auf den Typ-Adapter `app.db.GUID` beschränkt, und das Testschema entsteht
+aus denselben Alembic-Migrationen wie in Produktion.
+
+## Konfiguration
+
+Zwei getrennte Mechanismen für zwei Arten von Einstellungen (Architektur 6.6):
+
+- **ENV** (`GP_*`) — wie die Anwendung läuft: Datenbankverbindung, OIDC,
+  Registry, CA-Bundle, Log-Level. Ändert sich beim Deployment.
+- **`konfiguration`-Tabelle** — was die Anwendung an Governance-Regeln
+  durchsetzt: Fristen, Erinnerungsvorlauf, Schwellen. Ändert die
+  Governance-Rolle im laufenden Betrieb, ohne Deployment; jede Änderung läuft
+  wie jede andere schreibende Aktion über den `change_log`.
+
+| ENV-Variable | Bedeutung |
+|---|---|
+| `GP_DATABASE_URL` | Verbindungszeichenfolge (PostgreSQL produktiv) |
+| `GP_OIDC_ISSUER`, `GP_OIDC_JWKS_URL`, `GP_OIDC_AUDIENCE` | Zentrale Unternehmensidentität |
+| `GP_AUTH_DEV_MODE` | Nur Entwicklung: lokal ausgestellte Token statt OIDC |
+| `GP_BOOTSTRAP_ADMIN_SUBJECTS` | Subjects, die beim Erstzugang die Startrollen erhalten |
+| `GP_QUERY_API_SERVICE_TOKENS` | `name:token`-Paare andockender Anwendungen |
+| `GP_CORS_ORIGINS` | Erlaubte Herkünfte der Single-Page-Application |
+| `GP_CA_BUNDLE_PATH` | Zusätzliches CA-Bundle für ausgehende Verbindungen |
+| `GP_IMAGE_REGISTRY` | Registry-Ziel der Images |

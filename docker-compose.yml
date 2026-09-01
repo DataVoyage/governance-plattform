@@ -1,0 +1,69 @@
+# Entwicklungsumgebung mit denselben getrennten Containern wie in Produktion
+# (Architektur 6.5) — keine abweichende, monolithische lokale Umgebung.
+
+services:
+  datenbank:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: governance
+      POSTGRES_PASSWORD: governance
+      POSTGRES_DB: governance
+    ports:
+      - "5432:5432"
+    volumes:
+      - datenbank:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U governance"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    image: ${GP_IMAGE_REGISTRY:-localhost:5000}/governance-backend:${GP_IMAGE_TAG:-dev}
+    depends_on:
+      datenbank:
+        condition: service_healthy
+    environment:
+      GP_DATABASE_URL: postgresql+psycopg://governance:governance@datenbank:5432/governance
+      GP_AUTH_DEV_MODE: "true"
+      GP_AUTH_DEV_SECRET: entwicklungsgeheimnis
+      GP_CORS_ORIGINS: http://localhost:5173,http://localhost:4173
+      GP_QUERY_API_SERVICE_TOKENS: self-service-frontend:entwicklungs-service-token
+      GP_LOG_LEVEL: INFO
+    command: >
+      sh -c "alembic upgrade head &&
+             uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASIS: http://localhost:8000
+    image: ${GP_IMAGE_REGISTRY:-localhost:5000}/governance-frontend:${GP_IMAGE_TAG:-dev}
+    depends_on:
+      - backend
+    ports:
+      - "5173:8080"
+
+  sync-worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.worker
+    image: ${GP_IMAGE_REGISTRY:-localhost:5000}/governance-sync-worker:${GP_IMAGE_TAG:-dev}
+    depends_on:
+      - backend
+    # Laeuft produktiv als Kubernetes-CronJob je Adapter; lokal auf Zuruf:
+    #   docker compose run --rm sync-worker --api http://backend:8000 --token <t> --datei /daten/export.json
+    profiles: ["worker"]
+    volumes:
+      - ./beispieldaten:/daten:ro
+    entrypoint: ["python", "-m", "app.sync.worker"]
+    command: ["--help"]
+
+volumes:
+  datenbank:

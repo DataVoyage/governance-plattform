@@ -1,0 +1,87 @@
+# Entwurfsentscheidungen und Auslegungen
+
+Dieses Dokument hält fest, wo die Umsetzung die Architekturvorgabe
+(`docs/architektur.md`) auslegt, präzisiert oder bewusst von ihr abweicht. Alles
+andere folgt der Vorgabe unverändert.
+
+## E-1 — `customer` und `ausfallfolge` sind kontrollierte Listen, kein Freitext
+
+**Vorgabe:** Abschnitt 3.2 führt `customer` als „Enum/Text" mit dem Zusatz
+„Reichweiten-Ableitung" und `ausfallfolge` als „Text".
+
+**Umsetzung:** Beide Felder sind Auswahllisten (`Kundenkreis`,
+`Ausfallfolge`).
+
+**Grund:** Reichweite und Kritikalität werden serverseitig abgeleitet und nicht
+abgefragt (Leitdokument P1, Architektur 8.1). Eine Ableitung aus Freitext wäre
+nicht bestimmbar und damit nicht prüfbar — das Abnahmekriterium „nach Speichern
+serverseitig berechnet" ließe sich gegen ein Freitextfeld nicht testen. Die
+übrigen acht SIPOC-Felder bleiben Freitext beziehungsweise Referenz; die Zahl
+der Felder im Formular bleibt bei zehn.
+
+## E-2 — Ableitungsregeln
+
+Das Leitdokument liegt diesem Repository nicht bei; die konkreten Formeln sind
+hier festgelegt und in `app/services/ableitung.py` dokumentiert:
+
+- **Reichweite** = Kundenkreis, angehoben auf `unternehmen`, sobald der Prozess
+  in mehr als einer Landesorganisation umgesetzt wird.
+- **Kritikalität** = eigene Ausfallfolge (0–3), angehoben auf das Maximum der
+  transitiven Nachfolger in der Prozesskette (Leitdokument A.4.2). Die Rekursion
+  ist gegen Zyklen abgesichert, weil die Kette technisch n:m ist.
+- **Mitbestimmungsflag** = wahr, sobald ein beteiligtes Datenobjekt die
+  Kategorie `mitarbeiterbezogen` trägt oder die neueste Bewertung eine
+  Mitbestimmungsstufe größer null hat.
+
+Ändert sich eine Ausfallfolge, führt die Anwendung die Kritikalität aller
+transitiven Vorgänger nach; sonst wäre sie nach einer Änderung still veraltet.
+
+## E-3 — Erstzugang über `GP_BOOTSTRAP_ADMIN_SUBJECTS`
+
+Rollen vergibt ausschließlich der App-Administrator (Matrix 5.3). Damit die
+allererste Zuweisung überhaupt möglich ist, erhält ein in dieser ENV-Variable
+genanntes OIDC-Subject bei seiner ersten Anmeldung global die Rollen
+App-Administrator und Governance. Der Vorgang ist idempotent und greift nur für
+ausdrücklich konfigurierte Subjects.
+
+## E-4 — Entwicklungsanmeldung statt zweitem Anmeldeweg
+
+`GP_AUTH_DEV_MODE` ersetzt nur den *Aussteller* des Tokens, nicht die Prüfkette:
+auch dort wird ein signiertes JWT erwartet und validiert. Ist der Modus aus —
+der Produktionsfall —, antwortet die Route `POST /api/v1/auth/dev-token` mit
+404, damit es keinen zweiten Anmeldeweg neben der zentralen Identität gibt
+(Architektur 10.1). Ein Test hält das fest.
+
+## E-5 — SQLite in der Testsuite, PostgreSQL in Produktion
+
+Die Backend-Tests laufen gegen eine SQLite-Datei je Test, damit sie ohne
+Container-Start reproduzierbar sind. Damit das keine Schemafehler verdeckt,
+entsteht das Testschema aus denselben Alembic-Migrationen wie in Produktion, und
+alles Dialektspezifische ist auf den Typ-Adapter `app.db.GUID` beschränkt.
+Arrays und JSON-Spalten sind generisch (`JSON`) statt PostgreSQL-spezifisch
+(`JSONB`, `ARRAY`) modelliert — der Preis dafür sind fehlende
+GIN-Indizes, die bei den erwarteten Datenmengen nicht ins Gewicht fallen.
+
+## E-6 — Datenkategorien
+
+Die Kategorien eines Datenobjekts (Leitdokument A.7) sind hier als
+`oeffentlich`, `intern`, `vertraulich`, `personenbezogen`, `mitarbeiterbezogen`
+und `besondere_kategorie` gesetzt. Sie sind bewusst nullable, damit die
+Cockpit-Ansicht „Datenobjekte ohne Kategorie" (Architektur 8.7) überhaupt
+etwas zu zeigen hat.
+
+## E-7 — Offene Punkte der Architektur
+
+Die fünf offenen Punkte aus Architektur 12 bleiben offen; die Umsetzung nimmt
+keine Entscheidung vorweg:
+
+1. **Cloud SQL vs. selbstbetriebenes PostgreSQL** — die Anwendung kennt nur
+   `GP_DATABASE_URL`; beide Varianten sind ohne Codeänderung bedienbar.
+2. **Frontend-Framework** — React wie in der Architektur begründet gewählt.
+3. **Format und Frequenz des Imports** — der Zielvertrag steht
+   (`POST /api/v1/import/assets`); der Sync-Worker liest wahlweise eine Datei
+   oder eine HTTP-Quelle in genau diesem Format.
+4. **Format der `owner_hinweis`-Zuordnung** — wird als Zeichenkette gespeichert
+   und nicht als harter Fremdschlüssel aufgelöst.
+5. **Ausstellung der Service-Zugangsdaten** — die Query-API prüft Tokens aus
+   `GP_QUERY_API_SERVICE_TOKENS`; wer sie ausstellt, ist Betriebsfrage.

@@ -1,0 +1,21 @@
+{
+  "quelle": "zentrale-entwicklungsplattform",
+  "datensaetze": [
+    { "typ": "fachbereich", "externe_id": "FB-FIN", "name": "Finance", "metadaten": { "code": "fb-fin" } },
+    { "typ": "fachbereich", "externe_id": "FB-HR", "name": "Human Resources", "metadaten": { "code": "fb-hr" } },
+    { "typ": "organisationseinheit", "externe_id": "OE-FIN-INT", "name": "Finance International",
+      "metadaten": { "fachbereich_externe_id": "FB-FIN", "ebene": "INT" } },
+    { "typ": "organisationseinheit", "externe_id": "OE-FIN-DE", "name": "Finance Deutschland",
+      "metadaten": { "fachbereich_externe_id": "FB-FIN", "ebene": "LAND", "land_code": "DE" } },
+    { "typ": "organisationseinheit", "externe_id": "OE-FIN-FR", "name": "Finance Frankreich",
+      "metadaten": { "fachbereich_externe_id": "FB-FIN", "ebene": "LAND", "land_code": "FR" } },
+    { "typ": "organisationseinheit", "externe_id": "OE-HR-INT", "name": "HR International",
+      "metadaten": { "fachbereich_externe_id": "FB-HR", "ebene": "INT" } },
+    { "typ": "team", "externe_id": "TEAM-AP", "name": "Accounts Payable",
+      "owner_hinweis": "ap.lead@beispiel-ag.de",
+      "metadaten": { "organisationseinheit_externe_id": "OE-FIN-DE" } },
+    { "typ": "team", "externe_id": "TEAM-PAYROLL", "name": "Payroll",
+      "owner_hinweis": "payroll.lead@beispiel-ag.de",
+      "metadaten": { "organisationseinheit_externe_id": "OE-HR-INT" } }
+  ]
+}

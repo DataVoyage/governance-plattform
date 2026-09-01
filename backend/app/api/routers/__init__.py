@@ -1,0 +1,14 @@
+"""Routenmodule, ein Modul je fachlichem Bereich."""
+
+from fastapi import APIRouter
+
+from app.api.routers import admin, auth, integration, organisation, prozesse
+
+api_router = APIRouter(prefix="/api/v1")
+api_router.include_router(auth.router)
+api_router.include_router(admin.router)
+api_router.include_router(organisation.router)
+api_router.include_router(prozesse.router)
+api_router.include_router(integration.router)
+
+__all__ = ["api_router"]
