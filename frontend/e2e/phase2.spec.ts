@@ -68,16 +68,19 @@ async function anmelden(seite: Page) {
   await expect(seite.getByRole('heading', { name: 'Prozessobjekte' })).toBeVisible();
 }
 
-/** Beantwortet die aktuelle Frage und wartet, bis der Bildschirm wechselt. */
+/** Beantwortet die aktuelle Frage und wartet, bis der Bildschirm wechselt.
+
+    Der Wechsel wird an der Frage-ID festgemacht, nicht am Fragetext: die ID
+    ist stabil und eindeutig, waehrend ein Text sich zwischen zwei Schritten
+    theoretisch wiederholen koennte. */
 async function antworte(seite: Page, antwort: 'Ja' | 'Nein') {
-  const vorher = await seite.getByTestId('frage').textContent();
+  const vorher = await seite.getByTestId('frage').getAttribute('data-frage-id');
   await seite.getByRole('button', { name: antwort, exact: true }).click();
   await expect
-    .poll(async () =>
-      (await seite.getByTestId('frage').count()) === 0
-        ? '__ende__'
-        : await seite.getByTestId('frage').textContent(),
-    )
+    .poll(async () => {
+      if ((await seite.getByTestId('frage').count()) === 0) return '__ende__';
+      return seite.getByTestId('frage').getAttribute('data-frage-id');
+    })
     .not.toBe(vorher);
 }
 

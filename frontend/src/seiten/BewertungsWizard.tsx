@@ -151,7 +151,9 @@ export function BewertungsWizard() {
         {t('bewertung.schritt')} {frage.nummer} {t('bewertung.von')} {frage.anzahl_bloecke} —{' '}
         {frage.block_titel}
       </p>
-      <p data-testid="frage">{frage.text}</p>
+      <p data-testid="frage" data-frage-id={frage.id}>
+        {frage.text}
+      </p>
       <button type="button" onClick={() => beantworte(true)}>
         {t('bewertung.ja')}
       </button>{' '}

@@ -30,6 +30,26 @@ def anlegen(client: TestClient, anmeldung, daten: dict):
     return client.post("/api/v1/prozesse", json=daten, headers=anmeldung.kopf)
 
 
+def aktiviere(client: TestClient, anmeldung, prozess_id: str):
+    """Bewertet mit Tier 1 und setzt den Prozess aktiv.
+
+    Ab Tier 3 kaemen Selbstverpflichtung und Gate 1 dazu (siehe test_gates.py);
+    fuer die Sichtbarkeits- und Filtertests genuegt der einfache Weg.
+    """
+    from tests.test_bewertung import antworten_fuer, profil_von
+
+    client.post(
+        f"/api/v1/prozesse/{prozess_id}/bewertungen",
+        json={"modus": "vollstaendig", "antworten": antworten_fuer(profil_von(ur=1))},
+        headers=anmeldung.kopf,
+    )
+    antwort = client.patch(
+        f"/api/v1/prozesse/{prozess_id}", json={"status": "aktiv"}, headers=anmeldung.kopf
+    )
+    assert antwort.status_code == 200, antwort.text
+    return antwort.json()
+
+
 def test_owner_legt_prozess_mit_allen_zehn_feldern_an(
     client: TestClient, owner, vertretung, prozess_daten
 ) -> None:
@@ -154,13 +174,14 @@ def test_prozess_aendern_und_status_setzen(
     prozess = anlegen(client, owner, prozess_daten(owner.user_id, vertretung.user_id)).json()
     antwort = client.patch(
         f"/api/v1/prozesse/{prozess['id']}",
-        json={"name": "Rechnungspruefung DE", "ausfallfolge": "kritisch", "status": "aktiv"},
+        json={"name": "Rechnungspruefung DE", "ausfallfolge": "kritisch"},
         headers=owner.kopf,
     )
     assert antwort.status_code == 200
     assert antwort.json()["name"] == "Rechnungspruefung DE"
     assert antwort.json()["kritikalitaet"] == 3
-    assert antwort.json()["status"] == "aktiv"
+    # Der Statuswechsel nach "aktiv" hat eigene Bedingungen; siehe test_gates.py.
+    assert antwort.json()["status"] == "entwurf"
 
 
 def test_prozessgeber_wechsel_nur_in_den_eigenen_bereich(
@@ -403,7 +424,7 @@ def test_liste_nach_fachbereich_und_status_filtern(
         client, owner, prozess_daten(owner.user_id, vertretung.user_id, name="Aktiv")
     ).json()
     anlegen(client, owner, prozess_daten(owner.user_id, vertretung.user_id, name="Entwurf"))
-    client.patch(f"/api/v1/prozesse/{erster['id']}", json={"status": "aktiv"}, headers=owner.kopf)
+    aktiviere(client, owner, erster["id"])
     nur_aktiv = client.get("/api/v1/prozesse?status_filter=aktiv", headers=governance.kopf).json()
     assert [p["name"] for p in nur_aktiv] == ["Aktiv"]
     finance = client.get(

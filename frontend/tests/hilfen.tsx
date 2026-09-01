@@ -3,10 +3,15 @@ import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 
 import { App } from '@/App';
-import type { Prozess } from '@/api/typen';
+import type { Prozess, Rollenzuweisung } from '@/api/typen';
 import { SitzungsAnbieter } from '@/zustand/Sitzung';
 
-export const PROFIL = {
+export const PROFIL: {
+  id: string;
+  email: string;
+  name: string;
+  rollen: Rollenzuweisung[];
+} = {
   id: 'user-1',
   email: 'owner@beispiel-ag.de',
   name: 'Olivia Owner',
@@ -15,7 +20,7 @@ export const PROFIL = {
       id: 'rz-1',
       user_id: 'user-1',
       rolle: 'prozess_owner',
-      scope_typ: 'organisationseinheit' as const,
+      scope_typ: 'organisationseinheit',
       scope_id: 'org-int',
     },
   ],

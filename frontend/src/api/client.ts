@@ -11,12 +11,18 @@ import type {
   BewertungsModus,
   DatenObjekt,
   Datenkategorie,
+  AussageEingabe,
   Fachbereich,
+  GateStatus,
+  GateTyp,
+  GateVorgang,
+  Katalog,
   Nutzer,
   Organisationseinheit,
   Profil,
   Prozess,
   ProzessEingabe,
+  Selbstverpflichtung,
   ToolObjekt,
   Umsetzung,
   WizardSchritt,
@@ -137,6 +143,42 @@ export const api = {
     anfrage<DatenObjekt>(`/api/v1/datenobjekte/${id}`, {
       methode: 'PATCH',
       koerper: { kategorie },
+      token,
+    }),
+  katalog: (token: string) =>
+    anfrage<Katalog[]>('/api/v1/selbstverpflichtungen/katalog', { token }),
+  selbstverpflichtungen: (token: string, prozessId: string) =>
+    anfrage<Selbstverpflichtung[]>(`/api/v1/prozesse/${prozessId}/selbstverpflichtungen`, {
+      token,
+    }),
+  selbstverpflichtungAbgeben: (
+    token: string,
+    prozessId: string,
+    aussagen: Record<string, AussageEingabe>,
+  ) =>
+    anfrage<Selbstverpflichtung>('/api/v1/selbstverpflichtungen', {
+      methode: 'POST',
+      koerper: { typ: 'prozesseigner', prozessobjekt_id: prozessId, aussagen },
+      token,
+    }),
+  gates: (token: string, prozessId: string) =>
+    anfrage<GateVorgang[]>(`/api/v1/prozesse/${prozessId}/gates`, { token }),
+  offeneGates: (token: string) => anfrage<GateVorgang[]>('/api/v1/gates', { token }),
+  gateAusloeser: (token: string) => anfrage<string[]>('/api/v1/gates/ausloeser', { token }),
+  gateEinreichen: (
+    token: string,
+    prozessId: string,
+    daten: { gate_typ: GateTyp; ausloeser?: string | null; begruendung?: string },
+  ) =>
+    anfrage<GateVorgang>(`/api/v1/prozesse/${prozessId}/gates`, {
+      methode: 'POST',
+      koerper: daten,
+      token,
+    }),
+  gateEntscheiden: (token: string, gateId: string, status: GateStatus, kommentar = '') =>
+    anfrage<GateVorgang>(`/api/v1/gates/${gateId}/entscheidung`, {
+      methode: 'POST',
+      koerper: { status, kommentar },
       token,
     }),
   umsetzungAnlegen: (token: string, prozessId: string, landOrgId: string) =>

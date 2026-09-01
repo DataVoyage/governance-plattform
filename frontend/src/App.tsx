@@ -6,9 +6,11 @@ import { Layout } from '@/komponenten/Layout';
 import { Anmeldung } from '@/seiten/Anmeldung';
 import { BewertungsWizard } from '@/seiten/BewertungsWizard';
 import { DatenobjektListe } from '@/seiten/DatenobjektListe';
+import { Gates } from '@/seiten/Gates';
 import { ProzessDetail } from '@/seiten/ProzessDetail';
 import { ProzessFormular } from '@/seiten/ProzessFormular';
 import { ProzessListe } from '@/seiten/ProzessListe';
+import { SelbstverpflichtungSeite } from '@/seiten/Selbstverpflichtung';
 import { ToolDetail } from '@/seiten/ToolDetail';
 import { ToolListe } from '@/seiten/ToolListe';
 
@@ -41,6 +43,11 @@ export function App() {
           <Route path="prozesse/neu" element={<ProzessFormular />} />
           <Route path="prozesse/:id" element={<ProzessDetail />} />
           <Route path="prozesse/:id/bewertung" element={<BewertungsWizard />} />
+          <Route
+            path="prozesse/:id/selbstverpflichtung"
+            element={<SelbstverpflichtungSeite />}
+          />
+          <Route path="gates" element={<Gates />} />
           <Route path="tools" element={<ToolListe />} />
           <Route path="tools/:id" element={<ToolDetail />} />
           <Route path="datenobjekte" element={<DatenobjektListe />} />

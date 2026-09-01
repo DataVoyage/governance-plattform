@@ -265,6 +265,36 @@ def anlegen(db: Session, principal: Principal, daten: ProzessAnlegen) -> Prozess
     return prozess
 
 
+def pruefe_aktivierung(db: Session, prozess: Prozessobjekt) -> None:
+    """Torwaechter fuer den Wechsel nach ``aktiv`` (Leitdokument A.10.5, A.11).
+
+    Ab Tier 3 haengen zwei Bedingungen an der Aktivierung: eine vollstaendige,
+    gueltige Selbstverpflichtung des Prozesseigners und die Erstfreigabe durch
+    Gate 1. Beide werden hier geprueft und nicht in der Oberflaeche, damit ein
+    direkter API-Aufruf sie nicht umgehen kann.
+
+    Die Importe stehen bewusst in der Funktion: Selbstverpflichtungs- und
+    Gate-Modul bauen ihrerseits auf diesem Modul auf.
+    """
+    from app.models.enums import GateTyp
+    from app.services import gate, selbstverpflichtung
+
+    bewertung = neueste_bewertung(prozess)
+    if bewertung is None:
+        raise Ungueltig("Ein Prozessobjekt wird erst nach einer Bewertung aktiv (Leitdokument A.8)")
+    if bewertung.tier < 3:
+        return
+    if not selbstverpflichtung.ist_gedeckt(db, prozess):
+        raise Ungueltig(
+            "Ab Tier 3 wird ein Prozessobjekt erst nach vollstaendig abgegebener "
+            "Selbstverpflichtung aktiv"
+        )
+    if not gate.ist_freigegeben(db, prozess.id, GateTyp.GATE_1):
+        raise Ungueltig(
+            "Ab Tier 3 wird ein Prozessobjekt erst nach der Erstfreigabe durch Gate 1 aktiv"
+        )
+
+
 def aendern(
     db: Session, principal: Principal, prozess: Prozessobjekt, daten: ProzessAendern
 ) -> Prozessobjekt:
@@ -289,6 +319,8 @@ def aendern(
         prozess.vorgelagert = _lade_prozesse(db, werte.pop("vorgelagert_ids"))
     if "nachgelagert_ids" in werte:
         prozess.nachgelagert = _lade_prozesse(db, werte.pop("nachgelagert_ids"))
+    if werte.get("status") == ProzessStatus.AKTIV and prozess.status != ProzessStatus.AKTIV:
+        pruefe_aktivierung(db, prozess)
 
     for feld, wert in werte.items():
         setattr(prozess, feld, wert)

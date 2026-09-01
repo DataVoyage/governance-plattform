@@ -10,6 +10,7 @@ from app.api.routers import (
     integration,
     organisation,
     prozesse,
+    verpflichtung,
 )
 
 api_router = APIRouter(prefix="/api/v1")
@@ -19,6 +20,7 @@ api_router.include_router(organisation.router)
 api_router.include_router(prozesse.router)
 api_router.include_router(bewertungen.router)
 api_router.include_router(assets.router)
+api_router.include_router(verpflichtung.router)
 api_router.include_router(integration.router)
 
 __all__ = ["api_router"]

@@ -98,7 +98,33 @@ diese Angleichung würde ein Vergleich zwischen einem frisch geschriebenen und
 einem neu geladenen Zeitstempel je nach Dialekt fehlschlagen. Dieser Unterschied
 darf die Fachlogik nichts angehen; er bleibt deshalb im Typ-Adapter.
 
-## E-9 — Offene Punkte der Architektur
+## E-9 — Aktivierung eines Tier-3-Prozessobjekts
+
+Abnahmekriterium 4.1 nennt die vollständige Selbstverpflichtung als Bedingung
+für den Wechsel nach `aktiv`. Die Umsetzung prüft zwei weitere Bedingungen:
+
+1. **Eine Bewertung muss vorliegen.** Ohne Bewertung ist weder Tier noch
+   K-Klassen-Bild bekannt; ein aktives, unbewertetes Prozessobjekt wäre genau
+   die Lücke, die das Leitdokument schließen will.
+2. **Ab Tier 3 muss Gate 1 freigegeben sein.** Architektur 8.5 beschreibt
+   Gate 1 als „Tier-3-Erstfreigabe" — die Aktivierung *ist* die erste Freigabe.
+   Bliebe sie ungeprüft, wäre Gate 1 ein Vorgang ohne Wirkung.
+
+Beide Prüfungen liegen in der Geschäftslogik (`prozess.pruefe_aktivierung`),
+nicht in der Oberfläche, damit ein direkter API-Aufruf sie nicht umgeht.
+
+## E-10 — Aussagenkataloge der Selbstverpflichtung
+
+Die nummerierten Aussagen aus A.10.2 (sechs für den Prozesseigner) und A.10.3
+(sechs für den technischen Owner) sind in
+`app/services/selbstverpflichtung.py` ausformuliert, weil das Leitdokument
+diesem Repository nicht beiliegt. Sie sind strukturierte Wahrheitswerte mit
+optionalem Kommentar, nie ein Freitextfeld: nur so bleibt auswertbar, was
+Cockpit und Lenkung später auswerten müssen. Die Oberfläche baut ihre
+Checkliste aus dem Katalog-Endpunkt, damit Wortlaut und Reihenfolge an genau
+einer Stelle stehen.
+
+## E-11 — Offene Punkte der Architektur
 
 Die fünf offenen Punkte aus Architektur 12 bleiben offen; die Umsetzung nimmt
 keine Entscheidung vorweg:

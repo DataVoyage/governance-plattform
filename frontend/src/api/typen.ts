@@ -203,3 +203,51 @@ export interface DatenObjekt {
   metadaten: Record<string, unknown>;
   schreibgeschuetzte_felder: string[];
 }
+
+// --- Selbstverpflichtung und Gates (Phase 4) -------------------------------
+
+export type SelbstverpflichtungTyp = 'prozesseigner' | 'technischer_owner';
+export type GateTyp = '1' | '2';
+export type GateStatus = 'eingereicht' | 'in_pruefung' | 'freigegeben' | 'abgelehnt';
+
+export interface Aussage {
+  id: string;
+  text: string;
+}
+
+export interface Katalog {
+  typ: SelbstverpflichtungTyp;
+  aussagen: Aussage[];
+}
+
+export interface AussageEingabe {
+  bestaetigt: boolean;
+  kommentar: string;
+}
+
+export interface Selbstverpflichtung {
+  id: string;
+  typ: SelbstverpflichtungTyp;
+  prozessobjekt_id: string | null;
+  tool_objekt_id: string | null;
+  aussagen: Record<string, AussageEingabe>;
+  vollstaendig: boolean;
+  abgegeben_von: string;
+  abgegeben_am: string;
+  gueltig_bis: string | null;
+  erinnerung_gesendet_am: string | null;
+}
+
+export interface GateVorgang {
+  id: string;
+  prozessobjekt_id: string;
+  gate_typ: GateTyp;
+  ausloeser: string | null;
+  begruendung: string;
+  status: GateStatus;
+  eingereicht_von: string;
+  entschieden_von: string | null;
+  entscheidungskommentar: string;
+  entschieden_am: string | null;
+  erstellt_am: string;
+}

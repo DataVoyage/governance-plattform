@@ -8,7 +8,7 @@ abgeschlossen, wenn alle ihre Abnahmekriterien durch einen Test belegt sind.
 | 1 | Fundament | ✅ abgeschlossen |
 | 2 | Bewertung | ✅ abgeschlossen |
 | 3 | Asset-Management | ✅ abgeschlossen |
-| 4 | Selbstverpflichtung und Gates | ⏳ offen |
+| 4 | Selbstverpflichtung und Gates | ✅ abgeschlossen |
 | 5 | Compliance und Lenkung | ⏳ offen |
 | 6 | Cockpit | ⏳ offen |
 | 7 | Governance-Query-API | ⏳ offen |
@@ -98,3 +98,35 @@ des Import-Adapters um die Typen `tool` und `datenobjekt`.
 ### Abdeckung
 
 - Backend: 98 % · Frontend: 99 % Anweisungen · neun Playwright-Läufe, headless
+
+---
+
+## Phase 4 — Selbstverpflichtung und Gates
+
+**Enthalten:** Selbstverpflichtungs-Modul mit den strukturierten Checklisten aus
+A.10.2 und A.10.3, Gate-Modul mit Einreichung, Governance-Entscheidung und
+Historie, Erinnerungslogik für die jährliche Erneuerung ab Tier 3.
+
+### Abnahmekriterien und Nachweis
+
+| # | Kriterium | Nachweis |
+|---|---|---|
+| 1 | Ein Tier-3-Prozessobjekt wechselt ohne vollständig abgegebene Selbstverpflichtung nicht in den Status „aktiv" | `backend/tests/test_gates.py::test_tier_3_wird_ohne_selbstverpflichtung_nicht_aktiv`, `::test_unvollstaendige_selbstverpflichtung_reicht_nicht`, `frontend/e2e/phase4.spec.ts` |
+| 2 | Eine Gate-2-Einreichung ohne einen der fünf zulässigen Auslöser wird abgelehnt, bevor sie eingereicht werden kann | `backend/tests/test_gates.py::test_gate_2_ohne_ausloeser_wird_abgelehnt`, `::test_gate_2_kennt_nur_die_fuenf_ausloeser`, `frontend/e2e/phase4.spec.ts` (Pflichtauswahl im Formular) |
+| 3 | Nur die Governance-Rolle entscheidet; Prozess-Owner und Auditor erhalten 403 | `backend/tests/test_gates.py::test_nur_governance_entscheidet`, `frontend/e2e/phase4.spec.ts` |
+| 4 | 60 Tage vor Ablauf wird erinnert; nach Fristablauf erscheint der Datensatz im Cockpit-Filter (hier als Datenzustand geprüft) | `backend/tests/test_gates.py::test_erinnerung_60_tage_vor_ablauf_und_ueberfaelligkeit`, `::test_erinnerung_geht_an_den_technischen_owner` |
+
+### Hinweise
+
+Der Vorlauf von 60 Tagen und die Gültigkeitsdauer stehen in der
+`konfiguration`-Tabelle und sind von der Governance-Rolle im laufenden Betrieb
+änderbar. Der Lauf ist idempotent und läuft als Kubernetes-`CronJob`
+(`python -m app.jobs erinnerungen`); ein doppelt gestarteter Job mahnt nicht
+doppelt.
+
+Die Aktivierung eines Tier-3-Prozessobjekts verlangt zusätzlich die Erstfreigabe
+durch Gate 1 — begründet in `docs/entscheidungen.md` (E-9).
+
+### Abdeckung
+
+- Backend: 98 % · Frontend: 99 % Anweisungen · zwölf Playwright-Läufe, headless

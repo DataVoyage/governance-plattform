@@ -3,6 +3,7 @@ import { Link, useParams } from 'react-router-dom';
 
 import { api } from '@/api/client';
 import type { Bewertung, Organisationseinheit, Prozess, ToolObjekt } from '@/api/typen';
+import { ProzessGovernance } from '@/komponenten/ProzessGovernance';
 import { useSprache } from '@/i18n/SprachKontext';
 import { useSitzung } from '@/zustand/Sitzung';
 
@@ -108,6 +109,8 @@ export function ProzessDetail() {
           </table>
         )}
       </section>
+
+      <ProzessGovernance prozessId={prozess.id} />
 
       <section>
         <h2>{t('asset.tools.amProzess')}</h2>
