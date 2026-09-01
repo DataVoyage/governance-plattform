@@ -106,3 +106,8 @@ class ProzessAus(BaseModel):
     nachgelagert_ids: list[uuid.UUID] = Field(default_factory=list)
     umsetzungen: list[UmsetzungAus] = Field(default_factory=list)
     tool_objekt_ids: list[uuid.UUID] = Field(default_factory=list)
+
+    # Stand der neuesten Bewertung — abgeleitet, nur zur Anzeige (Phase 2).
+    tier: int | None = None
+    ausgeloeste_k_klassen: list[str] = Field(default_factory=list)
+    bewertung_gueltig_bis: datetime | None = None

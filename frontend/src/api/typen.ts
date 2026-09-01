@@ -68,6 +68,9 @@ export interface Prozess {
   nachgelagert_ids: string[];
   umsetzungen: Umsetzung[];
   tool_objekt_ids: string[];
+  tier: number | null;
+  ausgeloeste_k_klassen: string[];
+  bewertung_gueltig_bis: string | null;
 }
 
 export interface ProzessEingabe {
@@ -82,4 +85,66 @@ export interface ProzessEingabe {
   customer: Kundenkreis;
   ausfallfolge: Ausfallfolge;
   umsetzung_land_org_ids?: string[];
+}
+
+// --- Bewertung (Phase 2) ---------------------------------------------------
+
+export type BewertungsModus = 'schnell' | 'vollstaendig';
+
+export interface Frage {
+  id: string;
+  text: string;
+  block: string;
+  block_titel: string;
+  nummer: number;
+  anzahl_bloecke: number;
+}
+
+export interface Ergebnis {
+  tier: number;
+  profil: Record<string, number>;
+  ausgeloeste_k_klassen: string[];
+  vollstaendig: boolean;
+}
+
+export interface WizardSchritt {
+  naechste_frage: Frage | null;
+  abgeschlossen: boolean;
+  verboten: boolean;
+  vollstaendig: boolean;
+  vorschau: Ergebnis | null;
+}
+
+export interface Bewertung {
+  id: string;
+  prozessobjekt_id: string;
+  ki_stufe: number;
+  ds_stufe: number;
+  mb_stufe: number;
+  it_stufe: number;
+  rg_stufe: number;
+  ur_stufe: number;
+  tier: number;
+  gesperrt: boolean;
+  vollstaendig: boolean;
+  ausgeloeste_k_klassen: string[];
+  antworten: Record<string, boolean>;
+  bewertet_von: string;
+  bewertet_am: string;
+  gueltig_bis: string | null;
+}
+
+export interface Alarm {
+  id: string;
+  typ: string;
+  prozessobjekt_id: string | null;
+  beschreibung: string;
+  ausgeloest_von: string;
+  quittiert: boolean;
+  erstellt_am: string;
+}
+
+export interface BewertungAbschluss {
+  bewertung: Bewertung | null;
+  alarm: Alarm | null;
 }

@@ -6,7 +6,7 @@ abgeschlossen, wenn alle ihre Abnahmekriterien durch einen Test belegt sind.
 | Phase | Inhalt | Stand |
 |---|---|---|
 | 1 | Fundament | ✅ abgeschlossen |
-| 2 | Bewertung | ⏳ offen |
+| 2 | Bewertung | ✅ abgeschlossen |
 | 3 | Asset-Management | ⏳ offen |
 | 4 | Selbstverpflichtung und Gates | ⏳ offen |
 | 5 | Compliance und Lenkung | ⏳ offen |
@@ -43,3 +43,37 @@ Frontend-Grundgerüst mit Sprachpfad-Routing für Deutsch und Französisch.
 - Backend: 97 % (Schwelle 90 %, erzwungen über `fail_under` in `pyproject.toml`)
 - Frontend: 99 % Anweisungen (Schwelle 90 %, erzwungen über `vite.config.ts`)
 - Oberfläche: drei Playwright-Läufe, ausschließlich headless
+
+---
+
+## Phase 2 — Bewertung
+
+**Enthalten:** der sechsstufige Entscheidungsbaum als geführter Wizard (ein
+Schritt pro Bildschirm, zwei Antwortknöpfe), serverseitige Tier- und
+K-Klassen-Ableitung, Versionierung der Bewertungen mit Historie am
+Prozessobjekt.
+
+**Nicht enthalten, wie vorgegeben:** Asset-Verknüpfung. Die K-Klassen-Anzeige
+sagt, welche Klassen ausgelöst sind — nicht, ob ein konkretes Tool sie erfüllt.
+
+### Abnahmekriterien und Nachweis
+
+| # | Kriterium | Nachweis |
+|---|---|---|
+| 1 | Sechs Themenblöcke in der festgelegten Reihenfolge; Verifikation über alle Antwortkombinationen ergibt das tabellierte Tier | `backend/tests/test_bewertung.py::test_bloecke_stehen_in_der_festgelegten_reihenfolge`, `::test_jede_antwortkombination_ergibt_das_tabellierte_tier` (4096 Kombinationen), `frontend/e2e/phase2.spec.ts` |
+| 2 | Treffer auf „verbotene KI-Praxis" speichert keine Bewertung, sondern erzeugt einen Alarm | `backend/tests/test_bewertung.py::test_verbotstatbestand_speichert_keine_bewertung`, `frontend/e2e/phase2.spec.ts` |
+| 3 | Schnelle Variante endet beim ersten Tier-3-Treffer; vollständige liefert das ganze Profil | `backend/tests/test_bewertung.py::test_schnelle_variante_endet_beim_ersten_tier_3_treffer`, `::test_vollstaendige_variante_liefert_das_ganze_profil`, `frontend/e2e/phase2.spec.ts` |
+| 4 | Neubewertung erzeugt einen neuen Datensatz; die vorherige bleibt einsehbar | `backend/tests/test_bewertung.py::test_neubewertung_erzeugt_neuen_datensatz`, `frontend/tests/bewertung.test.tsx` |
+| 5 | Profil `KI0-DS3-MB1-IT1-RG2-UR2` löst K1–K5, K7, K8, K9 aus — nicht K6, nicht K10 | `backend/tests/test_bewertung.py::test_beispiel_aus_dem_leitdokument`, `frontend/e2e/phase2.spec.ts` |
+
+### Hinweis zur Ableitung
+
+Die konkreten Fragen des Baums und die Bedingungen der zehn Maßnahmenklassen
+sind in `docs/entscheidungen.md` (E-8) festgehalten, weil das Leitdokument
+diesem Repository nicht beiliegt. Es gibt genau **eine** Implementierung: der
+Wizard, die Historie und später die Governance-Query-API rufen dieselben
+Funktionen in `app/services/bewertung.py`.
+
+### Abdeckung
+
+- Backend: 98 % · Frontend: 99 % Anweisungen · sechs Playwright-Läufe, headless

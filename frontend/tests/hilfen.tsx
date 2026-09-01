@@ -49,6 +49,9 @@ export function prozess(ueberschreibungen: Partial<Prozess> = {}): Prozess {
     nachgelagert_ids: [],
     umsetzungen: [],
     tool_objekt_ids: [],
+    tier: null,
+    ausgeloeste_k_klassen: [],
+    bewertung_gueltig_bis: null,
     ...ueberschreibungen,
   };
 }
@@ -57,7 +60,8 @@ export interface Route {
   pfad: string | RegExp;
   methode?: string;
   status?: number;
-  koerper: unknown;
+  /** Fester Koerper, oder eine Funktion fuer wechselnde Antworten je Aufruf. */
+  koerper: unknown | ((aufrufNummer: number) => unknown);
 }
 
 /** Ersetzt fetch durch eine Tabelle aus Pfadmustern und Antworten. */
@@ -77,10 +81,17 @@ export function fetchAttrappe(routen: Route[]) {
         (typeof r.pfad === 'string' ? url.endsWith(r.pfad) : r.pfad.test(url)),
     );
     const status = treffer?.status ?? (treffer ? 200 : 404);
+    const treffernummer = aufrufe.filter(
+      (a) => a.url === url && a.methode === methode,
+    ).length;
+    const koerper =
+      typeof treffer?.koerper === 'function'
+        ? (treffer.koerper as (n: number) => unknown)(treffernummer)
+        : treffer?.koerper;
     return {
       ok: status < 400,
       status,
-      json: async () => treffer?.koerper ?? { detail: `Keine Attrappe fuer ${methode} ${url}` },
+      json: async () => koerper ?? { detail: `Keine Attrappe fuer ${methode} ${url}` },
     } as Response;
   });
   vi.stubGlobal('fetch', attrappe);

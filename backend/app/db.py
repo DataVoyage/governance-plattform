@@ -4,9 +4,10 @@ from __future__ import annotations
 
 import uuid
 from collections.abc import Iterator
+from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import CHAR, String, TypeDecorator, create_engine
+from sqlalchemy import CHAR, DateTime, String, TypeDecorator, create_engine
 from sqlalchemy.dialects.postgresql import UUID as PGUUID
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
@@ -44,6 +45,33 @@ class GUID(TypeDecorator):
         if isinstance(value, uuid.UUID):
             return value
         return uuid.UUID(str(value))
+
+
+class TZDateTime(TypeDecorator):
+    """Zeitstempel, die immer zeitzonenbehaftet zurueckkommen.
+
+    PostgreSQL liefert ``timestamptz`` von sich aus mit Zeitzone; SQLite kennt
+    keine und gibt naive Werte zurueck. Ohne diese Angleichung wuerden
+    Vergleiche zwischen einem frisch geschriebenen und einem neu geladenen
+    Zeitstempel je nach Dialekt fehlschlagen — ein Unterschied, der die
+    Fachlogik nichts angehen darf.
+    """
+
+    impl = DateTime
+    cache_ok = True
+
+    def __init__(self) -> None:
+        super().__init__(timezone=True)
+
+    def process_bind_param(self, value: Any, dialect: Any) -> Any:
+        if isinstance(value, datetime) and value.tzinfo is None:
+            return value.replace(tzinfo=UTC)
+        return value
+
+    def process_result_value(self, value: Any, dialect: Any) -> datetime | None:
+        if isinstance(value, datetime) and value.tzinfo is None:
+            return value.replace(tzinfo=UTC)
+        return value
 
 
 class Base(DeclarativeBase):

@@ -4,6 +4,7 @@ import { STANDARDSPRACHE } from '@/i18n';
 import { SprachAnbieter, useSprache } from '@/i18n/SprachKontext';
 import { Layout } from '@/komponenten/Layout';
 import { Anmeldung } from '@/seiten/Anmeldung';
+import { BewertungsWizard } from '@/seiten/BewertungsWizard';
 import { ProzessDetail } from '@/seiten/ProzessDetail';
 import { ProzessFormular } from '@/seiten/ProzessFormular';
 import { ProzessListe } from '@/seiten/ProzessListe';
@@ -36,6 +37,7 @@ export function App() {
           <Route path="prozesse" element={<ProzessListe />} />
           <Route path="prozesse/neu" element={<ProzessFormular />} />
           <Route path="prozesse/:id" element={<ProzessDetail />} />
+          <Route path="prozesse/:id/bewertung" element={<BewertungsWizard />} />
         </Route>
         <Route path="*" element={<NichtGefunden />} />
       </Route>

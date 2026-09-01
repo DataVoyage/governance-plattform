@@ -70,6 +70,34 @@ und `besondere_kategorie` gesetzt. Sie sind bewusst nullable, damit die
 Cockpit-Ansicht „Datenobjekte ohne Kategorie" (Architektur 8.7) überhaupt
 etwas zu zeigen hat.
 
+## E-8 — Fragen des Bewertungsbaums und Bedingungen der K-Klassen
+
+Das Leitdokument (A.8.5, A.9.2) liegt diesem Repository nicht bei. Der Baum ist
+deshalb in `app/services/bewertungsbaum.py` ausformuliert, die Bedingungen der
+zehn Maßnahmenklassen in `app/services/bewertung.py`. Beide sind so gesetzt,
+dass das im Leitdokument durchgerechnete Beispiel exakt herauskommt: Profil
+`KI0-DS3-MB1-IT1-RG2-UR2` löst K1, K2, K3, K4, K5, K7, K8 und K9 aus — nicht K6
+und nicht K10. Ein Test hält genau das fest.
+
+Struktur des Baums: sechs Blöcke in fester Reihenfolge, innerhalb eines Blocks
+die Fragen absteigend nach Schwere. Die erste bejahte Frage bestimmt die Stufe;
+wird keine bejaht, ist die Stufe 0. Der KI-Block hat eine Einstiegsfrage: ohne
+KI-Einsatz wird der Rest übersprungen. Das Tier ist die höchste erreichte Stufe,
+mindestens 1.
+
+Der Wizard ist **zustandslos**: der Client schickt alle bisherigen Antworten
+mit, der Server bestimmt daraus die nächste Frage. Damit liegt die Reihenfolge
+in der Geschäftslogik und nicht in der Oberfläche, ohne dass eine serverseitige
+Wizard-Sitzung nötig wäre.
+
+## E-9 — Zeitstempel kommen immer zeitzonenbehaftet zurück
+
+`app.db.TZDateTime` normalisiert Zeitstempel beim Lesen auf UTC.
+PostgreSQL liefert `timestamptz` von sich aus mit Zeitzone, SQLite nicht — ohne
+diese Angleichung würde ein Vergleich zwischen einem frisch geschriebenen und
+einem neu geladenen Zeitstempel je nach Dialekt fehlschlagen. Dieser Unterschied
+darf die Fachlogik nichts angehen; er bleibt deshalb im Typ-Adapter.
+
 ## E-7 — Offene Punkte der Architektur
 
 Die fünf offenen Punkte aus Architektur 12 bleiben offen; die Umsetzung nimmt

@@ -6,6 +6,9 @@
  */
 
 import type {
+  Bewertung,
+  BewertungAbschluss,
+  BewertungsModus,
   Fachbereich,
   Nutzer,
   Organisationseinheit,
@@ -13,6 +16,7 @@ import type {
   Prozess,
   ProzessEingabe,
   Umsetzung,
+  WizardSchritt,
 } from './typen';
 
 export const API_BASIS: string =
@@ -80,6 +84,30 @@ export const api = {
     anfrage<Prozess>('/api/v1/prozesse', { methode: 'POST', koerper: daten, token }),
   prozessAendern: (token: string, id: string, daten: Partial<ProzessEingabe>) =>
     anfrage<Prozess>(`/api/v1/prozesse/${id}`, { methode: 'PATCH', koerper: daten, token }),
+  wizardSchritt: (
+    token: string,
+    prozessId: string,
+    modus: BewertungsModus,
+    antworten: Record<string, boolean>,
+  ) =>
+    anfrage<WizardSchritt>(`/api/v1/prozesse/${prozessId}/bewertung/wizard`, {
+      methode: 'POST',
+      koerper: { modus, antworten },
+      token,
+    }),
+  bewertungAbschliessen: (
+    token: string,
+    prozessId: string,
+    modus: BewertungsModus,
+    antworten: Record<string, boolean>,
+  ) =>
+    anfrage<BewertungAbschluss>(`/api/v1/prozesse/${prozessId}/bewertungen`, {
+      methode: 'POST',
+      koerper: { modus, antworten },
+      token,
+    }),
+  bewertungen: (token: string, prozessId: string) =>
+    anfrage<Bewertung[]>(`/api/v1/prozesse/${prozessId}/bewertungen`, { token }),
   umsetzungAnlegen: (token: string, prozessId: string, landOrgId: string) =>
     anfrage<Umsetzung>(`/api/v1/prozesse/${prozessId}/umsetzungen`, {
       methode: 'POST',

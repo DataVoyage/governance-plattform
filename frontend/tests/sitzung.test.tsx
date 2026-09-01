@@ -22,6 +22,8 @@ describe('Anmeldung', () => {
       { pfad: '/api/v1/auth/dev-token', methode: 'POST', koerper: { access_token: 'tok' } },
       { pfad: '/api/v1/auth/me', koerper: PROFIL },
       { pfad: '/api/v1/prozesse', koerper: [prozess()] },
+    { pfad: /\/bewertungen$/, koerper: [] },
+
       { pfad: '/api/v1/organisationseinheiten', koerper: EINHEITEN },
     ]);
     zeichne('/de/anmeldung', false);

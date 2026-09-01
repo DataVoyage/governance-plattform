@@ -5,10 +5,10 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, func
+from sqlalchemy import func
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db import GUID
+from app.db import GUID, TZDateTime
 
 
 def now_utc() -> datetime:
@@ -21,8 +21,8 @@ def uuid_pk() -> Mapped[uuid.UUID]:
 
 class TimestampMixin:
     erstellt_am: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=now_utc, server_default=func.now()
+        TZDateTime(), default=now_utc, server_default=func.now()
     )
     geaendert_am: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=now_utc, onupdate=now_utc, server_default=func.now()
+        TZDateTime(), default=now_utc, onupdate=now_utc, server_default=func.now()
     )

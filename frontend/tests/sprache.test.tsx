@@ -16,6 +16,7 @@ function routen() {
     { pfad: '/api/v1/auth/me', koerper: PROFIL },
     { pfad: '/api/v1/prozesse', koerper: [prozess(), prozess({ id: 'p-2', name: 'Zahlungslauf' })] },
     { pfad: '/api/v1/organisationseinheiten', koerper: EINHEITEN },
+    { pfad: /\/bewertungen$/, koerper: [] },
   ];
 }
 

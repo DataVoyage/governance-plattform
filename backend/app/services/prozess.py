@@ -154,7 +154,15 @@ def liste(
     return list(db.execute(stmt.order_by(Prozessobjekt.name)).scalars())
 
 
+def neueste_bewertung(prozess: Prozessobjekt):
+    """Die juengste Bewertung, oder None — vorherige bleiben erhalten."""
+    if not prozess.bewertungen:
+        return None
+    return max(prozess.bewertungen, key=lambda b: b.bewertet_am)
+
+
 def zu_schema(prozess: Prozessobjekt) -> ProzessAus:
+    bewertung = neueste_bewertung(prozess)
     return ProzessAus(
         id=prozess.id,
         name=prozess.name,
@@ -178,6 +186,9 @@ def zu_schema(prozess: Prozessobjekt) -> ProzessAus:
         nachgelagert_ids=[p.id for p in prozess.nachgelagert],
         umsetzungen=[UmsetzungAus.model_validate(u) for u in prozess.umsetzungen],
         tool_objekt_ids=[t.id for t in prozess.tool_objekte],
+        tier=bewertung.tier if bewertung else None,
+        ausgeloeste_k_klassen=list(bewertung.ausgeloeste_k_klassen) if bewertung else [],
+        bewertung_gueltig_bis=bewertung.gueltig_bis if bewertung else None,
     )
 
 

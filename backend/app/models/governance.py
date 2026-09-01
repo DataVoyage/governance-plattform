@@ -9,7 +9,6 @@ from sqlalchemy import (
     JSON,
     Boolean,
     Column,
-    DateTime,
     ForeignKey,
     Integer,
     String,
@@ -19,7 +18,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from app.db import GUID, Base
+from app.db import GUID, Base, TZDateTime
 from app.models.base import TimestampMixin, uuid_pk
 from app.models.enums import (
     AlarmTyp,
@@ -177,8 +176,8 @@ class Bewertung(Base, TimestampMixin):
     ausgeloeste_k_klassen: Mapped[list[str]] = mapped_column(JSON, default=list)
     antworten: Mapped[dict] = mapped_column(JSON, default=dict)
     bewertet_von: Mapped[uuid.UUID] = mapped_column(GUID, ForeignKey("users.id"))
-    bewertet_am: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    gueltig_bis: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    bewertet_am: Mapped[datetime] = mapped_column(TZDateTime())
+    gueltig_bis: Mapped[datetime | None] = mapped_column(TZDateTime(), nullable=True)
 
     prozessobjekt: Mapped[Prozessobjekt] = relationship(back_populates="bewertungen")
 
@@ -251,7 +250,7 @@ class ToolObjekt(Base, TimestampMixin):
     status: Mapped[AssetStatus] = mapped_column(String(32), default=AssetStatus.BESTAETIGT)
     metadaten: Mapped[dict] = mapped_column(JSON, default=dict)
     letzte_aktivitaet_am: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        TZDateTime(), nullable=True
     )
 
     prozessobjekte: Mapped[list[Prozessobjekt]] = relationship(
@@ -281,10 +280,10 @@ class Selbstverpflichtung(Base, TimestampMixin):
     aussagen: Mapped[dict] = mapped_column(JSON, default=dict)
     vollstaendig: Mapped[bool] = mapped_column(Boolean, default=False)
     abgegeben_von: Mapped[uuid.UUID] = mapped_column(GUID, ForeignKey("users.id"))
-    abgegeben_am: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    gueltig_bis: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    abgegeben_am: Mapped[datetime] = mapped_column(TZDateTime())
+    gueltig_bis: Mapped[datetime | None] = mapped_column(TZDateTime(), nullable=True)
     erinnerung_gesendet_am: Mapped[datetime | None] = mapped_column(
-        DateTime(timezone=True), nullable=True
+        TZDateTime(), nullable=True
     )
 
 
@@ -302,7 +301,7 @@ class GateVorgang(Base, TimestampMixin):
         GUID, ForeignKey("users.id"), nullable=True
     )
     entscheidungskommentar: Mapped[str] = mapped_column(Text, default="")
-    entschieden_am: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    entschieden_am: Mapped[datetime | None] = mapped_column(TZDateTime(), nullable=True)
 
 
 class ComplianceZustand(Base, TimestampMixin):
@@ -315,7 +314,7 @@ class ComplianceZustand(Base, TimestampMixin):
     farbe: Mapped[ComplianceFarbe] = mapped_column(String(8))
     begruendung: Mapped[str] = mapped_column(Text, default="")
     abweichung_art: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    festgestellt_am: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    festgestellt_am: Mapped[datetime] = mapped_column(TZDateTime())
     festgestellt_von: Mapped[uuid.UUID | None] = mapped_column(
         GUID, ForeignKey("users.id"), nullable=True
     )
@@ -332,7 +331,7 @@ class Lenkungsvorgang(Base, TimestampMixin):
         GUID, ForeignKey("compliance_zustaende.id"), nullable=True
     )
     eskalationsstufe: Mapped[int] = mapped_column(Integer, default=1)
-    frist: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    frist: Mapped[datetime] = mapped_column(TZDateTime())
     zugewiesen_an: Mapped[uuid.UUID | None] = mapped_column(
         GUID, ForeignKey("users.id"), nullable=True
     )
@@ -341,7 +340,7 @@ class Lenkungsvorgang(Base, TimestampMixin):
     aufloesung_bewertung_id: Mapped[uuid.UUID | None] = mapped_column(
         GUID, ForeignKey("bewertungen.id"), nullable=True
     )
-    aufgeloest_am: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    aufgeloest_am: Mapped[datetime | None] = mapped_column(TZDateTime(), nullable=True)
     beschreibung: Mapped[str] = mapped_column(Text, default="")
 
 

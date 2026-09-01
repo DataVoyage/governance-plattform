@@ -5,10 +5,10 @@ from __future__ import annotations
 import uuid
 from datetime import datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
+from sqlalchemy import JSON, ForeignKey, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
-from app.db import GUID, Base
+from app.db import GUID, Base, TZDateTime
 from app.models.base import TimestampMixin, uuid_pk
 from app.models.enums import ChangeAktion
 
@@ -35,7 +35,7 @@ class ChangeLog(Base):
         GUID, ForeignKey("users.id"), nullable=True
     )
     akteur_beschreibung: Mapped[str] = mapped_column(String(255), default="")
-    zeitpunkt: Mapped[datetime] = mapped_column(DateTime(timezone=True), index=True)
+    zeitpunkt: Mapped[datetime] = mapped_column(TZDateTime(), index=True)
 
 
 class Konfiguration(Base, TimestampMixin):
