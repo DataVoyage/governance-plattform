@@ -117,6 +117,9 @@ mit, der Server bestimmt daraus die nächste Frage. Damit liegt die Reihenfolge
 in der Geschäftslogik und nicht in der Oberfläche, ohne dass eine serverseitige
 Wizard-Sitzung nötig wäre.
 
+
+> **Nachtrag vom 02.09.2026:** Das Leitdokument liegt seit heute bei (`docs/leitdokument.md`). Der Abgleich hat gezeigt, dass die hier beschriebene Fassung von der damaligen Vorgabe abweicht — die Entscheidung fiel, **das Dokument** an den Code anzupassen, nicht umgekehrt (E-48). Was unten steht, ist damit nicht mehr meine Auslegung, sondern die geltende Fassung.
+
 ## E-8 — Zeitstempel sind `timestamptz`
 
 Alle Zeitstempel sind `TIMESTAMP WITH TIME ZONE`; PostgreSQL liefert sie
@@ -667,6 +670,9 @@ Auflagen sind in `services/bewertung.py` so ausformuliert, dass sie zu dem
 passen, was die Plattform tatsächlich tut — die Jahresfrist ab Tier 3 etwa
 entspricht der bereits vorhandenen `gueltig_bis`-Logik.
 
+
+> **Nachtrag vom 02.09.2026:** Das Leitdokument liegt seit heute bei (`docs/leitdokument.md`). Der Abgleich hat gezeigt, dass die hier beschriebene Fassung von der damaligen Vorgabe abweicht — die Entscheidung fiel, **das Dokument** an den Code anzupassen, nicht umgekehrt (E-48). Was unten steht, ist damit nicht mehr meine Auslegung, sondern die geltende Fassung.
+
 ## E-32 — Zustimmung zu Text A ist keine Zustimmung zu Text B
 
 Der Aussagenkatalog der Selbstverpflichtung war frei erfunden (E-10, weil das
@@ -853,6 +859,9 @@ Ein laufender Stufe-1-Vorgang wird durch eine spätere Schicht-2-Meldung
 angehoben, statt daneben einen zweiten zu eröffnen. Sonst hätte die Reihenfolge
 der Meldungen über die Schwere entschieden.
 
+
+> **Nachtrag vom 02.09.2026:** Das Leitdokument liegt seit heute bei (`docs/leitdokument.md`). Der Abgleich hat gezeigt, dass die hier beschriebene Fassung von der damaligen Vorgabe abweicht — die Entscheidung fiel, **das Dokument** an den Code anzupassen, nicht umgekehrt (E-48). Was unten steht, ist damit nicht mehr meine Auslegung, sondern die geltende Fassung.
+
 ## E-38 — Der Rahmen zeigt neben jedem erlaubten Wert den gemessenen
 
 A.13.2 Schicht 1 listet sieben Rahmenelemente; umgesetzt waren drei. Die vier
@@ -1027,6 +1036,9 @@ auseinanderlaufen können: die eine Ansicht zeigte einen Namen, die andere
 einen Schlüssel. Tool-Auswahl, Tool-Liste, Prozessdetail und Matrix lesen sie
 jetzt aus derselben Quelle.
 
+
+> **Nachtrag vom 02.09.2026:** Das Leitdokument liegt seit heute bei (`docs/leitdokument.md`). Der Abgleich hat gezeigt, dass die hier beschriebene Fassung von der damaligen Vorgabe abweicht — die Entscheidung fiel, **das Dokument** an den Code anzupassen, nicht umgekehrt (E-48). Was unten steht, ist damit nicht mehr meine Auslegung, sondern die geltende Fassung.
+
 ## E-43 — Eine Alt-Anwendung ist eine, die niemand angemeldet hat
 
 A.16 beschreibt den Weg für Anwendungen, die es vor dem Rahmenwerk schon gab:
@@ -1054,6 +1066,9 @@ sie ist Inhalt, kein Betriebsparameter.
 einem bewerteten Prozess zugeordnete Alt-Anwendung ist keine Alt-Anwendung
 mehr, sondern ein geführtes Tool-Objekt. Eine Zeile, die sie weiter mitführte,
 würde die Zahl bedeutungslos machen.
+
+
+> **Nachtrag vom 02.09.2026:** Das Leitdokument liegt seit heute bei (`docs/leitdokument.md`). Der Abgleich hat gezeigt, dass die hier beschriebene Fassung von der damaligen Vorgabe abweicht — die Entscheidung fiel, **das Dokument** an den Code anzupassen, nicht umgekehrt (E-48). Was unten steht, ist damit nicht mehr meine Auslegung, sondern die geltende Fassung.
 
 ## E-44 — Das Cockpit zeigt Kacheln, keine Tabelle
 
@@ -1171,3 +1186,63 @@ Modell sie nicht ab — dann bräuchte die Organisationseinheit einen eigenen
 Namen, und die Eindeutigkeit über `(Fachbereich, Ebene, Land)` müsste fallen.
 Das ist kein Versehen, sondern die Annahme, auf der die Ableitung der
 Reichweite und die Scope-Auflösung heute stehen.
+
+## E-48 — Das Leitdokument folgt dem Code, nicht umgekehrt
+
+Am 02.09.2026 kam das Leitdokument ins Repository. Der Abgleich mit der
+Umsetzung ergab sechs Abweichungen, davon vier im Kern des Modells: die zehn
+Anforderungsklassen (A.9.2), die Technologiematrix (C.1), die sechs
+Schicht-2-Verbote (A.13.2) und das Migrationsprinzip (A.16). Dazu zwei
+Gate-2-Auslöser und eine Tier-Schwelle.
+
+**Die Entscheidung war, das Dokument anzupassen.** Nicht weil der Code
+maßgeblich wäre — ein Leitdokument geht der Umsetzung vor —, sondern weil die
+gewachsene Fassung die bessere Abbildung ist. Drei Gründe, die jeweils an einer
+konkreten Stelle hängen:
+
+**Die Anforderungsklassen sind organisatorisch statt technisch geschnitten.**
+Die ursprüngliche Fassung nannte K1 „Identität und Zugriffssteuerung", K4
+„Nachvollziehbarkeit der Ausführung", K5 „Trennung Dev/Prod" — Eigenschaften
+einer Plattform. Damit beantwortet die Matrix aber eine Frage, die sie nicht
+beantworten soll: was eine Technologie kann. Die Klassen sollen sagen, was ein
+**Prozess braucht**. In der gewachsenen Fassung heißen sie
+„Dokumentationspflicht", „Datenschutz-Folgenabschätzung",
+„Mitbestimmungsverfahren einleiten" — Pflichten, die jemand erfüllt, nicht
+Merkmale, die etwas hat. Der Unterschied wird an K7 sichtbar: das
+Mitbestimmungsverfahren ist eine Klasse, die ausgelöst wird und dann läuft;
+„Verfügbarkeit" war ein Zustand, den eine Plattform mitbringt oder nicht.
+
+**Die Technologiematrix wird dadurch ehrlicher.** Sieben der zehn Zeilen stehen
+jetzt überall auf ✅, und genau das ist die Aussage: keine Plattform hindert
+jemanden daran, den Betriebsrat zu beteiligen. Es unterscheiden sich die drei
+technischen Klassen — Rechtekonzept, Aufbewahrung, Wiederanlauf. Die alte
+Matrix verteilte Unterschiede über alle zehn Zeilen und suggerierte damit, die
+Technologiewahl entscheide über Dinge, über die sie nicht entscheidet.
+
+**Das unternehmerische Risiko kann Tier 3 auslösen.** Die alte Fassung
+deckelte es ausdrücklich bei Tier 2 — „reines Betriebsrisiko hebt allein nicht
+in Tier 3". Ein Prozess, dessen Ausfall den Geschäftsbetrieb gefährdet, wird
+jetzt streng geführt, auch wenn er keine Personendaten berührt. Das ist die
+sachlich richtige Konsequenz: die Auflagen ab Tier 3 — benannter Owner,
+Wiederanlaufkonzept, Governance-Freigabe — sind genau die, die ein solcher
+Prozess braucht.
+
+**Was dabei verloren ging, und bewusst.** Die alte A.16 kannte eine
+signaturbasierte Vollinventur und **zwei** Grace Periods. Die Umsetzung hat
+eine Frist und erkennt Alt-Anwendungen an ihrer Herkunft aus dem Sync. Das ist
+schlanker und deckt den Fall; wer die zweite Frist braucht, hat mit
+`altanwendung_meldefrist_tage` die Stellschraube und müsste eine zweite
+ergänzen.
+
+**Was offen bleibt: Teil B.** Er belegt an 34 Stellen technische Eigenschaften
+mit K-Nummern der alten, technisch geschnittenen Fassung. Die Aussagen bleiben
+richtig, ihre Etiketten nicht. Sie sind **nicht** umgeschrieben worden — eine
+Zuordnung technischer Fähigkeiten auf organisatorische Klassen wäre eine
+inhaltliche Entscheidung, keine Redaktion. Am Kopf von Teil B steht das jetzt
+als offener Punkt.
+
+**Was das Dokument weiterhin nicht enthält:** das Architekturdokument. Alle
+Verweise der Form „Architektur 4.3", „Architektur 7.3", „Architektur 10.2"
+zeigen auf ein zweites Dokument, das nicht beiliegt. Was aus ihm stammt —
+Sichtbarkeitsregel, Query-API-Vertrag, Rollenmatrix 5.3 — ist nach wie vor
+ungeprüft.

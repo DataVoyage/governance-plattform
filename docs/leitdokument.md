@@ -373,7 +373,7 @@ Daraus folgt die zentrale Regel dieses Modells:
 
 > **Kann eine Technologie eine abgeleitete Anforderung nicht erfüllen, ist das ein Befund — keine Ausnahme.** Die Konsequenz ist ein Technologiewechsel, keine Absenkung der Anforderung.
 
-Diese Prüfung — Datenklassen durch Mapping auf den Prozess, daraus die erlaubten Tiers — ist der **bereits heute etablierte Standardprozess**. Was in diesem Abschnitt neu ist, ist ausschließlich die Präzisierung, *wie* die vier Dimensionen zum Tier zusammengeführt werden (A.8.5) — nicht die Dimensionen selbst und nicht der Umstand, dass sie am Prozess hängen.
+Diese Prüfung — Datenklassen durch Mapping auf den Prozess, daraus die erlaubten Tiers — ist der **bereits heute etablierte Standardprozess**. Was in diesem Abschnitt neu ist, ist ausschließlich die Präzisierung, *wie* die sechs Dimensionen zum Tier zusammengeführt werden (A.8.5) — nicht die Dimensionen selbst und nicht der Umstand, dass sie am Prozess hängen.
 
 ### A.8.2 Die Risikodimensionen
 
@@ -413,45 +413,45 @@ Jede Dimension wird auf 0–3 bewertet (KI zusätzlich mit einer Stufe „verbot
 | Stufe | Anker |
 |---|---|
 | 0 | Keine personenbezogenen Daten |
-| 1 | Geschäftskontaktdaten, interner Empfängerkreis |
-| 2 | Personenbezogene Daten über den Kontaktrahmen hinaus, oder Empfänger außerhalb der verantwortlichen Stelle |
-| 3 | Besondere Kategorien (Entgelt, Gesundheit, Bewertung), Profilbildung, Drittlandtransfer oder externe Empfänger |
+| 1 | Pseudonymisierte oder personenbeziehbare Daten |
+| 2 | Personenbezogene Daten |
+| 3 | Besondere Kategorien nach Art. 9 DSGVO (Entgelt, Gesundheit, Bewertung) oder Profilbildung |
 
 **MB — Arbeitsrecht / Mitbestimmung**
 
 | Stufe | Anker |
 |---|---|
-| 0 | Keine Beschäftigtendaten berührt |
-| 1 | Beschäftigtendaten nur organisatorisch (Zuständigkeit, Abwesenheit), keine Bewertung |
-| 2 | Ergebnis ist einzelnen Beschäftigten zurechenbar; Auswertung möglich, aber nicht Zweck |
-| 3 | Ergebnis fließt in Bewertung, Steuerung oder Entscheidung über einzelne Beschäftigte — oder ist zur Leistungs-/Verhaltenskontrolle geeignet |
+| 0 | Keine Beschäftigtendaten berührt, kein Einfluss auf den Arbeitsablauf |
+| 1 | Der Prozess verändert den Arbeitsablauf von Beschäftigten spürbar, ohne sie zu bewerten |
+| 2 | Beschäftigtenbezogene Daten werden verarbeitet; das Ergebnis ist einzelnen Beschäftigten zurechenbar |
+| 3 | Eine Verhaltens- oder Leistungskontrolle ist möglich — unabhängig davon, ob sie beabsichtigt ist |
 
 **IT — IT-Sicherheit**
 
 | Stufe | Anker |
 |---|---|
-| 0 | Keine sicherheitsrelevanten Berechtigungen oder Zugangsdaten betroffen, keine nennenswerte Angriffsfläche |
-| 1 | Interne, nicht besonders schützenswerte Zugriffsrechte; Angriffsfläche gering (rein intern, kein externer Zugriff) |
-| 2 | Verwaltet oder nutzt sicherheitskritische Berechtigungen/Zugangsdaten; oder nennenswerter externer Angriffsvektor (extern erreichbar, verarbeitet nicht vertrauenswürdige Eingaben) |
-| 3 | Verwaltet Identitäts-/Zugriffssteuerung selbst, oder hätte bei Kompromittierung Zugriff auf breite Teile der IT-Landschaft (z. B. privilegierte Service-Accounts, domainweite Rechte) |
+| 0 | Keine sicherheitsrelevanten Berührungen |
+| 1 | Ausschließlich interne, nicht vertrauliche Daten |
+| 2 | Vertrauliche Daten, oder eine Schnittstelle nach außerhalb des Unternehmens |
+| 3 | Schreibender Zugriff auf produktive Kernsysteme oder auf Unternehmensdaten |
 
 **RG — Regulatorik / Nachweispflicht**
 
 | Stufe | Anker |
 |---|---|
 | 0 | Ergebnis ist Arbeitsmittel ohne Nachweisfunktion |
-| 1 | Interne Nachvollziehbarkeit erwünscht, keine Pflicht |
-| 2 | Ergebnis geht in prüfungsrelevante Unterlagen ein (Qualität, Steuern, Handelsbücher) |
-| 3 | Ergebnis ist selbst aufbewahrungs- oder testatpflichtig; Revisionssicherheit gefordert |
+| 1 | Sonstige regulatorische Berührung ohne eigene Pflicht |
+| 2 | Es entstehen dokumentations- oder aufbewahrungspflichtige Ergebnisse |
+| 3 | Der Prozess ist rechnungslegungs-, steuer- oder aufsichtsrelevant |
 
 **UR — Unternehmerisches Risiko**
 
 | Stufe | Anker |
 |---|---|
-| 0 | Ausfall bleibt beim Verursacher, kein Sachschaden |
-| 1 | Mehraufwand im Team, in Stunden aufholbar |
-| 2 | Abteilungsprozess steht; wirtschaftlicher Schaden, Terminrisiko, Reputationswirkung intern |
-| 3 | Unternehmensprozess steht, wesentlicher wirtschaftlicher Schaden, Außenwirkung, Geschäftsgeheimnis- oder IP-Abfluss |
+| 0 | Ein Ausfall bleibt ohne nennenswerte Folge |
+| 1 | Ein Ausfall führt zu einer geringen Beeinträchtigung |
+| 2 | Ein Ausfall führt zu einer spürbaren Beeinträchtigung |
+| 3 | Ein Ausfall gefährdet den Geschäftsbetrieb oder wesentliche Umsätze |
 
 ### A.8.4 Herkunft der Bewertung
 
@@ -462,17 +462,21 @@ Auch hier gilt Prinzip P1 — nur bewerten, was nicht ableitbar ist:
 | KI | Eingesetzte Bibliotheken/APIs als Signal (teilweise) | Einsatzzweck und EU-AI-Act-Kategorie — **vollständig zu erklären**, Zweckbindung ist technisch nicht ablesbar |
 | DS | Kategorien der referenzierten Datenobjekte, Customer-Kreis | Empfänger außerhalb der Organisation |
 | MB | Datenkategorie der Inputs, Attestierungen 1 und 2 | Eignung zur Leistungs-/Verhaltenskontrolle |
-| IT | Angefragte Berechtigungen/Scopes, Netzwerk-Exposition (Telemetrie) | — |
+| IT | — (vorgesehen: angefragte Berechtigungen/Scopes und Netzwerk-Exposition, sobald Telemetrie-Adapter angebunden sind) | Sicherheitsrelevanz und Angriffsfläche — **derzeit vollständig zu erklären** |
 | RG | — | Nachweis-, Aufbewahrungs- oder Prüfpflicht — **vollständig zu erklären** |
 | UR | Ausfallfolge, Kritikalität aus der Prozesskette (A.4.2) | Wirtschaftliche Größenordnung |
 
-Zwei Dimensionen — KI und RG — müssen vollständig erklärt werden; sie haben kein oder nur ein sehr partielles technisches Korrelat. Genau dafür existiert die Selbstverpflichtung in Abschnitt A.10.
+Drei Dimensionen — KI, IT und RG — müssen derzeit vollständig erklärt werden; sie haben kein oder nur ein sehr partielles technisches Korrelat. Bei KI und RG ist das dauerhaft so, bei IT nur so lange, bis Telemetrie-Adapter Berechtigungen und Netzwerk-Exposition liefern. Genau dafür existiert die Selbstverpflichtung in Abschnitt A.10.
+
+**Ein Vorschlag ist keine Antwort.** Wo eine Dimension ableitbar ist, schlägt die Anwendung einen Wert vor und nennt den Beleg mitsamt seiner Quelle („Datenobjekt ‚Entgeltdaten' trägt die Kategorie besondere Kategorie"). Der Bewertende kann abweichen — dann ist die Abweichung zu begründen, und Vorschlag, Antwort und Begründung werden gemeinsam gespeichert. Nur so bleibt später unterscheidbar, ob jemand bewusst abgewichen ist oder ob sich seither die Daten geändert haben.
+
+**Die Beweislast ist asymmetrisch.** Ein „ja" verlangt einen benennbaren Beleg; ein „nein" verlangt zusätzlich, dass die Datenlage vollständig ist. Wo ein Prozessobjekt keine Datenobjekte referenziert, wird deshalb **kein** Vorschlag erzeugt — ein geratener Vorschlag kostet den Anwender einen Satz Rechtfertigung für etwas, das das System gar nicht wusste, und wäre damit schlechter als keiner.
 
 ### A.8.5 Ableitung des Tiers: der Entscheidungsbaum
 
 Das Tier wird durch einen **linearen Entscheidungsbaum** ermittelt — dieselben sechs Dimensionen aus A.8.2, als Ablauf statt als gleichzeitig zu würdigende Werte dargestellt. Der Baum ist zugleich als **eigenständiges Werkzeug für die erste Betrachtung eines Prozesses** gedacht: Ein Prozesseigner kann ihn ohne Vorwissen über das Objektmodell durchgehen und erhält am Ende einen Tier-Vorschlag.
 
-**Aufbau:** Sechs Themenblöcke in fester Reihenfolge, schwerste Konsequenz zuerst. Jeder Block ist in sich linear — die schärfste Ausprägung führt sofort zu einem Ergebnis, ohne dass etwas gegeneinander abgewogen werden muss.
+**Aufbau:** Sechs Themenblöcke in fester Reihenfolge. **Innerhalb** eines Blocks steht die schärfste Frage zuerst — das erste „ja" legt die Stufe des Blocks fest, die milderen Fragen entfallen. So braucht niemand etwas gegeneinander abzuwägen, und ein Prozess, der bei der ersten Frage anschlägt, ist mit drei Klicks eingestuft.
 
 ```
  1 · KI-Einsatz (EU AI Act)
@@ -490,42 +494,52 @@ Das Tier wird durch einen **linearen Entscheidungsbaum** ermittelt — dieselben
 
 | Schritt | Frage | Bei „Ja" | Bei „Nein" |
 |---|---|---|---|
-| 1a | Wird KI/ein KI-System eingesetzt — auch als Komponente (externe KI-API, eingebettetes Modell)? | weiter zu 1b | KI = 0, weiter zu Schritt 2 |
-| 1b | Verbotene Praxis nach EU AI Act Art. 5 (z. B. Social Scoring, manipulative Beeinflussung, unautorisierte Emotionserkennung am Arbeitsplatz)? | **STOPP — Einsatz nicht zulässig**, keine Tier-Einstufung, Governance/Recht einbeziehen | weiter zu 1c |
-| 1c | Hochrisiko-System nach Anhang III (u. a. Beschäftigung/Personalauswahl, Bewertung natürlicher Personen)? | **Tier 3** (+ Auflage K10), weiter zu Schritt 2 | weiter zu 1d |
-| 1d | Transparenzpflichtig nach Art. 50 (Chatbot, synthetische Inhalte, Emotionserkennung ohne Ausnahme)? | **mind. Tier 2** (+ Auflage K10), weiter zu Schritt 2 | KI = 1 (minimal), weiter zu Schritt 2 |
-| 2a | Werden personenbezogene Daten verarbeitet? | weiter zu 2b | DS = 0, weiter zu Schritt 3 |
-| 2b | Besondere Kategorien, Profilbildung, Drittlandtransfer oder externe Empfänger? | **Tier 3**, weiter zu Schritt 3 | weiter zu 2c |
-| 2c | Personenbezug über Geschäftskontakt hinaus, oder Empfänger außerhalb der verantwortlichen Stelle? | **mind. Tier 2**, weiter zu Schritt 3 | DS = 1, weiter zu Schritt 3 |
-| 3a | Kann das Ergebnis Leistung/Verhalten einzelner Beschäftigter bewerten, steuern oder beeinflussen? | weiter zu 3b | MB = 0, weiter zu Schritt 4 |
-| 3b | Ist das Zweck oder unmittelbare Folge? | **Tier 3**, weiter zu Schritt 4 | **mind. Tier 2** (möglich, aber nicht Zweck), weiter zu Schritt 4 |
-| 4a | Verwaltet/nutzt die Anwendung sicherheitskritische Berechtigungen/Zugangsdaten, oder besteht ein nennenswerter Angriffsvektor (extern erreichbar, nicht vertrauenswürdige Eingaben)? | weiter zu 4b | IT = 0/1, weiter zu Schritt 5 |
-| 4b | Verwaltet Identität/Zugriffssteuerung selbst, oder bestünde bei Kompromittierung Zugriff auf breite Teile der IT-Landschaft? | **Tier 3**, weiter zu Schritt 5 | **mind. Tier 2**, weiter zu Schritt 5 |
-| 5a | Unterliegt das Ergebnis einer Aufbewahrungs-, Nachweis- oder Prüfpflicht? | weiter zu 5b | RG = 0/1, weiter zu Schritt 6 |
-| 5b | Ist das Ergebnis selbst aufbewahrungs- oder testatpflichtig? | **Tier 3**, weiter zu Schritt 6 | **mind. Tier 2** (fließt in prüfungsrelevante Unterlagen ein), weiter zu Schritt 6 |
-| 6a | Wäre bei Ausfall, Fehler oder Datenabfluss ein Unternehmensprozess betroffen, mit wesentlichem Schaden? | **Tier 2** — bleibt Tier 2 auch bei maximaler Ausprägung, sofern 1–5 durchgehend „nein"/niedrig waren (reines Betriebsrisiko hebt allein nicht in Tier 3) | weiter zu 6b |
-| 6b | Wäre ein Abteilungsprozess betroffen, mit spürbarem Schaden? | **mind. Tier 2** | kein Treffer in 1–6 → **Tier 1** |
+| 1a | Setzt der Prozess ein KI-System oder ein KI-Modell ein — auch als Komponente (externe KI-API, eingebettetes Modell)? | KI = 1, weiter zu 1b | **KI = 0**, Block übersprungen, weiter zu Schritt 2 |
+| 1b | Fällt der Einsatz unter eine nach EU AI Act verbotene Praxis (Social Scoring, Emotionserkennung am Arbeitsplatz, biometrische Kategorisierung)? | **STOPP — Einsatz nicht zulässig**, keine Tier-Einstufung, keine gespeicherte Bewertung, Governance/Recht einbeziehen | weiter zu 1c |
+| 1c | Handelt es sich um einen Hochrisiko-Anwendungsfall nach Anhang III (Personalauswahl, Kreditwürdigkeit, kritische Infrastruktur)? | **KI = 3** | weiter zu 1d |
+| 1d | Interagiert das System unmittelbar mit natürlichen Personen, oder erzeugt es Inhalte, die als menschlich erscheinen können? | **KI = 2** | KI bleibt 1 (minimal) |
+| 2a | Werden besondere Kategorien personenbezogener Daten (Art. 9 DSGVO) verarbeitet, oder findet Profilbildung statt? | **DS = 3** | weiter zu 2b |
+| 2b | Werden personenbezogene Daten verarbeitet? | **DS = 2** | weiter zu 2c |
+| 2c | Werden pseudonymisierte oder personenbeziehbare Daten verarbeitet? | **DS = 1** | **DS = 0** |
+| 3a | Ist eine Verhaltens- oder Leistungskontrolle von Beschäftigten möglich? | **MB = 3** | weiter zu 3b |
+| 3b | Werden beschäftigtenbezogene Daten verarbeitet? | **MB = 2** | weiter zu 3c |
+| 3c | Verändert der Prozess den Arbeitsablauf von Beschäftigten spürbar? | **MB = 1** | **MB = 0** |
+| 4a | Greift der Prozess schreibend auf produktive Kernsysteme oder auf Unternehmensdaten zu? | **IT = 3** | weiter zu 4b |
+| 4b | Werden vertrauliche Daten verarbeitet, oder besteht eine Schnittstelle nach außerhalb des Unternehmens? | **IT = 2** | weiter zu 4c |
+| 4c | Werden ausschließlich interne, nicht vertrauliche Daten verarbeitet? | **IT = 1** | **IT = 0** |
+| 5a | Ist der Prozess rechnungslegungs-, steuer- oder aufsichtsrelevant? | **RG = 3** | weiter zu 5b |
+| 5b | Entstehen dokumentations- oder aufbewahrungspflichtige Ergebnisse? | **RG = 2** | weiter zu 5c |
+| 5c | Besteht eine sonstige regulatorische Berührung? | **RG = 1** | **RG = 0** |
+| 6a | Gefährdet ein Ausfall den Geschäftsbetrieb oder wesentliche Umsätze? | **UR = 3** | weiter zu 6b |
+| 6b | Führt ein Ausfall zu einer spürbaren Beeinträchtigung? | **UR = 2** | weiter zu 6c |
+| 6c | Führt ein Ausfall zu einer geringen Beeinträchtigung? | **UR = 1** | **UR = 0** |
+
+**Vom Profil zum Tier:** Das Tier ist die höchste erreichte Stufe über alle sechs Blöcke, mindestens 1 und höchstens 3. Ein Prozess ohne einen einzigen Treffer ist Tier 1 — es gibt kein „Tier 0". Auch das unternehmerische Risiko allein kann Tier 3 auslösen: ein Prozess, dessen Ausfall den Geschäftsbetrieb gefährdet, wird streng geführt, auch wenn er keine Personendaten berührt und keiner Nachweispflicht unterliegt.
 
 **Zwei Nutzungsweisen:**
 
 - **Schnell (nur Tier):** Baum von oben nach unten durchgehen, beim ersten „Tier 3"-Treffer abbrechen. Ausreichend für Freigabewege und Auflagen nach A.8.6, und genau die Form, in der der Baum als erste Betrachtung eines neuen Prozesses dient.
 - **Vollständig (Profil für K-Klassen):** Alle sechs Schritte bis zum Ende durchlaufen, auch nach einem frühen Tier-3-Treffer — nur so ergibt sich das vollständige Profil, das A.9 für die K-Klassen-Ableitung braucht.
 
-**Schreibweise für das vollständige Profil:** `KI1-DS3-MB0-IT1-RG2-UR2 → Tier 3` (höchster Einzeltreffer bestimmt den Tier — hier DS = 3 in Schritt 2b).
+**Schreibweise für das vollständige Profil:** `KI1-DS3-MB0-IT1-RG2-UR2 → Tier 3` (höchster Einzeltreffer bestimmt den Tier — hier DS = 3 in Schritt 2a).
 
 **Korrekturfaktor Ausführungsart:** Läuft ein Tool unbeaufsichtigt/geplant statt interaktiv, wird das bei Grenzfällen (z. B. knappes „Nein" an einem der Ja/Nein-Punkte) als zusätzlicher Anhaltspunkt in die Einzelfallprüfung bei Gate 1 einbezogen. Es verändert das Baumergebnis nicht automatisch (siehe A.6).
 
 ### A.8.6 Auflagen je Tier
 
+Die Auflagen gelten **kumulativ**: ein Tier-3-Prozess trägt auch die Auflagen von Tier 2 und Tier 1. Anders als die Anforderungsklassen aus A.9.2 hängen sie nicht am Profil, sondern allein am erreichten Tier — die Klassen sagen, **was** dieser Prozess wegen seiner Eigenschaften braucht, die Auflagen sagen, **wie streng** er insgesamt geführt wird.
+
 | | Tier 1 | Tier 2 | Tier 3 |
 |---|---|---|---|
 | Prozessobjekt | erforderlich | erforderlich | erforderlich |
 | Selbstverpflichtung | Kurzform | vollständig | vollständig + jährlich |
-| Code in Versionsverwaltung | empfohlen | empfohlen | **Pflicht** |
-| Kontrolle der Ausführungsumgebung | Entwickler | Entwickler | **Governance** |
-| Review vor Erstfreigabe | nein | nein | **ja** |
-| Deployment | selbst | selbst | **Pipeline** |
-| Compliance-/BR-Behandlung | entfällt | Sammelbewertung | **Einzelbewertung** |
+| Änderungen am Prozessobjekt | protokolliert | protokolliert | protokolliert |
+| Technischer Owner | — | **benannt, mit Betriebsverantwortung** | benannt |
+| Zugriffs- und Rechtekonzept | — | **mindestens jährlich überprüft** | jährlich überprüft |
+| Governance-Durchsicht | — | **regelmäßig** | laufend im Cockpit |
+| Gültigkeit der Bewertung | unbefristet | unbefristet | **ein Jahr, dann zu erneuern** |
+| Freigabe vor Inbetriebnahme | nein | nein | **Gate 1 durch die Governance-Rolle** |
+| Abweichungen | — | — | **lösen einen Lenkungsvorgang aus** |
 
 ---
 
@@ -545,22 +559,30 @@ Die mittlere Stufe ist stabil. Nur die rechte Spalte — Teil B dieses Dokuments
 
 ### A.9.2 Anforderungsklassen und ihre Auslöser
 
+Jede Klasse hängt an genau einer nachvollziehbaren Bedingung über dem Profil. Die Ableitung ist reine Rechnung ohne Datenbankzugriff — damit ist sie an jeder Stelle identisch: im Wizard, in der Historie und in der Governance-Query-API.
+
 | # | Anforderungsklasse | Ausgelöst durch |
 |---|---|---|
-| K1 | Identität und Zugriffssteuerung — wer darf ausführen, wer ändern | MB ≥ 2 · DS ≥ 2 · IT ≥ 2 |
-| K2 | Datenzugriffsminimierung — kein Zugriff über den deklarierten Bedarf hinaus | DS ≥ 1 |
-| K3 | Nachvollziehbarkeit des Codes — Versionierung, Review, Autorschaft | RG ≥ 2 · IT ≥ 2 |
-| K4 | Nachvollziehbarkeit der Ausführung — Protokollierung, Auswertbarkeit | MB ≥ 2 · RG ≥ 2 · IT ≥ 2 |
-| K5 | Trennung Entwicklung / Produktion | RG ≥ 2 · UR ≥ 3 · IT ≥ 2 |
-| K6 | Aufbewahrung und Revisionssicherheit | RG = 3 |
-| K7 | Verfügbarkeit und Wiederanlauf | UR ≥ 2 |
-| K8 | Betroffenentransparenz — Information, Auskunftsfähigkeit, Löschung | MB ≥ 2 · DS ≥ 2 |
-| K9 | Nachfolge und Abhängigkeitsreduktion — kein Einzelpersonen-Wissen | UR ≥ 2 |
-| K10 | KI-spezifische Auflagen — Transparenz, menschliche Aufsicht, Dokumentation nach EU AI Act | KI ≥ 2 |
+| K1 | Dokumentationspflicht des Prozessobjekts | immer |
+| K2 | Selbstverpflichtung des Prozesseigners | immer |
+| K3 | Benannter technischer Owner mit Betriebsverantwortung | irgendeine Dimension ≥ 2 |
+| K4 | Datenschutz-Folgenabschätzung | DS = 3 |
+| K5 | Zugriffs- und Rechtekonzept | DS ≥ 2 · IT ≥ 2 |
+| K6 | KI-Transparenz und -Dokumentation nach EU AI Act | KI ≥ 1 |
+| K7 | Mitbestimmungsverfahren einleiten | MB ≥ 1 |
+| K8 | Regulatorischer Nachweis und Aufbewahrung | RG ≥ 2 |
+| K9 | Notfall- und Wiederanlaufkonzept | UR ≥ 2 |
+| K10 | Gate-2-Pflicht vor Inbetriebnahme | KI = 3 · IT = 3 · UR = 3 |
 
-**Notation:** Das Zeichen „·" zwischen mehreren Bedingungen einer Zeile bedeutet **ODER** — eine der genannten Schwellen reicht aus, alle müssen nicht gleichzeitig erfüllt sein. K1 triggert also schon, wenn nur DS ≥ 2 gilt, auch wenn MB und IT niedrig bleiben.
+**Notation:** Das Zeichen „·" zwischen mehreren Bedingungen einer Zeile bedeutet **ODER** — eine der genannten Schwellen reicht aus. K5 triggert also schon, wenn nur DS ≥ 2 gilt, auch wenn IT niedrig bleibt.
 
-**Zu K10:** EU-AI-Act-Auflagen wie „menschliche Aufsicht" oder „Konformitätsbewertung" lassen sich nicht sauber in eine der übrigen neun Klassen pressen, weder Datenminimierung noch Code-Nachvollziehbarkeit erfassen diese Konzepte. K1, K3, K4 und K5 werden zusätzlich durch IT-Sicherheit ausgelöst, da Zugriffssteuerung, Code-Nachvollziehbarkeit, Ausführungsprotokollierung und Dev/Prod-Trennung ebenso genuine IT-Sicherheitsanliegen wie Compliance-Anliegen sind. K10 selbst ist überwiegend organisatorisch zu erfüllen (menschliche Aufsicht, Dokumentation, Konformitätsbewertung) — anders als K1–K9 hängt die Erfüllung kaum von der Ausführungsplattform ab; eine tiefe technologiespezifische Umsetzung je Teil-B-Abschnitt ist daher nicht in gleichem Maß sinnvoll wie bei den anderen Klassen.
+**Zu K1 und K2:** Beide gelten ab Tier 1 ohne Ausnahme. Ein Prozessobjekt, das nicht im Verzeichnis geführt wird, ist für das Modell nicht vorhanden; eine Erklärung, die niemand abgibt, ordnet keine Verantwortung zu. Das sind die zwei Grundpflichten, unter die kein Prozess fällt.
+
+**Zu K6:** Die Schwelle liegt bei KI ≥ 1, also **sobald überhaupt KI beteiligt ist** — auch bei minimalem Risiko. Transparenz darüber, dass ein KI-System mitwirkt, ist keine Funktion der Risikostufe: Betroffene haben ein Interesse daran zu wissen, dass eine Maschine beteiligt war, unabhängig davon, wie riskant ihr Beitrag eingestuft wurde.
+
+**Zu K7:** Die Schwelle liegt bei MB ≥ 1, also schon dort, wo ein Prozess den Arbeitsablauf spürbar verändert, ohne jemanden zu bewerten. Das Mitbestimmungsverfahren früh einzuleiten kostet wenig; es nachzuholen, nachdem ein Prozess produktiv ist, kostet viel.
+
+**Zu K10:** Anders als die übrigen neun ist K10 keine inhaltliche Auflage, sondern ein **Verfahrensschritt**: die Governance entscheidet vor der Inbetriebnahme. Sie greift, wo eine der drei Dimensionen mit der schärfsten Konsequenz — KI, IT-Sicherheit oder unternehmerisches Risiko — die höchste Stufe erreicht.
 
 ### A.9.3 Wie daraus eine Entscheidung wird
 
@@ -654,11 +676,15 @@ Alles andere läuft ungebremst — unabhängig davon, ob es sich um ein Apps-Scr
 
 **Auslöser für Gate 2 – abschließende Liste:**
 
-1. Neues Datenobjekt mit **höherer** Kategorie als bisher deklariert
-2. Customer-Kreis überschreitet die deklarierte Reichweitenstufe
-3. Neuer Schreibzugriff auf ein System of Record
-4. Neuer externer Endpunkt außerhalb der Allowlist (URL-Ziel bei Apps Script, Egress-Ziel bei Python/Kubernetes)
-5. Wechsel von „Mensch dazwischen" zu vollautomatisiert
+1. **Neue Datenkategorie** — ein Datenobjekt mit höherer Kategorie als bisher deklariert
+2. **Reichweitenerweiterung** — der Customer-Kreis überschreitet die deklarierte Reichweitenstufe
+3. **Neues externes Ziel** — ein Endpunkt außerhalb der am Prozessobjekt erklärten Liste (URL-Ziel bei Apps Script, Egress-Ziel bei Python/Kubernetes)
+4. **KI-Komponente ergänzt** — der Prozess setzt KI ein, wo bisher keine im Spiel war
+5. **Kritikalität gestiegen** — die geerbte Kritikalität des Prozesses ist gewachsen, etwa weil ein nachgelagerter Prozess kritischer geworden ist
+
+Die Liste ist **abschließend**. Es gibt bewusst keinen sechsten, freien Grund: eine Liste, die sich um „Sonstiges" ergänzen lässt, ist keine Liste mehr, und der goldene Pfad wäre wieder Verhandlungssache.
+
+**Der dritte Auslöser meldet sich selbst.** Wer am aktiven Prozessobjekt ein externes Ziel ergänzt, meldet damit den Auslöser — der Gate-2-Vorgang entsteht beim Speichern von selbst, mit dem Ziel in der Begründung. Ihn zusätzlich zum Einreichen aufzufordern hieße, dem Anwender die Regel aufzubürden, die die Anwendung kennt.
 
 Alles andere – Refactoring, neue Features, geänderte Logik, Performance-Arbeit – löst **keinen** Review aus. Das ist der goldene Pfad, technisch definiert statt als Absichtserklärung.
 
@@ -716,21 +742,33 @@ Es gilt das Positivlistenprinzip: **Was nicht ausdrücklich erlaubt ist, ist nic
 | Erlaubte Datenobjekte | Input/Output des SIPOC | Datenzugriffe, APIs, Endpunkte |
 | Obergrenze der Datenkategorie | Dimension DS | Kategorie der referenzierten Objekte |
 | Erlaubte Reichweite / Empfängerkreis | Customer-Spalte | Deployment- und Freigabekonfiguration |
-| Erlaubte Zugriffsart | Wirkungsart (verändert/gestaltet) | Lese- vs. Schreibberechtigungen |
+| Erlaubte Zugriffsart | Output-Kante des SIPOC (A.4.1) | Lese- vs. Schreibberechtigungen je Datenobjekt |
 | Erlaubte externe Ziele | Prozessdeklaration | URL-/Egress-Logs, Allowlist |
 | Erlaubte Ausführungsart | Attestierung 2 | Lauftyp interaktiv/getriggert/geplant |
-| Erlaubte Ausführungsidentität | Tier-Auflagen | Deployment-/Workload-Identity-Konfiguration |
+| Erlaubte Ausführungsidentität | Erlaubte Ausführungsart | Deployment-/Workload-Identity-Konfiguration |
+
+**Zur Zugriffsart:** Sie folgt der Output-Kante des SIPOC, nicht der Wirkungsart. Der Umweg über die Wirkungsart wäre ein Zirkel — die Triage aus A.6 leitet „verändernd" gerade daraus ab, dass ein Tool Schreibzugriff hat, und jede Schreibkante hätte sich damit selbst genehmigt. Ein Tool darf nur dort schreiben, wo der Prozess das Datenobjekt als **Ergebnis** führt.
+
+**Zur Ausführungsidentität:** Sie folgt der erlaubten Ausführungsart. Interaktiv heißt, ein Mensch bedient — dann läuft es unter dessen Identität. Getriggert oder geplant heißt, niemand ist da, der eine Identität leihen könnte; dann ist eine benannte Dienstidentität die einzige, die sich später noch jemandem zuordnen lässt.
+
+**Neben jedes erlaubte Element gehört das gemessene.** Ein Rahmen ohne Messung ist eine Behauptung; erst der Vergleich macht eine Abweichung sichtbar. Sechs der sieben Elemente haben ein solches Gegenstück am Tool-Objekt — die **Reichweite** hat keines: sie ist nach A.4.4 geerbt und nach P1 nie eingegeben, es gibt am Tool nichts, wogegen sie zu prüfen wäre. Das steht so auf dem Bildschirm, statt eine leere Spalte zu zeigen, die wie eine Messung ohne Befund aussähe.
 
 **Schicht 2 — Organisationsweite Verbote** (gelten immer, unabhängig vom Prozess)
 
-Diese lassen sich durch keine Prozessbewertung freischalten:
+Diese sechs lassen sich durch keine Prozessbewertung freischalten. Die Liste ist abschließend, aus demselben Grund wie die der Gate-2-Auslöser:
 
-- Secrets oder Zugangsdaten im Code oder in Konfigurationsdateien
-- Domain-Wide Delegation für Fachbereichsanwendungen
-- Umgehung der zentralen Identität (geteilte Accounts, persönliche Keys)
-- **Service-Account-Keys für Compute-Workloads** — ausschließlich Workload Identity Federation (neu, siehe B.2)
-- Datenausleitung an nicht deklarierte externe Ziele
-- Verarbeitung von Daten aus nicht klassifizierten Quellen bei Dimension DS ≥ 2
+| Verbot | Wird erkannt |
+|---|---|
+| Ausführung unter umgangener Unternehmensidentität (geteiltes oder fremdes Konto) | **selbst**, aus der erfassten Ausführungsidentität |
+| Dauerhaft gültige Zugangsdaten im Tool hinterlegt statt verwaltet | **selbst**, aus dem Feld am Tool-Objekt |
+| Verarbeitung von Daten aus nicht deklarierten Quellen | **selbst**, aus Attestierung 3 |
+| Automatisierte Entscheidung über einzelne Personen ohne Menschen dazwischen | **selbst**, aus Attestierung 1 zusammen mit Attestierung 2 |
+| Übermittlung von Unternehmensdaten außerhalb der freigegebenen Infrastruktur | zu melden |
+| Betrieb ohne oder mit abgeschalteter Protokollierung | zu melden |
+
+Vier der sechs erkennt die Anwendung aus Daten, die sie ohnehin führt. Die übrigen zwei betreffen Vorgänge in der Zielplattform, von denen die Governance-Plattform nichts sieht; sie sind zu melden. Beides steht in der Auskunft mit dabei, damit niemand die eine Hälfte für die ganze Wahrheit hält.
+
+Die Folge eines Schicht-2-Verstoßes ist nicht Verhandlung, sondern Abstellen — deshalb entfällt bei ihnen die erste Eskalationsstufe (A.13.5). Eine Meldung, die ein Verbot nennt, aber nur „gelb" sagt, wird abgewiesen: was keine Bewertung freischaltet, ist keine Beobachtung.
 
 ### A.13.3 Zustände
 
@@ -802,8 +840,10 @@ Was das Cockpit zeigen muss, damit Steuerung möglich ist – jede Zeile ist ein
 | Assets ohne Ausführung > 12 Monate | Toter Bestand | Stilllegen |
 | Attestierungen älter als 12 Monate | Veraltete Erklärungen | Bestätigung anfordern |
 | Erklärung widerspricht Telemetrie | Selbstverpflichtung vs. Messung | Klärung mit Owner |
+| Selbstverpflichtungen ohne Deckung | Erklärung fehlt, ist verfallen oder hängt an einer überholten Bewertung | Neu abgeben oder bestätigen |
+| Antwort widerspricht Datenlage | Die Bewertung sagt etwas anderes als die heutigen Daten | Neu bewerten oder begründen |
 | Technologie erfüllt ausgelöste Anforderungsklasse nicht | Ausschlusskriterium nach A.9.3 | Technologiewechsel oder Kompensation |
-| Alt-Executables im Melde-/Blockierungspfad | Migrationsfortschritt nach A.16 | Fristen nachhalten |
+| Alt-Anwendungen im Melde-/Blockierungspfad | Migrationsfortschritt nach A.16 | Fristen nachhalten |
 
 **Das eigentliche Steuerungsinstrument** ist die Rahmenabweichungs-Sicht: Governance wird damit zu einem **Abgleich** statt einer Prüfung. Ihr inspiziert nicht den Gesamtbestand, sondern behandelt Abweichungen zwischen deklariertem Bedarf und gemessenem Verhalten. Nur das skaliert.
 
@@ -813,11 +853,14 @@ Was das Cockpit zeigen muss, damit Steuerung möglich ist – jede Zeile ist ein
 
 | Rolle | Verantwortung | Aufwand |
 |---|---|---|
-| **Prozess-Owner** (Fachbereich) | Prozessobjekt aktuell halten, Bewertung der vier Dimensionen, Selbstverpflichtung (A.10.2) | ~1h Ersterfassung, danach jährliche Bestätigung |
-| **Technischer Owner** | Tool-Zuordnung, Umsetzung der Anforderungsklassen, Selbstverpflichtung (A.10.3) | Minuten je Tool |
+| **Prozess-Owner** (Fachbereich) | Prozessobjekt aktuell halten, Bewertung der sechs Dimensionen, Selbstverpflichtung (A.10.2) | ~1h Ersterfassung, danach jährliche Bestätigung |
+| **Prozess-Umsetzer** | Pflegt die lokale Abweichung an einer Umsetzung — und nur diese. Der Prozess selbst gehört ihm nicht | Minuten je Umsetzung |
+| **Technischer Owner** | Tool-Zuordnung, Attestierungen nach A.6, Umsetzung der Anforderungsklassen, Selbstverpflichtung (A.10.3), Compliance-Meldungen | Minuten je Tool |
 | **Datenobjekt-Owner** | Kategorie und Klassifikation der Quelle | Einmalig je Quelle |
-| **Governance** | Gate 1 und 2, Cockpit, Regelpflege | Skaliert mit Tier-3-Menge, nicht mit Gesamtbestand |
+| **Governance** | Gate 1 und 2, Cockpit, Technologiematrix, Einstellungen, Lenkungsvorgänge | Skaliert mit Tier-3-Menge, nicht mit Gesamtbestand |
 | **Plattform** | Provisionierung, Pipeline, Telemetrie — **eine Instanz für alle drei Technologiedomänen** (Apps Script, Python/Kubernetes, GCP-Datendienste), kein getrenntes Team je Technologie | Betrieb |
+| **Auditor** | Liest bereichsübergreifend mit, einschließlich des Nachweises. Ändert nichts | Prüfungsanlass |
+| **App-Administrator** | Verwaltet Nutzer und Rollen — und vergibt damit jeden anderen Zugriff. Die Rolle, die man am sparsamsten vergibt | Selten |
 
 **Warum eine Plattform-Instanz statt getrennter Teams:** Sobald Apps Script, Python und GCP-Datendienste hinter demselben Self-Service-Frontend liegen (B.4), würde eine Aufteilung des Betriebs nach Technologie eine künstliche Übergabegrenze mitten durch einen einzigen Nutzerfluss ziehen. Die Provisionierungslogik — Prozessobjekt vorhanden? Tier bestimmt? Pipeline auslösen? — ist technologieübergreifend identisch; nur die letzte Umsetzungsstufe unterscheidet sich (Teil B).
 
@@ -848,18 +891,25 @@ Für bestehende Anwendungen gilt technologieübergreifend:
 
 Das gilt gleichermaßen für Apps-Script-Projekte, Python-Anwendungen und bestehende Nutzungen des GCP-Datendienste-Stacks.
 
-### A.16.2 Ausnahme: strukturell nicht erfüllbare Technologie bei Tier 3
+### A.16.2 Der Melde- und Blockierungspfad
 
-Wo eine Technologie eine ausgelöste Anforderungsklasse strukturell nicht erfüllen kann (❌ in der Technologiematrix, Teil C.1), ist reines Zuwarten kein neutraler Zustand — der Prozess trägt in der Zwischenzeit ein unkompensiertes Risiko. Für diese Fälle gilt eine **abgestufte Mindest-Kompensationspflicht**, ohne die vollständige on-touch-Regel zu ersetzen:
+Reines Zuwarten ist kein neutraler Zustand: eine vorgefundene Anwendung, die niemand angemeldet hat, trägt in der Zwischenzeit ein unbewertetes Risiko. Für diese Fälle gilt eine **Meldepflicht mit Frist**, ohne die on-touch-Regel für die eigentliche Migration zu ersetzen.
 
-1. **Vollinventur.** Signaturbasierte Erkennung erfasst den vollständigen Bestand strukturell ausgeschlossener Alt-Anwendungen (heute: lokal verteilte `.exe`-Anwendungen) über die vorhandene Endpoint-/Applikationskontrolle — unabhängig davon, ob ein Owner sich meldet.
-2. **Grace Period 1 — Meldepflicht.** Ab Erkennung läuft eine Frist, innerhalb derer der technische Owner die Anwendung einem Prozessobjekt zuordnen und die Mindest-Kompensation liefern muss: Code-Backup in Versionsverwaltung, Owner-Attestierung nach A.10.3. Das ist **nicht** die vollständige Migration — nur die Absicherung des Ausfall- und Bus-Faktor-Risikos, die auch ohne Technologiewechsel möglich ist.
-3. **Grace Period 2 — letzte Warnung.** Nach Ablauf von Grace Period 1 ohne Erfüllung folgt eine zweite, kürzere Frist mit expliziter Ankündigung der Blockierung.
-4. **Blockierung auf Applikationsebene.** Nach Ablauf von Grace Period 2 wird die Ausführung technisch unterbunden.
+**Woran eine Alt-Anwendung erkannt wird:** an ihrer **Herkunft**. Tool-Objekte, die der Sync **vorgefunden** hat, sind Alt-Anwendungen; wer sein Werkzeug selbst anmeldet, ist den Weg gegangen und steht nicht auf ihm. Ein Startdatum des Rahmenwerks wäre das falsche Kriterium — es gibt keinen Tag, an dem alle Anwendungen gleichzeitig bekannt wurden.
 
-> Die konkreten Fristlängen sind an dieser Stelle **als Vorschlag markiert, nicht als Festlegung**: Eine Größenordnung von 60–90 Tagen für Grace Period 1 und 15–30 Tagen für Grace Period 2 ist ein plausibler Ausgangspunkt, sollte aber mit dem Fachbereich abgestimmt werden, der die Endpoint-/Applikationskontrolle betreibt.
+**Die offene Aufgabe** ist in jedem Fall dieselbe, in dieser Reihenfolge:
 
-**Warum das die on-touch-Regel nicht aufweicht:** Schritt 2 verlangt keine Migration auf eine neue Technologie — nur die zwei Mindestmaßnahmen, die das größte Einzelrisiko (kein Backup, kein benannter Verantwortlicher) schließen. Die eigentliche Migration auf den golden Path bleibt an „touch" gebunden. Nur wenn selbst diese Mindestmaßnahme verweigert wird, greift Schritt 4.
+1. **Bestätigen** — der technische Owner erkennt die vorgefundene Anwendung als seine an.
+2. **Zuordnen** — sie hängt an mindestens einem Prozessobjekt.
+3. **Bewerten** — dieses Prozessobjekt trägt eine Bewertung.
+
+**Zwei Pfade, ein Fall.** Was Melde- und Blockierungspfad unterscheidet, ist allein die Frist: bis zu ihrem Ablauf steht die Anwendung im **Meldepfad**, danach im **Blockierungspfad** — dieselbe Aufgabe, aber die Zeit ist abgelaufen. Deshalb eine Cockpit-Zeile mit zwei Zuständen und nicht zwei Zeilen; der Hinweis nennt Pfad, offene Aufgabe und die Zahl der Tage seit dem Auffinden.
+
+> Die Frist steht in der Konfiguration (`altanwendung_meldefrist_tage`, Vorgabe 90 Tage) und ist von der Governance-Rolle im laufenden Betrieb änderbar — sie ist Governance-Inhalt, kein Betriebsparameter. Die eigentliche Blockierung auf Applikationsebene erfolgt außerhalb dieser Anwendung, in der jeweiligen technischen Plattform; die Governance-Plattform hält die Frist nach und kennzeichnet den Fall.
+
+**Wer den Weg hinter sich hat, verschwindet aus der Zeile.** Eine bestätigte, einem bewerteten Prozess zugeordnete Alt-Anwendung ist keine Alt-Anwendung mehr, sondern ein geführtes Tool-Objekt. Eine Zeile, die sie weiter mitführte, würde ihre eigene Zahl bedeutungslos machen.
+
+**Warum das die on-touch-Regel nicht aufweicht:** Verlangt werden nur die drei Schritte, die aus einer unbekannten Anwendung eine geführte machen — keine Migration auf eine neue Technologie. Die bleibt an „touch" gebunden.
 
 ### A.16.3 Sichtbarkeit im Cockpit
 
@@ -874,7 +924,7 @@ Zur Erwartungssteuerung – und weil Adoption an vermuteten Auflagen scheitert, 
 - ❌ Keine Dokumentation von Code oder Logik
 - ❌ Keine Prüfung von Tier-1- und Tier-2-Anwendungen
 - ❌ Keine ODCS-Kontrakte für normale Datennutzung
-- ❌ Keine Migration bestehender Anwendungen ohne Anlass (Ausnahme: Mindest-Kompensation für strukturell ausgeschlossene Tier-3-Altfälle, A.16.2)
+- ❌ Keine Migration bestehender Anwendungen ohne Anlass (Ausnahme: die Meldepflicht für vorgefundene Anwendungen, A.16.2)
 - ❌ Keine Freigabe für Refactoring, Features oder Bugfixes
 - ❌ Keine Einzelvorlage beim Betriebsrat je Anwendung
 - ❌ Keine manuelle Pflege dessen, was Telemetrie liefert
@@ -898,7 +948,7 @@ Zur Erwartungssteuerung – und weil Adoption an vermuteten Auflagen scheitert, 
 | 9 | Technologiematrix (Teil C.1) altert | Produktfähigkeiten ändern sich; Einstufungen sind periodisch zu prüfen | Jährliche Revision |
 | 10 | Entscheidungsbaum A.8.5 ist neu und ungetestet | Reihenfolge und Schwellen der sechs Schritte beruhen auf Ableitung aus den Ankern (A.8.3), nicht auf gelebter Praxis | Erste Fälle nach Einführung parallel gegen Fachbewertung prüfen, Reihenfolge ggf. nachschärfen |
 | 11 | EU-AI-Act-Kategorisierung in der KI-Dimension (A.8.3) ist vereinfacht dargestellt | Ersetzt keine Einzelfallprüfung nach Anhang III bzw. der Verbotsliste in Art. 5, insbesondere in Grenzfällen | Bei Unklarheit über die Kategorie: Rechtsabteilung vor Tier-Festlegung einbeziehen |
-| 12 | Grace-Period-Fristen in A.16.2 sind Platzhalter | Zu kurze Fristen erzeugen unnötigen Druck, zu lange verlängern das ungeschützte Fenster | Abstimmung mit Endpoint-/Applikationskontrolle |
+| 12 | Die Meldefrist in A.16.2 (Vorgabe 90 Tage) ist ein Ausgangswert | Zu kurze Fristen erzeugen unnötigen Druck, zu lange verlängern das ungeschützte Fenster | Abstimmung mit Endpoint-/Applikationskontrolle; änderbar über die Einstellungen |
 
 ---
 
@@ -913,6 +963,21 @@ Wenn die Antwort keine Risikoreduktion benennt, die den Wartezeitpreis rechtfert
 ---
 
 # TEIL B — TECHNISCHE REALISIERUNG
+
+> **Offener Punkt: die K-Verweise in diesem Teil.** Teil B belegt an
+> 34 Stellen technische Eigenschaften mit Anforderungsklassen — „Cloud Logging
+> erfüllt K4", „Namespace-Trennung erfüllt K5". Diese Verweise folgen noch der
+> **früheren, technisch geschnittenen** Nummerierung (K1 Identität, K4
+> Ausführungs-Nachvollziehbarkeit, K5 Trennung Dev/Prod). Die Nummerierung in
+> A.9.2 ist inzwischen **organisatorisch** geschnitten und deckt sich damit
+> nicht mehr.
+>
+> Die Aussagen selbst — was eine Plattform technisch kann — bleiben richtig;
+> nur ihre Etiketten stimmen nicht. Sie sind hier bewusst **nicht** umgeschrieben
+> worden: eine Zuordnung technischer Fähigkeiten auf organisatorische Klassen
+> wäre eine inhaltliche Entscheidung, keine Redaktion. Bis sie getroffen ist,
+> gilt für Teil B die Lesart „technische Eigenschaft", nicht „Anforderungsklasse
+> nach A.9.2".
 
 *Wie die in Teil A definierten Anforderungen je Technologie konkret erfüllt werden. Dieser Teil ändert sich, wenn sich Produktfähigkeiten ändern oder eine Technologie hinzukommt — Teil A bleibt davon unberührt.*
 
@@ -1742,7 +1807,7 @@ Beide sind gleichrangig vorgesehen, nicht als Vorstufe zueinander — ein Fachbe
 
 ### B.2.7 Identität: Workload Identity Federation
 
-**Schicht-2-Verbot, ab Tag 1 ohne Übergangsregelung (A.13.2):** Für Compute-Workloads werden **keine Service-Account-Keys** ausgestellt. Ausschließlich Workload Identity Federation.
+**Ab Tag 1 ohne Übergangsregelung:** Für Compute-Workloads werden **keine Service-Account-Keys** ausgestellt. Ausschließlich Workload Identity Federation. Ein ausgestellter Schlüssel wäre zugleich ein dauerhaft gültiges Zugangsdatum und fiele damit unter das zweite Schicht-2-Verbot aus A.13.2.
 
 Da der Fachbereichs-GCP-Bestand bislang **keine Compute-Komponente** enthielt (B.2.0), gibt es keinen bestehenden Key-basierten Zugriff, der abgelöst werden müsste — die Regel gilt von Beginn an, ohne Migrationsfenster oder Ausnahmeliste. Das ist ein seltener Fall, in dem eine Sicherheitsanforderung nicht gegen gewachsenen Bestand durchgesetzt werden muss, sondern von Anfang an Teil des Fundaments ist.
 
@@ -1763,7 +1828,7 @@ Jedes Tool-Objekt erhält eine **eigene** GCP-IAM-Identität statt einer geteilt
 
 ### B.2.8 Netzwerk: Default-Deny-Egress
 
-Die Schicht-2-Prohibition „Datenausleitung an nicht deklarierte Ziele" (A.13.2) wird für Python/Kubernetes **technisch erzwungen**, nicht nur telemetrisch gemessen — anders als etwa bei Apps Script, wo eine Allowlist auf Anwendungsebene das einzig verfügbare Mittel ist (B.1.5), erlaubt Kubernetes echte Netzwerkdurchsetzung.
+Das Schicht-2-Verbot „Übermittlung von Unternehmensdaten außerhalb der freigegebenen Infrastruktur" (A.13.2) wird für Python/Kubernetes **technisch erzwungen**, nicht nur telemetrisch gemessen — anders als etwa bei Apps Script, wo eine Allowlist auf Anwendungsebene das einzig verfügbare Mittel ist (B.1.5), erlaubt Kubernetes echte Netzwerkdurchsetzung.
 
 ```yaml
 # Beispiel: Default-Deny-Egress-NetworkPolicy je Namespace
@@ -1842,7 +1907,7 @@ Diese Tabelle ist der eigentliche Beleg für die in B.2.1 formulierte Zielrichtu
 
 ### B.2.13 Bestand und Migration
 
-Es gilt das technologieneutrale Migrationsprinzip aus A.16 unverändert: **on touch**, mit signaturbasierter Vollinventur und gestufter Mindest-Kompensationspflicht für strukturell ausgeschlossene Tier-3-Altfälle.
+Es gilt das technologieneutrale Migrationsprinzip aus A.16 unverändert: **on touch**, mit Meldepflicht und Frist für vorgefundene Anwendungen.
 
 **Python-spezifische Ergänzung zur Erkennung:** Die signaturbasierte Erkennung (A.16.2, Schritt 1) nutzt die bestehende Endpoint-/Applikationskontrolle, die ausführbare Dateien anhand ihrer Signatur identifiziert — unabhängig davon, ob ein Owner sich meldet. Für den Python-Bestand bedeutet das konkret: Jede lokal installierte `.exe`, die aus dem bestehenden CI/CD-Framework stammt, ist über diese Signatur auffindbar, auch wenn das zugehörige Tool-Objekt heute nicht existiert.
 
@@ -1964,28 +2029,44 @@ Das Frontend kennt den Tier eines anfragenden Prozesses (aus dem Prozessobjekt, 
 
 ## C.1 Technologiematrix
 
-Die Python-Spalte ist aufgeteilt in **Alt-Bestand** (heutige `.exe`-Praxis, zum Vergleich) und **Golden Path** (Kubernetes, Zielbild) — der Unterschied zwischen beiden Spalten ist der eigentliche Wirkungsnachweis von B.2.
+Die Matrix ist **gepflegte Stammdaten**, keine Konstante im Code: sie ist eine Entscheidungsgrundlage, und eine, die nur mit einer Auslieferung änderbar wäre, veraltet zwischen zwei Releases. Die Governance-Rolle ändert jedes Feld im laufenden Betrieb — mit **Pflichtbegründung**, denn eine Farbe ohne Satz ist keine Entscheidungsgrundlage. Eine Änderung wirkt sofort in allen Befunden; sie werden bei jedem Aufruf gerechnet und nicht gespeichert, damit es keinen zweiten, veralteten Stand gibt.
 
-**Legende:** ✅ strukturell erfüllt · ⚠️ eingeschränkt erfüllbar / kompensierende Maßnahme nötig · ❌ strukturell nicht erfüllbar
+**Legende:** ✅ erfüllt · ⚠️ kompensierbar, dokumentierte Maßnahme nötig · ❌ nicht erfüllbar
 
-| # | Anforderungsklasse | Apps Script | AppSheet | Python — Alt (`.exe`) | **Python — Golden Path** | BigQuery / GCS |
-|---|---|---|---|---|---|---|
-| K1 | Identität/Zugriff | ✅ Standard-Projekt, IAM über Gruppen | ✅ App-Owner als Gruppe, Security Filter | ⚠️ Nur Dateisystemrechte | ✅ Workload Identity, RBAC | ✅ IAM, Row-Level-Security |
-| K2 | Minimierung | ✅ Enge Scopes, `@OnlyCurrentDoc`, Picker | ✅ Datenquelle auf Bedarf begrenzt | ⚠️ Meist volle Rechte der Kennung | ✅ Scoped Workload Identity, Default-Deny-Egress | ✅ Authorized Views, Policy Tags |
-| K3 | Code-Nachvollziehbarkeit | ✅ clasp + Git + Pipeline | ⚠️ Nur App-Versionierung | ⚠️ Git möglich, organisatorisch selten | ✅ Ephemere Workspaces erzwingen Git | ✅ Views als Code (dbt/Terraform) |
-| K4 | Ausführungs-Nachvollziehbarkeit | ✅ Cloud Logging, OAuth Token Audit | ✅ Nutzungs-/Änderungsprotokoll | ❌ Nicht vorhanden | ✅ Cloud Logging je Cluster/Namespace | ✅ Cloud Audit Logs, `INFORMATION_SCHEMA` |
-| K5 | Trennung Dev/Prod | ✅ Getrennte Projekte | ⚠️ Eingeschränkt möglich | ❌ Nicht vorhanden | ✅ Namespace-/Node-Pool-Trennung | ✅ Getrennte Datasets/Projekte |
-| K6 | Revisionssicherheit | ⚠️ Nur über Export | ⚠️ Nur über Export | ❌ Nicht vorhanden | ✅ Git + Artifact-Registry-Historie | ✅ Snapshots, Time Travel |
-| K7 | Verfügbarkeit | ⚠️ Google-SLA, kein eigener Wiederanlauf | ✅ Google-SLA | ❌ Endet mit dem Gerät | ✅ K8s-Self-Healing, Plattform-Betrieb | ✅ Google-SLA + Wiederherstellung |
-| K8 | Betroffenentransparenz | Organisatorisch | Organisatorisch | Organisatorisch | Organisatorisch | Organisatorisch |
-| K9 | Nachfolge | ✅ Gruppen-Ownership, Repo | ✅ Gruppen-Ownership | ❌ Bindet an Person und Gerät | ✅ Gruppen-Ownership, Plattform-Betrieb | ✅ Gruppen-Ownership |
-| K10 | KI-Auflagen (EU AI Act) | Organisatorisch | Organisatorisch | Organisatorisch | Organisatorisch | Organisatorisch |
+| # | Anforderungsklasse | Apps Script | Python / Kubernetes | BigQuery / Cloud Storage | AppSheet |
+|---|---|---|---|---|---|
+| K1 | Dokumentationspflicht des Prozessobjekts | ✅ | ✅ | ✅ | ✅ |
+| K2 | Selbstverpflichtung des Prozesseigners | ✅ | ✅ | ✅ | ✅ |
+| K3 | Benannter technischer Owner | ✅ | ✅ | ✅ | ✅ |
+| K4 | Datenschutz-Folgenabschätzung | ✅ | ✅ | ✅ | ✅ |
+| K5 | Zugriffs- und Rechtekonzept | ⚠️ | ✅ | ✅ | ❌ |
+| K6 | KI-Transparenz nach EU AI Act | ✅ | ✅ | ✅ | ✅ |
+| K7 | Mitbestimmungsverfahren | ✅ | ✅ | ✅ | ✅ |
+| K8 | Regulatorischer Nachweis und Aufbewahrung | ⚠️ | ✅ | ✅ | ⚠️ |
+| K9 | Notfall- und Wiederanlaufkonzept | ❌ | ✅ | ⚠️ | ❌ |
+| K10 | Gate-2-Pflicht vor Inbetriebnahme | ✅ | ✅ | ✅ | ✅ |
 
-**Zu K10:** Anders als K1–K9 hängt die Erfüllung kaum von der Ausführungsplattform ab — menschliche Aufsicht, Dokumentation und Konformitätsbewertung sind Prozesspflichten, keine Infrastrukturmerkmale. Die Zeile ist deshalb technologieunabhängig „Organisatorisch", vergleichbar mit K8.
+**Warum sieben Zeilen durchgehend ✅ sind, und das keine Nachlässigkeit ist.** Dokumentation, Selbstverpflichtung, benannter Owner, Folgenabschätzung, KI-Transparenz, Mitbestimmung und die Gate-Pflicht sind **organisatorische** Anforderungen. Keine Plattform hindert jemanden daran, den Betriebsrat zu beteiligen oder eine Folgenabschätzung durchzuführen. Eine Matrix, die hier Unterschiede behauptete, wäre falsch. Es unterscheiden sich genau die drei **technischen** Klassen: das Zugriffs- und Rechtekonzept (K5), die revisionssichere Aufbewahrung (K8) und das Wiederanlaufkonzept (K9). Dort entscheidet das Werkzeug, überall sonst die Organisation.
 
-**Lesart für Gate 1 (A.9.3):** Ein Tier-3-Prozess mit Profil `KI0-DS3-MB1-IT1-RG2-UR2` (Ableitung über den Entscheidungsbaum, A.8.5) löst K1, K2, K3, K4, K5, K7, K8 und K9 aus, nicht aber K6 oder K10. Für K4, K5, K7 und K9 ist eine lokale Python-Lösung ohne den Golden Path aus B.2 strukturell ausgeschlossen; mit ihm ist sie es nicht — das ist die praktische Wirkung der in B.2 beschriebenen Architektur.
+**Die abweichenden Felder mit ihrer Begründung:**
 
-> ⚠️ Diese Matrix altert, sobald sich Produktfähigkeiten ändern. Periodische Prüfung bleibt jährliche Pflicht (A.18, Punkt 9).
+| Technologie | Klasse | Begründung |
+|---|---|---|
+| Apps Script | K5 ⚠️ | Ein Skript läuft unter der Identität dessen, der es startet; ein eigenes Rechtekonzept hat es nicht. Kompensierbar über die Rechte der angesprochenen Ablagen. |
+| Apps Script | K8 ⚠️ | Die Ausführungsprotokolle sind zeitlich begrenzt und nicht revisionssicher. Kompensierbar über eine Ausleitung in ein aufbewahrungspflichtiges System. |
+| Apps Script | K9 ❌ | Ein Skript in der Ablage einer Person hat weder Ausweichbetrieb noch zugesagte Wiederanlaufzeit. |
+| BigQuery / GCS | K9 ⚠️ | Der Speicher ist hochverfügbar, die Auswertungslogik aber nicht Teil eines Wiederanlaufplans. Kompensierbar über einen dokumentierten Wiederherstellungsweg der Abfragen. |
+| AppSheet | K5 ❌ | Die Plattform kennt nur ihr eigenes Freigabemodell. Ein abgestuftes, jährlich überprüfbares Rechtekonzept lässt sich darin nicht abbilden. |
+| AppSheet | K8 ⚠️ | Änderungen sind nachvollziehbar, aber nicht aufbewahrungssicher. Kompensierbar über einen regelmäßigen Export. |
+| AppSheet | K9 ❌ | Für die Anwendung gibt es keinen Ausweichbetrieb und keine zugesagte Wiederanlaufzeit. |
+
+**„Ungeprüft" ist eine eigene Antwort.** Steht am Tool-Objekt keine Technologie, gibt es nichts abzugleichen — und eine fehlende Angabe ist kein Nachweis. Solche Fälle erscheinen als offener Befund neben dem Ausschluss und der fehlenden Kompensation: alle drei verlangen denselben nächsten Schritt, nämlich eine Entscheidung.
+
+**Ein Ausschluss lässt sich nicht wegkompensieren.** Ein ❌ ist nach A.9.3 ein Ausschlusskriterium; eine Kompensation darauf wäre die Umgehung des Kriteriums, nicht seine Erfüllung. Umgekehrt braucht eine erfüllte Klasse keine Maßnahme — auch das wird abgewiesen, damit die Liste der Kompensationen aussagekräftig bleibt.
+
+**Lesart für Gate 1 (A.9.3):** Ein Tier-3-Prozess mit Profil `KI0-DS3-MB1-IT1-RG2-UR2` (Ableitung über den Entscheidungsbaum, A.8.5) löst K1, K2, K3, K4, K5, K7, K8 und K9 aus, nicht aber K6 oder K10. Für ein Apps-Script-Tool ist damit K9 strukturell ausgeschlossen und K5 sowie K8 kompensationspflichtig; für ein AppSheet-Tool sind K5 und K9 ausgeschlossen. Auf Python/Kubernetes läuft derselbe Prozess ohne Befund — das ist die praktische Wirkung der in B.2 beschriebenen Architektur.
+
+> ⚠️ Diese Matrix altert, sobald sich Produktfähigkeiten ändern. Periodische Prüfung bleibt jährliche Pflicht (A.18, Punkt 9). Jede Änderung landet über den `change_log` im Nachweis (A.13.7).
 
 ## C.2 Gesamtarchitektur im Überblick
 
@@ -2053,7 +2134,7 @@ Dieses Dokument enthält an mehreren Stellen Annahmen oder Vorschläge, die aus 
 |---|---|---|---|
 | 1 | Reihenfolge und Schwellen der sechs Schritte im Entscheidungsbaum sind aus den Ankern (A.8.3) abgeleitet, nicht gesondert bestätigt | A.8.5 | Reihenfolge/Schwellen im Baum |
 | 2 | EU-AI-Act-Risikokategorien (verboten/Anhang III/Art. 50/minimal) sind vereinfachend auf vier Stufen abgebildet | A.8.3, A.8.5 Schritt 1 | KI-Anker und Baum-Schritt 1a–1d |
-| 3 | Größenordnung der beiden Grace Periods (60–90 / 15–30 Tage) | A.16.2 | Fristangaben in A.16.2, A.18 Punkt 12 |
+| 3 | Länge der Meldefrist für vorgefundene Anwendungen (Vorgabe 90 Tage, konfigurierbar) | A.16.2 | Vorgabewert der Einstellung `altanwendung_meldefrist_tage` |
 | 4 | Ressourcenkontingente, Idle-Timeout für Notebook-/Code-Server-Sessions | B.2.15 | Konkrete Werte ergänzen |
 | 5 | Genaues Autorisierungsmodell des Zugriffsproxys vor dem Cluster | B.2.6, B.2.15 | Technische Umsetzung |
 | 6–15 | Die zehn technisch zu verifizierenden Punkte aus B.1.15 (App-Identitäts-Bündelung, Editionsstand, Audit-Log-Verhalten eingebauter Services u. a.) | B.1.15 | Je nach Prüfergebnis einzelne Bausteine in B.1 |
