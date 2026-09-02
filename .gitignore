@@ -36,7 +36,7 @@ Thumbs.db
 # aber nirgends, was sie vor einem `git add -A` nicht geschuetzt hat.
 docker-compose.override.yml
 
-# Interne Vorgabedokumente gehoeren nicht ins Repository
+# Das Leitdokument liegt seit dem 02.09.2026 bei (docs/leitdokument.md) —
+# die frueher hier gefuehrte Trennung ist damit hinfaellig.
 docs/architektur.md
-docs/leitdokument.md
 frontend/tsconfig.tsbuildinfo
