@@ -12,7 +12,13 @@ from app.core.permissions import Principal, Verboten, verlange
 from app.models.enums import Ebene, ProzessStatus, Rolle
 from app.models.governance import Datenobjekt, Prozessobjekt, ProzessUmsetzung
 from app.models.organisation import Organisationseinheit
-from app.schemas.prozess import ProzessAendern, ProzessAnlegen, ProzessAus, UmsetzungAus
+from app.schemas.prozess import (
+    HOECHSTZAHL_SCHRITTE,
+    ProzessAendern,
+    ProzessAnlegen,
+    ProzessAus,
+    UmsetzungAus,
+)
 from app.services import ableitung
 from app.services.changelog import (
     protokolliere_aenderung,
@@ -32,6 +38,38 @@ class Ungueltig(Exception):
     def __init__(self, detail: str) -> None:
         super().__init__(detail)
         self.detail = detail
+
+
+def zaehle_schritte(process_steps: str) -> int:
+    """Schritte der P-Spalte zaehlen (Leitdokument A.5).
+
+    Getrennt wird an Zeilenumbruch oder Semikolon — beides schreibt jemand, der
+    Schritte auflistet, ohne es als Syntax zu empfinden.
+    """
+    roh = process_steps.replace(";", "\n").splitlines()
+    return len([teil for teil in (t.strip() for t in roh) if teil])
+
+
+def _pruefe_zyklenfrei(prozess: Prozessobjekt) -> None:
+    """Die Prozesskette muss azyklisch bleiben.
+
+    Technisch ist sie n:m und liesse einen Zyklus zu; fachlich waere er
+    unsinnig — ein Prozess kann sich nicht selbst beliefern — und wuerde jede
+    Aussage ueber Kritikalitaet und Wirkung entwerten (Leitdokument A.4.2).
+    """
+    gesehen: set[uuid.UUID] = set()
+    stapel = list(prozess.nachgelagert)
+    while stapel:
+        aktuell = stapel.pop()
+        if aktuell.id == prozess.id:
+            raise Ungueltig(
+                "Diese Verknuepfung erzeugt einen Kreis in der Prozesskette; "
+                "ein Prozess kann sich nicht selbst beliefern"
+            )
+        if aktuell.id in gesehen:
+            continue
+        gesehen.add(aktuell.id)
+        stapel.extend(aktuell.nachgelagert)
 
 
 # --- Sichtbarkeit (Architektur 4.3) --------------------------------------
@@ -129,7 +167,7 @@ def hole_sichtbar(db: Session, principal: Principal, prozess_id: uuid.UUID) -> P
     prozess = hole(db, prozess_id)
     if not darf_lesen(db, principal, prozess):
         # Kein 404-Verstecken: die Existenz ist unkritisch, der Inhalt nicht.
-        raise Verboten("Prozessobjekt liegt ausserhalb des eigenen Bereichs")
+        raise Verboten("Prozessobjekt liegt außerhalb des eigenen Bereichs")
     return prozess
 
 
@@ -181,6 +219,8 @@ def zu_schema(prozess: Prozessobjekt) -> ProzessAus:
         reichweite=prozess.reichweite,
         kritikalitaet=prozess.kritikalitaet,
         mitbestimmung_flag=prozess.mitbestimmung_flag,
+        schritt_anzahl=zaehle_schritte(prozess.process_steps),
+        schritte_zu_viele=zaehle_schritte(prozess.process_steps) > HOECHSTZAHL_SCHRITTE,
         input_datenobjekt_ids=[d.id for d in prozess.input_datenobjekte],
         output_datenobjekt_ids=[d.id for d in prozess.output_datenobjekte],
         vorgelagert_ids=[p.id for p in prozess.vorgelagert],
@@ -231,7 +271,7 @@ def anlegen(db: Session, principal: Principal, daten: ProzessAnlegen) -> Prozess
         raise Ungueltig("Der Prozessgeber ist immer eine INT-Organisationseinheit")
     verlange(
         darf_schreiben(db, principal, daten.prozessgeber_org_id),
-        "Prozessobjekte darf nur ein Prozess-Owner im eigenen Bereich anlegen",
+        "Prozessobjekte legt nur ein Prozess-Owner im eigenen Bereich an",
     )
 
     prozess = Prozessobjekt(
@@ -245,10 +285,13 @@ def anlegen(db: Session, principal: Principal, daten: ProzessAnlegen) -> Prozess
         customer=daten.customer,
         ausfallfolge=daten.ausfallfolge,
         status=ProzessStatus.ENTWURF,
+        erlaubte_externe_ziele=list(daten.erlaubte_externe_ziele),
     )
     prozess.input_datenobjekte = _lade_datenobjekte(db, daten.input_datenobjekt_ids)
+    prozess.output_datenobjekte = _lade_datenobjekte(db, daten.output_datenobjekt_ids)
     prozess.vorgelagert = _lade_prozesse(db, daten.vorgelagert_ids)
     prozess.nachgelagert = _lade_prozesse(db, daten.nachgelagert_ids)
+    _pruefe_zyklenfrei(prozess)
     db.add(prozess)
     db.flush()
 
@@ -287,7 +330,7 @@ def pruefe_aktivierung(db: Session, prozess: Prozessobjekt) -> None:
         return
     if not selbstverpflichtung.ist_gedeckt(db, prozess):
         raise Ungueltig(
-            "Ab Tier 3 wird ein Prozessobjekt erst nach vollstaendig abgegebener "
+            "Ab Tier 3 wird ein Prozessobjekt erst nach vollständig abgegebener "
             "Selbstverpflichtung aktiv"
         )
     if not gate.ist_freigegeben(db, prozess.id, GateTyp.GATE_1):
@@ -301,7 +344,7 @@ def aendern(
 ) -> Prozessobjekt:
     verlange(
         darf_schreiben(db, principal, prozess.prozessgeber_org_id),
-        "Prozessobjekte darf nur ein Prozess-Owner im eigenen Bereich aendern",
+        "Prozessobjekte ändert nur ein Prozess-Owner im eigenen Bereich",
     )
     vorher = snapshot(prozess)
     werte = daten.model_dump(exclude_unset=True)
@@ -312,16 +355,27 @@ def aendern(
             raise Ungueltig("Der Prozessgeber ist immer eine INT-Organisationseinheit")
         verlange(
             darf_schreiben(db, principal, werte["prozessgeber_org_id"]),
-            "Der neue Prozessgeber liegt ausserhalb des eigenen Bereichs",
+            "Der neue Prozessgeber liegt außerhalb des eigenen Bereichs",
         )
     if "input_datenobjekt_ids" in werte:
         prozess.input_datenobjekte = _lade_datenobjekte(db, werte.pop("input_datenobjekt_ids"))
+    if "output_datenobjekt_ids" in werte:
+        prozess.output_datenobjekte = _lade_datenobjekte(db, werte.pop("output_datenobjekt_ids"))
     if "vorgelagert_ids" in werte:
         prozess.vorgelagert = _lade_prozesse(db, werte.pop("vorgelagert_ids"))
     if "nachgelagert_ids" in werte:
         prozess.nachgelagert = _lade_prozesse(db, werte.pop("nachgelagert_ids"))
+    if {"vorgelagert_ids", "nachgelagert_ids"} & set(daten.model_dump(exclude_unset=True)):
+        _pruefe_zyklenfrei(prozess)
     if werte.get("status") == ProzessStatus.AKTIV and prozess.status != ProzessStatus.AKTIV:
         pruefe_aktivierung(db, prozess)
+
+    # Vor dem Setzen vergleichen: danach waere nicht mehr erkennbar, welches
+    # Ziel neu ist (Leitdokument A.11, Ausloeser „neues externes Ziel").
+    bisherige_ziele = set(prozess.erlaubte_externe_ziele or [])
+    neue_ziele = [
+        ziel for ziel in werte.get("erlaubte_externe_ziele") or [] if ziel not in bisherige_ziele
+    ]
 
     for feld, wert in werte.items():
         setattr(prozess, feld, wert)
@@ -330,6 +384,11 @@ def aendern(
     ableitung.aktualisiere_kette(prozess)
     db.flush()
     protokolliere_aenderung(db, prozess, vorher, akteur_user_id=principal.user_id)
+
+    if neue_ziele:
+        from app.services import gate
+
+        gate.wegen_neuem_externen_ziel(db, principal, prozess, neue_ziele)
     return prozess
 
 
@@ -343,7 +402,7 @@ def umsetzung_anlegen(
     verlange(
         darf_schreiben(db, principal, prozess.prozessgeber_org_id)
         or darf_umsetzung_bearbeiten(db, principal, land_org_id),
-        "Keine Berechtigung fuer diese Umsetzung",
+        "Keine Berechtigung für diese Umsetzung",
     )
     _pruefe_land_org(db, land_org_id)
     if any(u.land_org_id == land_org_id for u in prozess.umsetzungen):

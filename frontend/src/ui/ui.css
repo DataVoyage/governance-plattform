@@ -1,0 +1,1546 @@
+/*
+ * Design-System „Klar" — Bausteine (Umsetzungsplan 1.6).
+ *
+ * Eine gemeinsame Datei statt fuenfzehn Fragmenten: die Bausteine teilen sich
+ * Masse und Zustaende, getrennte Dateien wuerden diese Bezuege verstecken.
+ */
+
+/* --- Seitenkopf -------------------------------------------------------- */
+
+.k-seitenkopf {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--abstand-4);
+  margin-block-end: var(--abstand-6);
+}
+
+.k-seitenkopf .titelblock {
+  min-width: 0;
+}
+
+.k-seitenkopf .rueckweg {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--abstand-1);
+  font: var(--hinweis-schrift);
+  margin-block-end: var(--abstand-1);
+}
+
+.k-seitenkopf h1 {
+  overflow-wrap: anywhere;
+}
+
+.k-seitenkopf .untertitel {
+  margin-block-start: var(--abstand-1);
+  font: var(--hinweis-schrift);
+  color: var(--text-sekundaer);
+}
+
+.k-seitenkopf .aktionen {
+  display: flex;
+  gap: var(--abstand-2);
+  flex: none;
+}
+
+/* --- Knopf ------------------------------------------------------------- */
+
+.k-knopf {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--abstand-2);
+  min-height: 2.25rem;
+  padding: 0 var(--abstand-4);
+  border: none;
+  border-radius: var(--radius-steuerung);
+  background: var(--fuellung-steuerung);
+  color: var(--text-primaer);
+  font: var(--hinweis-schrift);
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    filter var(--dauer-schnell) ease-out,
+    background var(--dauer-schnell) ease-out,
+    opacity var(--dauer-schnell) ease-out;
+}
+
+.k-knopf:hover:not(:disabled) {
+  filter: brightness(0.96);
+}
+
+.k-knopf:active:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+.k-knopf:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.k-knopf--gross {
+  min-height: 2.75rem;
+  padding: 0 var(--abstand-5);
+  font: var(--flies);
+  font-weight: 600;
+}
+
+.k-knopf--gefuellt {
+  background: var(--farbe-akzent);
+  color: var(--text-auf-akzent);
+}
+
+.k-knopf--getoent {
+  background: var(--farbe-akzent-gedaempft);
+  color: var(--farbe-akzent);
+}
+
+.k-knopf--unauffaellig {
+  background: transparent;
+  color: var(--farbe-akzent);
+  padding-inline: var(--abstand-2);
+}
+
+.k-knopf--unauffaellig:hover:not(:disabled) {
+  background: var(--fuellung-steuerung);
+  filter: none;
+}
+
+.k-knopf--zerstoerend {
+  background: var(--farbe-rot-gedaempft);
+  color: var(--farbe-rot);
+}
+
+.k-knopf--breit {
+  width: 100%;
+}
+
+/* --- Abzeichen --------------------------------------------------------- */
+
+.k-abzeichen {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem var(--abstand-2);
+  border-radius: var(--radius-pille);
+  background: var(--farbe-grau-gedaempft);
+  color: var(--farbe-grau);
+  font: var(--fussnote);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.k-abzeichen--gruen {
+  background: var(--farbe-gruen-gedaempft);
+  color: var(--farbe-gruen);
+}
+.k-abzeichen--gelb {
+  background: var(--farbe-gelb-gedaempft);
+  color: var(--farbe-gelb);
+}
+.k-abzeichen--rot {
+  background: var(--farbe-rot-gedaempft);
+  color: var(--farbe-rot);
+}
+/* Informationsabzeichen fuehren ein eigenes Blau statt der Akzentfarbe: in
+   einer Marke mit rotem Akzent waere „Importiert" sonst nicht von „rot" zu
+   unterscheiden. */
+.k-abzeichen--blau {
+  background: var(--farbe-blau-gedaempft);
+  color: var(--farbe-blau);
+}
+.k-abzeichen--lila {
+  background: var(--farbe-lila-gedaempft);
+  color: var(--farbe-lila);
+}
+
+.k-abzeichen .punkt {
+  font-size: 0.7em;
+  line-height: 1;
+}
+
+/* --- Karte ------------------------------------------------------------- */
+
+.k-karte {
+  background: var(--flaeche);
+  border-radius: var(--radius-karte);
+  box-shadow: var(--tiefe-karte);
+  padding: var(--abstand-5);
+}
+
+.k-karte + .k-karte {
+  margin-block-start: var(--abstand-5);
+}
+
+.k-karte > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--abstand-3);
+  margin-block-end: var(--abstand-4);
+}
+
+.k-karte > header .beischrift {
+  font: var(--fussnote);
+  color: var(--text-sekundaer);
+}
+
+/* --- Gruppierte Liste -------------------------------------------------- */
+
+.k-gruppe {
+  margin-block-end: var(--abstand-6);
+}
+
+.k-gruppe > .etikett {
+  display: block;
+  padding: 0 var(--abstand-4) var(--abstand-2);
+  font: var(--etikett);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-sekundaer);
+}
+
+.k-gruppe > .hinweis {
+  display: block;
+  padding: var(--abstand-2) var(--abstand-4) 0;
+  font: var(--fussnote);
+  color: var(--text-sekundaer);
+}
+
+.k-liste {
+  background: var(--flaeche);
+  border-radius: var(--radius-karte);
+  box-shadow: var(--tiefe-karte);
+  overflow: hidden;
+}
+
+.k-zeile {
+  display: flex;
+  align-items: center;
+  gap: var(--abstand-4);
+  min-height: 2.75rem;
+  padding: var(--abstand-3) var(--abstand-4);
+  color: inherit;
+  text-align: start;
+  width: 100%;
+  background: none;
+  border: none;
+}
+
+.k-zeile + .k-zeile {
+  border-top: 0.5px solid var(--trennlinie);
+}
+
+a.k-zeile:hover,
+button.k-zeile:hover {
+  background: var(--fuellung-steuerung);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.k-zeile .beschriftung {
+  flex: none;
+  color: var(--text-primaer);
+}
+
+.k-zeile .haupt {
+  min-width: 0;
+  flex: 1;
+}
+
+.k-zeile .haupt .zweitzeile {
+  display: block;
+  font: var(--fussnote);
+  color: var(--text-sekundaer);
+  margin-block-start: 0.1rem;
+}
+
+.k-zeile .wert {
+  margin-inline-start: auto;
+  display: flex;
+  align-items: center;
+  gap: var(--abstand-2);
+  color: var(--text-sekundaer);
+  font-variant-numeric: tabular-nums;
+  text-align: end;
+}
+
+.k-zeile .pfeil {
+  color: var(--text-tertiaer);
+  flex: none;
+}
+
+/* --- Werteliste (Beschriftung/Wert) ------------------------------------ */
+
+.k-werte {
+  display: grid;
+  grid-template-columns: minmax(8rem, 14rem) 1fr;
+  gap: var(--abstand-3) var(--abstand-4);
+}
+
+.k-werte dt {
+  font: var(--hinweis-schrift);
+  color: var(--text-sekundaer);
+}
+
+.k-werte dd {
+  font: var(--flies);
+  overflow-wrap: anywhere;
+}
+
+.k-werte dd .herkunft {
+  display: block;
+  font: var(--fussnote);
+  color: var(--text-sekundaer);
+  margin-block-start: 0.1rem;
+}
+
+@media (max-width: 34rem) {
+  .k-werte {
+    grid-template-columns: 1fr;
+    gap: var(--abstand-1) 0;
+  }
+
+  .k-werte dd {
+    margin-block-end: var(--abstand-3);
+  }
+}
+
+/* --- Formularfelder ---------------------------------------------------- */
+
+.k-feld {
+  display: block;
+  margin-block-end: var(--abstand-5);
+}
+
+/* Auswahl in einer Listenzeile: kein Aussenabstand, keine volle Breite —
+   die Zeile traegt bereits Beschriftung und Rhythmus. */
+.k-feld--schmal {
+  margin-block-end: 0;
+}
+
+.k-feld--schmal select {
+  inline-size: auto;
+  min-inline-size: 11rem;
+}
+
+.k-feld > .beschriftung {
+  display: block;
+  font: var(--hinweis-schrift);
+  font-weight: 600;
+  margin-block-end: var(--abstand-2);
+}
+
+/* Der Pflichtstern steht bewusst als ::after und nicht im Beschriftungstext:
+   sonst hiesse das Feld fuer Vorlesesoftware „Name Stern". */
+.k-feld--pflicht > .beschriftung::after {
+  content: '*';
+  color: var(--farbe-rot);
+  margin-inline-start: 0.15rem;
+}
+
+.k-feld input,
+.k-feld textarea,
+.k-feld select {
+  display: block;
+  width: 100%;
+  min-height: 2.5rem;
+  padding: var(--abstand-2) var(--abstand-3);
+  border: 0.5px solid var(--trennlinie-kraeftig);
+  border-radius: var(--radius-steuerung);
+  background: var(--flaeche);
+  /* Nie die Browservorgabe erben: sie folgt ``color-scheme``, nicht den Token. */
+  color: var(--text-primaer);
+  transition:
+    border-color var(--dauer-schnell) ease-out,
+    box-shadow var(--dauer-schnell) ease-out;
+}
+
+.k-feld textarea {
+  min-height: 6rem;
+  resize: vertical;
+}
+
+.k-feld select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position:
+    calc(100% - 1rem) 1.15rem,
+    calc(100% - 0.7rem) 1.15rem;
+  background-size: 0.3rem 0.3rem;
+  background-repeat: no-repeat;
+  padding-inline-end: var(--abstand-8);
+}
+
+.k-feld input:focus,
+.k-feld textarea:focus,
+.k-feld select:focus {
+  outline: none;
+  border-color: var(--farbe-akzent);
+  box-shadow: 0 0 0 3px var(--farbe-akzent-gedaempft);
+}
+
+.k-feld .hilfe,
+.k-feld .fehler,
+.k-feld .zaehler {
+  display: block;
+  font: var(--fussnote);
+  margin-block-start: var(--abstand-2);
+}
+
+.k-feld .hilfe {
+  color: var(--text-sekundaer);
+}
+
+.k-feld .fehler {
+  color: var(--farbe-rot);
+}
+
+.k-feld .zaehler {
+  color: var(--text-tertiaer);
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+}
+
+.k-feld--fehlerhaft input,
+.k-feld--fehlerhaft textarea,
+.k-feld--fehlerhaft select {
+  border-color: var(--farbe-rot);
+}
+
+/* --- Umschalter -------------------------------------------------------- */
+
+.k-umschalter {
+  display: flex;
+  align-items: center;
+  gap: var(--abstand-4);
+  width: 100%;
+  cursor: pointer;
+}
+
+.k-umschalter .text {
+  flex: 1;
+  min-width: 0;
+}
+
+.k-umschalter .text .zweitzeile {
+  display: block;
+  font: var(--fussnote);
+  color: var(--text-sekundaer);
+  margin-block-start: 0.15rem;
+}
+
+.k-umschalter input {
+  appearance: none;
+  flex: none;
+  position: relative;
+  width: 3.1875rem;
+  height: 1.9375rem;
+  margin: 0;
+  border-radius: var(--radius-pille);
+  background: var(--fuellung-steuerung);
+  cursor: pointer;
+  transition: background var(--dauer-mittel) ease-out;
+}
+
+.k-umschalter input::after {
+  content: '';
+  position: absolute;
+  inset-block-start: 0.125rem;
+  inset-inline-start: 0.125rem;
+  width: 1.6875rem;
+  height: 1.6875rem;
+  border-radius: var(--radius-pille);
+  background: #fff;
+  box-shadow: 0 2px 4px #00000029;
+  transition: transform var(--dauer-mittel) var(--kurve);
+}
+
+.k-umschalter input:checked {
+  background: var(--farbe-gruen);
+}
+
+.k-umschalter input:checked::after {
+  transform: translateX(1.1875rem);
+}
+
+/* --- Segmentierte Steuerung -------------------------------------------- */
+
+.k-segmente {
+  display: inline-flex;
+  padding: 0.125rem;
+  gap: 0.125rem;
+  border-radius: var(--radius-steuerung);
+  background: var(--fuellung-steuerung);
+}
+
+.k-segmente button {
+  border: none;
+  background: transparent;
+  border-radius: calc(var(--radius-steuerung) - 0.125rem);
+  padding: 0.3rem var(--abstand-4);
+  font: var(--hinweis-schrift);
+  color: var(--text-primaer);
+  cursor: pointer;
+  transition: background var(--dauer-schnell) ease-out;
+}
+
+.k-segmente button[aria-pressed='true'] {
+  background: var(--fuellung-steuerung-aktiv);
+  font-weight: 600;
+  box-shadow: var(--tiefe-karte);
+}
+
+/* --- Suchfeld ---------------------------------------------------------- */
+
+.k-suche {
+  display: flex;
+  align-items: center;
+  gap: var(--abstand-2);
+  padding: 0 var(--abstand-3);
+  border-radius: var(--radius-steuerung);
+  background: var(--fuellung-steuerung);
+}
+
+.k-suche input {
+  color: var(--text-primaer);
+  flex: 1;
+  min-height: 2.25rem;
+  border: none;
+  background: none;
+  outline: none;
+}
+
+.k-suche .lupe {
+  color: var(--text-tertiaer);
+  flex: none;
+}
+
+/* --- Referenz-Waehler --------------------------------------------------- */
+
+.k-referenz {
+  position: relative;
+}
+
+.k-referenz .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--abstand-2);
+  margin-block-end: var(--abstand-2);
+}
+
+.k-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--abstand-2);
+  padding: 0.2rem 0.3rem 0.2rem var(--abstand-3);
+  border-radius: var(--radius-pille);
+  background: var(--farbe-akzent-gedaempft);
+  color: var(--farbe-akzent);
+  font: var(--hinweis-schrift);
+  font-weight: 600;
+}
+
+.k-chip button {
+  display: grid;
+  place-items: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: none;
+  border-radius: var(--radius-pille);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.9rem;
+  line-height: 1;
+}
+
+.k-chip button:hover {
+  background: #0000001a;
+}
+
+.k-referenz .treffer {
+  position: absolute;
+  z-index: 20;
+  inset-inline: 0;
+  margin-block-start: var(--abstand-1);
+  max-height: 16rem;
+  overflow-y: auto;
+  background: var(--flaeche-erhoben);
+  border-radius: var(--radius-karte);
+  box-shadow: var(--tiefe-erhoben);
+  padding: var(--abstand-1);
+}
+
+.k-referenz .treffer li > * {
+  display: flex;
+  align-items: center;
+  gap: var(--abstand-3);
+  width: 100%;
+  min-height: 2.25rem;
+  padding: var(--abstand-2) var(--abstand-3);
+  border: none;
+  border-radius: var(--radius-steuerung);
+  background: none;
+  color: var(--text-primaer);
+  text-align: start;
+  cursor: pointer;
+}
+
+.k-referenz .treffer li[aria-selected='true'] > * {
+  background: var(--farbe-akzent);
+  color: var(--text-auf-akzent);
+}
+
+.k-referenz .treffer li[aria-selected='true'] .k-abzeichen {
+  background: #ffffff2e;
+  color: inherit;
+}
+
+.k-referenz .treffer .leer {
+  padding: var(--abstand-3);
+  font: var(--hinweis-schrift);
+  color: var(--text-sekundaer);
+}
+
+/* --- Hinweisstreifen ---------------------------------------------------- */
+
+.k-hinweis {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--abstand-3);
+  padding: var(--abstand-3) var(--abstand-4);
+  border-radius: var(--radius-karte);
+  background: var(--farbe-akzent-gedaempft);
+  color: var(--text-primaer);
+  font: var(--hinweis-schrift);
+  margin-block-end: var(--abstand-5);
+}
+
+.k-hinweis--warnung {
+  background: var(--farbe-gelb-gedaempft);
+}
+.k-hinweis--fehler {
+  background: var(--farbe-rot-gedaempft);
+}
+.k-hinweis--erfolg {
+  background: var(--farbe-gruen-gedaempft);
+}
+
+.k-hinweis .symbol {
+  flex: none;
+  font-size: 1.1em;
+  line-height: 1.25;
+}
+
+/* --- Leerzustand -------------------------------------------------------- */
+
+.k-leer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--abstand-3);
+  padding: var(--abstand-12) var(--abstand-5);
+  text-align: center;
+  background: var(--flaeche);
+  border-radius: var(--radius-karte);
+  box-shadow: var(--tiefe-karte);
+}
+
+.k-leer .symbol {
+  font-size: 2rem;
+  opacity: 0.35;
+}
+
+.k-leer p {
+  max-width: 26rem;
+  color: var(--text-sekundaer);
+  font: var(--hinweis-schrift);
+}
+
+/* --- Ladeschimmer ------------------------------------------------------- */
+
+.k-schimmer {
+  height: 1rem;
+  border-radius: var(--radius-steuerung);
+  background: linear-gradient(
+    90deg,
+    var(--fuellung-steuerung) 25%,
+    var(--trennlinie) 37%,
+    var(--fuellung-steuerung) 63%
+  );
+  background-size: 400% 100%;
+  animation: k-schimmern 1.4s ease-in-out infinite;
+}
+
+.k-schimmer + .k-schimmer {
+  margin-block-start: var(--abstand-3);
+}
+
+@keyframes k-schimmern {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+/* --- Blatt (Sheet) ------------------------------------------------------ */
+
+.k-blatt-grund {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--abstand-4);
+  background: #00000052;
+  animation: k-einblenden var(--dauer-mittel) ease-out;
+}
+
+.k-blatt {
+  width: min(36rem, 100%);
+  max-height: min(85vh, 48rem);
+  overflow-y: auto;
+  background: var(--flaeche-erhoben);
+  border-radius: var(--radius-blatt);
+  box-shadow: var(--tiefe-blatt);
+  padding: var(--abstand-6);
+  animation: k-aufsteigen var(--dauer-blatt) var(--kurve);
+}
+
+.k-blatt > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--abstand-4);
+  margin-block-end: var(--abstand-5);
+}
+
+.k-blatt-fuss {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--abstand-2);
+  margin-block-start: var(--abstand-6);
+}
+
+@keyframes k-einblenden {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes k-aufsteigen {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem) scale(0.98);
+  }
+}
+
+/* --- Raster für Kartenübersichten --------------------------------------- */
+
+.k-raster {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(15rem, 1fr));
+  gap: var(--abstand-4);
+}
+
+/* --- Kennzahl ----------------------------------------------------------- */
+
+.k-kennzahl {
+  display: block;
+  font: var(--gross-titel);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+/* --- Feldgruppe --------------------------------------------------------- */
+
+.k-feldgruppe {
+  border: none;
+  margin: 0 0 var(--abstand-5);
+  padding: 0;
+}
+
+.k-feldgruppe > legend {
+  padding: 0 0 var(--abstand-2);
+  font: var(--etikett);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-sekundaer);
+}
+
+/* --- Trefferzeile im Referenz-Waehler ----------------------------------- */
+
+.k-referenz .treffer .haupt {
+  flex: 1;
+  min-width: 0;
+}
+
+.k-referenz .treffer .haupt .zweitzeile {
+  display: block;
+  font: var(--fussnote);
+  color: var(--text-sekundaer);
+}
+
+.k-referenz .treffer li[aria-selected='true'] .zweitzeile {
+  color: inherit;
+  opacity: 0.8;
+}
+
+.k-referenz .treffer .wert {
+  margin-inline-start: auto;
+  flex: none;
+}
+
+/* --- Nur für Vorlesesoftware -------------------------------------------- */
+
+.k-nur-vorlesen {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* --- Formularseiten ----------------------------------------------------- */
+
+.prozessformular {
+  max-width: var(--breite-formular);
+}
+
+.formularfuss {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--abstand-2);
+  margin-block-start: var(--abstand-6);
+}
+
+/* Chips einer Detailansicht: dieselbe Form wie im Referenz-Waehler, aber als
+   Verweis auf das referenzierte Objekt. */
+.k-chipreihe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--abstand-2);
+}
+
+a.k-chip {
+  text-decoration: none;
+}
+
+a.k-chip:hover {
+  filter: brightness(0.95);
+  text-decoration: none;
+}
+
+.leerhinweis {
+  color: var(--text-sekundaer);
+  font: var(--hinweis-schrift);
+}
+
+.listenkopf {
+  display: flex;
+  justify-content: flex-end;
+  margin-block-end: var(--abstand-4);
+}
+
+.listenkopf .k-suche {
+  min-width: 16rem;
+}
+
+/* --- Bewertungs-Wizard (Leitdokument A.8, AP-4) -----------------------
+
+   Eine Frage je Bildschirm. Die Gestaltung ordnet den Blick in dieser
+   Reihenfolge: wo bin ich, was wird gefragt, was sagen die Daten dazu, wie
+   antworte ich. Der Vorschlag steht deshalb zwischen Frage und Antwort und
+   nicht daneben — er ist Teil der Frage, keine Randnotiz. */
+
+.k-knopfreihe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--abstand-2);
+  margin-block-start: var(--abstand-5);
+}
+
+.k-knopfreihe--getrennt {
+  justify-content: space-between;
+  border-block-start: 1px solid var(--trennlinie);
+  padding-block-start: var(--abstand-4);
+}
+
+/* Fortschritt: ein Punkt je Themenblock. Bewusst ohne Beschriftung der
+   kommenden Blöcke — wer die Fragen vorab liest, richtet seine Antworten
+   danach ein. */
+.k-fortschritt ol {
+  display: flex;
+  gap: var(--abstand-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.k-fortschritt li {
+  block-size: 0.5rem;
+  inline-size: 0.5rem;
+  border-radius: var(--radius-pille);
+  background: var(--fuellung-steuerung);
+}
+
+.k-fortschritt li.erledigt {
+  background: var(--farbe-akzent);
+}
+
+.k-fortschritt li.hier {
+  background: var(--farbe-akzent);
+  inline-size: 1.5rem;
+}
+
+.k-fortschritt .beischrift {
+  color: var(--text-sekundaer);
+  font: var(--fussnote);
+  margin-block: var(--abstand-2) 0;
+}
+
+.k-frage {
+  font: var(--titel-2);
+  margin-block: var(--abstand-4) var(--abstand-4);
+  color: var(--text-primaer);
+}
+
+.k-vorschlag {
+  background: var(--farbe-akzent-gedaempft);
+  border-radius: var(--radius-karte);
+  padding: var(--abstand-4);
+  margin-block-end: var(--abstand-5);
+}
+
+.k-vorschlag--offen {
+  background: var(--farbe-grau-gedaempft);
+}
+
+.k-vorschlag .titel {
+  font: var(--hinweis-schrift);
+  color: var(--text-primaer);
+  margin: 0;
+}
+
+.k-vorschlag .belege {
+  list-style: none;
+  margin: var(--abstand-3) 0 0;
+  padding: 0;
+  display: grid;
+  gap: var(--abstand-2);
+}
+
+.k-vorschlag .belege li {
+  font: var(--fussnote);
+  color: var(--text-sekundaer);
+}
+
+/* Die Quelle steht als Etikett vor dem Beleg: „woher weiß das System das?"
+   ist die erste Rückfrage, die ein Vorschlag auslöst. */
+.k-vorschlag .quelle {
+  display: inline-block;
+  font: var(--etikett);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: var(--text-tertiaer);
+  margin-inline-end: var(--abstand-2);
+}
+
+/* Große Antwortflächen statt Textknöpfe: die Antwort ist der Hauptzweck des
+   Bildschirms und darf ihn ausfüllen. */
+.k-antwortflaechen {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--abstand-3);
+}
+
+.k-antwort {
+  font: var(--titel-3);
+  color: var(--text-primaer);
+  background: var(--fuellung-steuerung);
+  border: 2px solid transparent;
+  border-radius: var(--radius-karte);
+  padding-block: var(--abstand-6);
+  cursor: pointer;
+}
+
+.k-antwort:hover {
+  background: var(--farbe-grau-gedaempft);
+}
+
+.k-antwort.gewaehlt {
+  border-color: var(--farbe-akzent);
+  background: var(--farbe-akzent-gedaempft);
+}
+
+.k-begruendung {
+  margin-block-start: var(--abstand-5);
+}
+
+/* Ergebnis: das Tier groß, das Profil als lesbare Kette darunter. */
+.k-ergebnis {
+  display: flex;
+  align-items: baseline;
+  gap: var(--abstand-5);
+  flex-wrap: wrap;
+}
+
+.k-ergebnis .stufe {
+  display: flex;
+  align-items: baseline;
+  gap: var(--abstand-2);
+}
+
+.k-ergebnis .zahl {
+  font: var(--gross-titel);
+  font-size: 4rem;
+  line-height: 1;
+  color: var(--farbe-akzent);
+}
+
+.k-ergebnis .wort {
+  font: var(--titel-3);
+  color: var(--text-sekundaer);
+}
+
+.k-ergebnis .profil {
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-size: 1.0625rem;
+  color: var(--text-sekundaer);
+  margin: 0;
+}
+
+.k-klassen {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--abstand-4);
+}
+
+.k-klassen li {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--abstand-3);
+}
+
+/* Feste Spaltenbreite für das Kürzel: sonst rückt „K10" die eigene Zeile
+   gegenüber „K4" ein, und die Namen stehen nicht mehr untereinander. */
+.k-klassen li > .k-abzeichen {
+  flex: none;
+  min-inline-size: 2.75rem;
+  justify-content: center;
+}
+
+.k-klassen .name {
+  font: var(--kopfzeile-schrift);
+  color: var(--text-primaer);
+  margin: 0;
+}
+
+.k-klassen .beischrift {
+  font: var(--hinweis-schrift);
+  color: var(--text-sekundaer);
+  margin: var(--abstand-1) 0 0;
+}
+
+/* Die globale Grundregel nimmt Listen ihre Marker; hier sind sie richtig,
+   weil die Auflagen eine Aufzählung sind und keine Navigation. */
+.k-auflagen {
+  list-style: disc;
+  margin: 0;
+  padding-inline-start: var(--abstand-5);
+  display: grid;
+  gap: var(--abstand-2);
+  color: var(--text-primaer);
+  font: var(--hinweis-schrift);
+}
+
+/* Der rote Ausgang beim Verbotstatbestand: kein Ergebnis, keine Bewertung,
+   sondern ein Halt. Er sieht deshalb aus wie ein Leerzustand, nicht wie eine
+   Ergebniskarte. */
+.k-ausgang {
+  text-align: center;
+  padding: var(--abstand-8) var(--abstand-4);
+}
+
+.k-ausgang .symbol {
+  display: block;
+  font-size: 2.5rem;
+  line-height: 1;
+  margin-block-end: var(--abstand-4);
+}
+
+.k-ausgang h2 {
+  font: var(--titel-2);
+  margin: 0 0 var(--abstand-3);
+}
+
+.k-ausgang p {
+  margin: 0 auto var(--abstand-2);
+  max-inline-size: 34rem;
+  color: var(--text-primaer);
+}
+
+.k-ausgang .beischrift {
+  color: var(--text-sekundaer);
+  font: var(--hinweis-schrift);
+}
+
+.k-ausgang--rot .symbol,
+.k-ausgang--rot h2 {
+  color: var(--farbe-rot);
+}
+
+/* Die Knöpfe eines Ausgangs stehen unter der Mitte, nicht links: der Halt ist
+   der ganze Bildschirminhalt, nicht der Abschluss eines Formulars. */
+.k-ausgang ~ .k-knopfreihe {
+  justify-content: center;
+}
+
+@media (max-width: 34rem) {
+  .k-antwortflaechen {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --- Selbstverpflichtung (Leitdokument A.10, AP-5) --------------------
+
+   Jede Aussage ist ein eigener Block: Kürzel, Text, Schalter und — nur wenn
+   nötig — der Kommentar. Eine Tabelle wäre kompakter und falsch: die Aussagen
+   sind Sätze, die man liest, bevor man sie bestätigt. */
+
+.k-aussagen {
+  display: grid;
+  gap: var(--abstand-3);
+}
+
+.k-aussage {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--abstand-3);
+  padding: var(--abstand-4);
+  border: 1px solid var(--trennlinie);
+  border-radius: var(--radius-karte);
+  background: var(--flaeche);
+}
+
+.k-aussage > .k-abzeichen {
+  flex: none;
+  min-inline-size: 2.75rem;
+  justify-content: center;
+}
+
+.k-aussage .satz {
+  flex: 1;
+  min-inline-size: 0;
+}
+
+/* Bestätigt heißt: erledigt, nicht hervorgehoben. Der Blick soll auf dem
+   hängenbleiben, was noch offen ist. */
+.k-aussage.bestaetigt {
+  border-color: var(--farbe-gruen-gedaempft);
+  background: var(--farbe-gruen-gedaempft);
+}
+
+.k-aussage .k-umschalter {
+  padding: 0;
+}
+
+.k-aussage .k-feld {
+  margin-block-start: var(--abstand-3);
+}
+
+.k-aussage .k-knopf {
+  margin-block-start: var(--abstand-2);
+  padding-inline: 0;
+  background: none;
+  color: var(--farbe-akzent);
+  font: var(--hinweis-schrift);
+  min-block-size: auto;
+}
+
+.k-aussage .k-knopf:hover {
+  background: none;
+  text-decoration: underline;
+}
+
+/* --- Erlaubnisrahmen (A.13.2 Schicht 1) ---------------------------------
+   Erlaubt und gemessen stehen nebeneinander, nicht untereinander: der Blick
+   soll den Unterschied finden, ohne zu blättern. Wo etwas abweicht, färbt
+   sich der linke Rand — Farbe allein trägt die Aussage aber nie, darunter
+   steht immer der Satz. */
+.k-rahmen {
+  display: grid;
+  gap: var(--abstand-3);
+  margin-block-start: var(--abstand-4);
+}
+
+.k-rahmenzeile {
+  border-inline-start: 3px solid var(--trennlinie);
+  padding-inline-start: var(--abstand-4);
+}
+
+.k-rahmenzeile[data-abweichend='ja'] {
+  border-inline-start-color: var(--farbe-rot);
+}
+
+.k-rahmenzeile .name {
+  display: block;
+  font: var(--hinweis-schrift);
+  color: var(--text-primaer);
+}
+
+.k-rahmenzeile .spalten {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--abstand-4);
+  margin-block-start: var(--abstand-2);
+}
+
+@media (max-inline-size: 40rem) {
+  .k-rahmenzeile .spalten {
+    grid-template-columns: 1fr;
+    gap: var(--abstand-2);
+  }
+}
+
+.k-rahmenzeile .spalte {
+  display: grid;
+  gap: 2px;
+}
+
+.k-rahmenzeile .etikett {
+  font: var(--fussnote);
+  color: var(--text-tertiaer);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.k-rahmenzeile .werte {
+  font: var(--fussnote);
+  color: var(--text-sekundaer);
+}
+
+.k-rahmenzeile .abweichung {
+  font: var(--fussnote);
+  color: var(--farbe-rot);
+  margin-block: var(--abstand-2) 0;
+}
+
+/* --- Countdown einer Lenkungsfrist (A.13.5) ----------------------------
+   Die Zahl steht groß und in Arbeitstagen — der Einheit, in der die Frist
+   gesetzt wurde. Wer rechnen muss, um zu wissen, wie lange er noch hat,
+   weiß es nicht. */
+.k-countdown {
+  display: flex;
+  align-items: baseline;
+  gap: var(--abstand-2);
+  flex-wrap: wrap;
+  margin-block-start: var(--abstand-4);
+}
+
+.k-countdown .zahl {
+  font: var(--gross-titel);
+  color: var(--text-primaer);
+  font-variant-numeric: tabular-nums;
+}
+
+.k-countdown[data-abgelaufen='ja'] .zahl {
+  color: var(--farbe-rot);
+}
+
+.k-countdown .einheit {
+  font: var(--hinweis-schrift);
+  color: var(--text-sekundaer);
+}
+
+.k-countdown .datum {
+  font: var(--fussnote);
+  color: var(--text-tertiaer);
+  margin-inline-start: auto;
+}
+
+/* Der Hilfetext eines Umschalters steht unter ihm, nicht in seiner
+   Beschriftung: im zugänglichen Namen würde er bei jedem Fokuswechsel
+   vorgelesen. */
+.k-umschalter-rahmen > .hinweis {
+  display: block;
+  font: var(--fussnote);
+  color: var(--text-sekundaer);
+  margin-block-start: calc(var(--abstand-2) * -1);
+  padding-block-end: var(--abstand-3);
+}
+
+/* Mehrere Rahmenwerte stehen untereinander: die Namen enthalten selbst
+   Kommas, ein Trennzeichen im Wert trennt nichts mehr. */
+.k-rahmenzeile .werte .eintrag {
+  display: block;
+}
+
+/* Verweis ohne Kasten — er führt weg, er handelt nicht. */
+.k-verweiszeile {
+  font: var(--fussnote);
+  margin-block: var(--abstand-3) 0;
+}
+
+/* --- Technologiematrix (Leitdokument Teil C.1) --------------------------
+   Eine Tabelle, und zwar bewusst: der Gegenstand hat zwei Achsen, und ein
+   Vergleich über zwei Achsen ist genau das, wofür es Tabellen gibt. Jede
+   Zelle trägt Symbol und Wort, nie Farbe allein. */
+.k-matrix {
+  overflow-x: auto;
+  margin-block-start: var(--abstand-4);
+}
+
+.k-matrix table {
+  border-collapse: collapse;
+  inline-size: 100%;
+  background: none;
+  box-shadow: none;
+}
+
+.k-matrix th,
+.k-matrix td {
+  text-align: start;
+  padding: var(--abstand-2) var(--abstand-3);
+  border-block-end: 1px solid var(--trennlinie);
+  vertical-align: middle;
+  background: none;
+}
+
+/* Die Spaltenköpfe sind Produktnamen — die schreibt man nicht in
+   Versalien. Die Übergangsstile für rohe Tabellen tun das global; hier
+   wird es zurückgenommen. */
+.k-matrix thead th {
+  font: var(--fussnote);
+  color: var(--text-tertiaer);
+  text-transform: none;
+  letter-spacing: normal;
+  white-space: nowrap;
+}
+
+.k-matrix tbody th {
+  font: var(--hinweis-schrift);
+  color: var(--text-primaer);
+  text-transform: none;
+  letter-spacing: normal;
+  inline-size: 20rem;
+  min-inline-size: 16rem;
+}
+
+/* Breiter als der Inhaltsbereich: dann greift das seitliche Rollen der
+   Hülle, statt die letzte Spalte abzuschneiden. */
+.k-matrix table {
+  min-inline-size: 54rem;
+}
+
+.k-matrix tbody th .kuerzel {
+  display: inline-block;
+  min-inline-size: 2.75rem;
+  color: var(--text-sekundaer);
+  font-variant-numeric: tabular-nums;
+}
+
+.k-matrix tbody th .name {
+  font-weight: 400;
+}
+
+.k-matrix .zelle {
+  display: inline-block;
+  border: 0;
+  padding: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+}
+
+.k-matrix button.zelle {
+  cursor: pointer;
+  border-radius: var(--radius-pille);
+}
+
+.k-matrix button.zelle:focus-visible {
+  outline: 2px solid var(--farbe-akzent);
+  outline-offset: 2px;
+}
+
+/* Mehrere Sätze in einer Zweitzeile stehen untereinander — sonst laufen
+   Erklärung, Begründung und Maßnahme zu einem Absatz zusammen. */
+.k-zeile .zweitzeile .satzzeile {
+  display: block;
+}
+
+/* --- Cockpit-Kachelraster (Leitdokument A.14) ---------------------------
+   Je Zeile eine Kachel: Zustand, Zahl und der Satz, was zu tun ist. Eine
+   Zahl ohne Handlungssatz wäre eine Kennzahl, und Kennzahlen steuern nichts. */
+.k-raster {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr));
+  gap: var(--abstand-4);
+  margin-block-start: var(--abstand-4);
+}
+
+.k-kachel {
+  display: grid;
+  gap: var(--abstand-2);
+  padding: var(--abstand-4);
+  border-radius: var(--radius-karte);
+  background: var(--flaeche);
+  box-shadow: var(--tiefe-karte);
+  color: inherit;
+  text-decoration: none;
+  transition: transform 200ms ease-out;
+}
+
+.k-kachel:hover {
+  transform: translateY(-2px);
+}
+
+.k-kachel:focus-visible {
+  outline: 2px solid var(--farbe-akzent);
+  outline-offset: 2px;
+}
+
+.k-kachel .kopf {
+  display: flex;
+  align-items: baseline;
+  gap: var(--abstand-2);
+}
+
+.k-kachel .punkt {
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  border-radius: var(--radius-pille);
+  display: grid;
+  place-items: center;
+  font: var(--fussnote);
+  flex: none;
+}
+
+.k-kachel[data-zustand='ruhig'] .punkt {
+  background: var(--farbe-gruen-gedaempft);
+  color: var(--farbe-gruen);
+}
+
+.k-kachel[data-zustand='offen'] .punkt {
+  background: var(--farbe-gelb-gedaempft);
+  color: var(--farbe-gelb);
+}
+
+.k-kachel .titel {
+  font: var(--hinweis-schrift);
+  color: var(--text-primaer);
+}
+
+.k-kachel .zahl {
+  font: var(--gross-titel);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primaer);
+}
+
+.k-kachel[data-zustand='ruhig'] .zahl {
+  color: var(--text-tertiaer);
+}
+
+.k-kachel .satz {
+  font: var(--fussnote);
+  color: var(--text-sekundaer);
+}
+
+/* --- Verteilung als Balken ----------------------------------------------
+   Farbe steht für die Einstufung, die Zahl steht am Segment: wer wissen
+   will, wie viele es sind, soll nicht auf eine Skala schauen müssen. */
+.k-legende {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--abstand-4);
+  margin-block-start: var(--abstand-3);
+  font: var(--fussnote);
+  color: var(--text-sekundaer);
+}
+
+.k-legende .eintrag {
+  display: flex;
+  align-items: center;
+  gap: var(--abstand-2);
+}
+
+.k-legende .feld {
+  inline-size: 0.75rem;
+  block-size: 0.75rem;
+  border-radius: 3px;
+}
+
+.k-legende .eintrag[data-tier='1'] .feld,
+.k-verteilung .segment[data-tier='1'] {
+  background: var(--farbe-grau-gedaempft);
+  color: var(--text-primaer);
+}
+
+.k-legende .eintrag[data-tier='2'] .feld,
+.k-verteilung .segment[data-tier='2'] {
+  background: var(--farbe-gelb-gedaempft);
+  color: var(--farbe-gelb);
+}
+
+.k-legende .eintrag[data-tier='3'] .feld,
+.k-verteilung .segment[data-tier='3'] {
+  background: var(--farbe-rot-gedaempft);
+  color: var(--farbe-rot);
+}
+
+.k-verteilung {
+  display: grid;
+  gap: var(--abstand-2);
+  margin-block-start: var(--abstand-4);
+}
+
+.k-verteilung .reihe {
+  display: grid;
+  grid-template-columns: 12rem 1fr auto;
+  align-items: center;
+  gap: var(--abstand-3);
+}
+
+@media (max-inline-size: 40rem) {
+  .k-verteilung .reihe {
+    grid-template-columns: 7rem 1fr auto;
+  }
+}
+
+.k-verteilung .kategorie {
+  font: var(--fussnote);
+  color: var(--text-sekundaer);
+  overflow-wrap: anywhere;
+}
+
+.k-verteilung .balken {
+  display: flex;
+  gap: 2px;
+  min-inline-size: 2rem;
+}
+
+.k-verteilung .segment {
+  display: grid;
+  place-items: center;
+  min-inline-size: 1.75rem;
+  padding-block: var(--abstand-2);
+  border-radius: 4px;
+  font: var(--fussnote);
+  font-variant-numeric: tabular-nums;
+}
+
+.k-verteilung .summe {
+  font: var(--fussnote);
+  color: var(--text-tertiaer);
+  font-variant-numeric: tabular-nums;
+}

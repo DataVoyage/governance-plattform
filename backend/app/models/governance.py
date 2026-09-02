@@ -30,6 +30,7 @@ from app.models.enums import (
     GateTyp,
     Herkunft,
     Kundenkreis,
+    Lauftyp,
     LenkungStatus,
     ProzessStatus,
     Reichweite,
@@ -180,6 +181,16 @@ class Bewertung(Base, TimestampMixin):
     vollstaendig: Mapped[bool] = mapped_column(Boolean, default=True)
     ausgeloeste_k_klassen: Mapped[list[str]] = mapped_column(JSON, default=list)
     antworten: Mapped[dict] = mapped_column(JSON, default=dict)
+    #: Was die Datenlage zum Zeitpunkt der Bewertung vorgeschlagen hat
+    #: (Leitdokument A.8.4). Frage-ID auf ``true``/``false``; Fragen ohne
+    #: ableitbaren Vorschlag fehlen. Wird mitgespeichert, damit spaeter
+    #: unterscheidbar bleibt, ob jemand bewusst abgewichen ist oder ob sich
+    #: seither die Daten geaendert haben.
+    vorschlaege: Mapped[dict] = mapped_column(JSON, default=dict)
+    #: Begruendungen zu den Fragen, in denen die Antwort dem Vorschlag
+    #: widerspricht. Ohne Begruendung wird eine solche Bewertung nicht
+    #: angenommen.
+    abweichungen: Mapped[dict] = mapped_column(JSON, default=dict)
     bewertet_von: Mapped[uuid.UUID] = mapped_column(GUID, ForeignKey("users.id"))
     bewertet_am: Mapped[datetime] = mapped_column(TZDateTime)
     gueltig_bis: Mapped[datetime | None] = mapped_column(TZDateTime, nullable=True)
@@ -220,6 +231,12 @@ class Datenobjekt(Base, TimestampMixin):
         GUID, ForeignKey("fachbereiche.id"), nullable=True
     )
     herkunft: Mapped[Herkunft] = mapped_column(String(16), default=Herkunft.MANUELL)
+    # ``quelle`` ist die Sync-Quelle des Imports (Architektur 7.2),
+    # ``quellsystem`` die fachliche Herkunft aus Reifegrad 1 (Leitdokument A.7):
+    # das System, in dem die Daten entstehen. Beides faellt oft zusammen, ist
+    # aber nicht dasselbe — ein manuell erfasstes Datenobjekt hat ein
+    # Quellsystem, aber keine Sync-Quelle.
+    quellsystem: Mapped[str | None] = mapped_column(String(255), nullable=True)
     quelle: Mapped[str | None] = mapped_column(String(128), nullable=True)
     externe_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[AssetStatus] = mapped_column(String(32), default=AssetStatus.BESTAETIGT)
@@ -246,15 +263,46 @@ class ToolObjekt(Base, TimestampMixin):
     technischer_owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
         GUID, ForeignKey("users.id"), nullable=True
     )
+    stellvertretung_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        GUID, ForeignKey("users.id"), nullable=True
+    )
     organisationseinheit_id: Mapped[uuid.UUID | None] = mapped_column(
         GUID, ForeignKey("organisationseinheiten.id"), nullable=True
     )
+    #: Interaktiv, getriggert oder geplant — nach A.6 ein Telemetriefeld, das
+    #: technische Entscheidungen steuert, aber keine eigene Tier-Achse ist.
+    lauftyp: Mapped[Lauftyp | None] = mapped_column(String(24), nullable=True)
+    #: Unter welcher Identitaet das Tool laeuft (A.13.2 Schicht 1, Element 7).
+    #: Der Rahmen leitet die *erlaubte* Identitaet aus der Ausfuehrungsart ab;
+    #: dieses Feld ist die *gemessene*. Erst beide nebeneinander ergeben eine
+    #: Abweichung statt einer Behauptung.
+    ausfuehrungsidentitaet: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    #: Sind dauerhaft gueltige Zugangsdaten im Tool hinterlegt? ``True`` ist
+    #: ein Schicht-2-Verstoss (A.13.2), ``None`` heisst unbeantwortet.
+    statische_zugangsdaten: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    #: Die Ziele, an die dieses Tool tatsaechlich uebermittelt. Gegenstueck zu
+    #: ``Prozessobjekt.erlaubte_externe_ziele``: der Prozess erklaert, was
+    #: erlaubt ist, das Tool traegt, was geschieht.
+    externe_ziele: Mapped[list[str]] = mapped_column(JSON, default=list)
     herkunft: Mapped[Herkunft] = mapped_column(String(16), default=Herkunft.MANUELL)
     quelle: Mapped[str | None] = mapped_column(String(128), nullable=True)
     externe_id: Mapped[str | None] = mapped_column(String(255), nullable=True)
     status: Mapped[AssetStatus] = mapped_column(String(32), default=AssetStatus.BESTAETIGT)
     metadaten: Mapped[dict] = mapped_column(JSON, default=dict)
     letzte_aktivitaet_am: Mapped[datetime | None] = mapped_column(TZDateTime, nullable=True)
+
+    # Die drei Attestierungen aus Leitdokument A.6 — was Telemetrie nicht
+    # liefern kann und deshalb erklaert werden muss. ``None`` heisst
+    # unbeantwortet und ist von einem erklaerten „Nein" zu unterscheiden:
+    # ohne Antwort gibt es keine Prozessverknuepfung.
+    attest_entscheidung_ueber_personen: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    attest_mensch_dazwischen: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    attest_undeklarierte_quellen: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    #: „Mit Namen, nicht als Formularfeld" (A.6) — wer wann erklaert hat.
+    attestiert_am: Mapped[datetime | None] = mapped_column(TZDateTime, nullable=True)
+    attestiert_von_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        GUID, ForeignKey("users.id"), nullable=True
+    )
 
     prozessobjekte: Mapped[list[Prozessobjekt]] = relationship(
         secondary=prozess_tool, back_populates="tool_objekte"
@@ -282,6 +330,20 @@ class Selbstverpflichtung(Base, TimestampMixin):
     # Struktur je Aussage: {"bestaetigt": bool, "kommentar": str}
     aussagen: Mapped[dict] = mapped_column(JSON, default=dict)
     vollstaendig: Mapped[bool] = mapped_column(Boolean, default=False)
+    #: Fassung des Aussagenkatalogs, gegen die erklaert wurde. Ohne sie wuerde
+    #: eine Erklaerung nach einer Textaenderung stillschweigend als Zustimmung
+    #: zu einem anderen Wortlaut gelten (E-32).
+    katalog_version: Mapped[int] = mapped_column(Integer, default=1)
+    #: Die Bewertung, an die diese Erklaerung gebunden ist (Leitdokument
+    #: A.10.4). Aendert sich das Profil, verfaellt sie. Nur bei
+    #: Prozesseigner-Erklaerungen gesetzt; Tool-Objekte erben ihr Tier.
+    bewertung_id: Mapped[uuid.UUID | None] = mapped_column(
+        GUID, ForeignKey("bewertungen.id"), nullable=True
+    )
+    #: Das Tier zum Zeitpunkt der Abgabe. Traegt bei Tool-Objekten dieselbe
+    #: Aufgabe wie ``bewertung_id`` beim Prozess und bestimmt, welche Aussagen
+    #: nach A.10.5 ueberhaupt verlangt waren.
+    tier_bei_abgabe: Mapped[int | None] = mapped_column(Integer, nullable=True)
     abgegeben_von: Mapped[uuid.UUID] = mapped_column(GUID, ForeignKey("users.id"))
     abgegeben_am: Mapped[datetime] = mapped_column(TZDateTime)
     gueltig_bis: Mapped[datetime | None] = mapped_column(TZDateTime, nullable=True)
@@ -315,6 +377,9 @@ class ComplianceZustand(Base, TimestampMixin):
     farbe: Mapped[ComplianceFarbe] = mapped_column(String(8))
     begruendung: Mapped[str] = mapped_column(Text, default="")
     abweichung_art: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    #: Welches der sechs Verbote aus A.13.2 Schicht 2 verletzt ist — gesetzt,
+    #: heisst: dieser Fall geht ohne Stufe 1 direkt in Stufe 2 (A.13.5).
+    schicht2_verbot: Mapped[str | None] = mapped_column(String(48), nullable=True)
     festgestellt_am: Mapped[datetime] = mapped_column(TZDateTime)
     festgestellt_von: Mapped[uuid.UUID | None] = mapped_column(
         GUID, ForeignKey("users.id"), nullable=True
@@ -332,6 +397,10 @@ class Lenkungsvorgang(Base, TimestampMixin):
         GUID, ForeignKey("compliance_zustaende.id"), nullable=True
     )
     eskalationsstufe: Mapped[int] = mapped_column(Integer, default=1)
+    #: Bei einem Schicht-2-Verstoss das verletzte Verbot. Es bleibt am Vorgang
+    #: stehen, weil sonst nicht mehr erkennbar waere, warum er in Stufe 2
+    #: begonnen hat statt in Stufe 1.
+    schicht2_verbot: Mapped[str | None] = mapped_column(String(48), nullable=True)
     frist: Mapped[datetime] = mapped_column(TZDateTime)
     zugewiesen_an: Mapped[uuid.UUID | None] = mapped_column(
         GUID, ForeignKey("users.id"), nullable=True
@@ -343,6 +412,52 @@ class Lenkungsvorgang(Base, TimestampMixin):
     )
     aufgeloest_am: Mapped[datetime | None] = mapped_column(TZDateTime, nullable=True)
     beschreibung: Mapped[str] = mapped_column(Text, default="")
+
+
+class Technologiebewertung(Base, TimestampMixin):
+    """Ein Feld der Technologiematrix (Leitdokument Teil C.1).
+
+    Gepflegte Stammdaten, keine Konstante im Code: A.9.3 macht den Abgleich zum
+    Entscheidungsschritt, und eine Entscheidungsgrundlage, die nur mit einer
+    Auslieferung aenderbar waere, veraltet zwischen zwei Releases.
+    """
+
+    __tablename__ = "technologie_bewertungen"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    technologie: Mapped[str] = mapped_column(String(64))
+    k_klasse: Mapped[str] = mapped_column(String(8))
+    bewertung: Mapped[str] = mapped_column(String(24))
+    #: Warum die Technologie die Klasse so abdeckt — auf dem Bildschirm der
+    #: Satz, der eine Farbe zu einer Aussage macht.
+    begruendung: Mapped[str] = mapped_column(Text, default="")
+    geaendert_von: Mapped[uuid.UUID | None] = mapped_column(
+        GUID, ForeignKey("users.id"), nullable=True
+    )
+
+    __table_args__ = (UniqueConstraint("technologie", "k_klasse", name="uq_technologie_klasse"),)
+
+
+class Kompensation(Base, TimestampMixin):
+    """Die dokumentierte Massnahme zu einer kompensierbaren Klasse (A.9.3).
+
+    Ohne sie bleibt der Befund offen. Der Text ist Pflicht: „kompensierende
+    Massnahme erforderlich" ist keine Zusage, sondern eine Aufgabe, und eine
+    Aufgabe ohne Beschreibung ist nicht pruefbar.
+    """
+
+    __tablename__ = "kompensationen"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    tool_objekt_id: Mapped[uuid.UUID] = mapped_column(GUID, ForeignKey("tool_objekte.id"))
+    k_klasse: Mapped[str] = mapped_column(String(8))
+    massnahme: Mapped[str] = mapped_column(Text)
+    erfasst_von: Mapped[uuid.UUID] = mapped_column(GUID, ForeignKey("users.id"))
+    erfasst_am: Mapped[datetime] = mapped_column(TZDateTime)
+
+    __table_args__ = (
+        UniqueConstraint("tool_objekt_id", "k_klasse", name="uq_kompensation_tool_klasse"),
+    )
 
 
 class Benachrichtigung(Base, TimestampMixin):

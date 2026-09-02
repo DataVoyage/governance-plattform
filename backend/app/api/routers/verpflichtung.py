@@ -11,6 +11,7 @@ from app.models.enums import GateTyp, SelbstverpflichtungTyp
 from app.schemas.verpflichtung import (
     AussageAus,
     BenachrichtigungAus,
+    DeckungAus,
     GateAus,
     GateEinreichen,
     GateEntscheiden,
@@ -41,10 +42,69 @@ def katalog(principal: AktuellerNutzer) -> list[KatalogAus]:
     return [
         KatalogAus(
             typ=typ,
-            aussagen=[AussageAus(id=a.id, text=a.text) for a in aussagen],
+            aussagen=[AussageAus(id=a.id, text=a.text, ab_tier=a.ab_tier) for a in aussagen],
+            version=sv_service.KATALOG_VERSION,
         )
         for typ, aussagen in sv_service.KATALOG.items()
     ]
+
+
+def _deckung_aus(db, eintrag, *, typ, prozess=None, tool=None, tier: int | None) -> DeckungAus:
+    stand = sv_service.deckung(db, eintrag, prozess=prozess, tool=tool)
+    return DeckungAus(
+        gedeckt=stand.gedeckt,
+        grund=stand.grund,
+        grundtext=stand.grundtext,
+        verlangte_aussagen=[a.id for a in sv_service.verlangte_aussagen(typ, tier)],
+        tier=tier,
+        aktuelle=SelbstverpflichtungAus.model_validate(eintrag) if eintrag else None,
+    )
+
+
+@router.get("/prozesse/{prozess_id}/selbstverpflichtung", response_model=DeckungAus)
+def deckung_prozess(prozess_id: uuid.UUID, principal: AktuellerNutzer, db: DbSession) -> DeckungAus:
+    """Der Stand der Erklaerung samt Grund, falls sie nicht traegt.
+
+    Die Oberflaeche fragt genau diesen Endpunkt und muss die Regeln aus A.10.4
+    und A.10.5 nicht nachbauen — sie zeigt an, was der Server entschieden hat.
+    """
+    prozess = prozess_service.hole_sichtbar(db, principal, prozess_id)
+    bewertung = prozess_service.neueste_bewertung(prozess)
+    return _deckung_aus(
+        db,
+        sv_service.aktuelle_fuer_prozess(db, prozess_id),
+        typ=SelbstverpflichtungTyp.PROZESSEIGNER,
+        prozess=prozess,
+        tier=bewertung.tier if bewertung is not None else None,
+    )
+
+
+@router.get("/tools/{tool_id}/selbstverpflichtung/deckung", response_model=DeckungAus)
+def deckung_tool(tool_id: uuid.UUID, principal: AktuellerNutzer, db: DbSession) -> DeckungAus:
+    tool = asset_service.hole_tool_sichtbar(db, principal, tool_id)
+    return _deckung_aus(
+        db,
+        sv_service.aktuelle_fuer_tool(db, tool_id),
+        typ=SelbstverpflichtungTyp.TECHNISCHER_OWNER,
+        tool=tool,
+        tier=asset_service.erbe_klassifikation(tool).tier,
+    )
+
+
+@router.post(
+    "/selbstverpflichtungen/{eintrag_id}/bestaetigung",
+    response_model=SelbstverpflichtungAus,
+)
+def bestaetigen(
+    eintrag_id: uuid.UUID, principal: AktuellerNutzer, db: DbSession
+) -> SelbstverpflichtungAus:
+    """Die Jahresbestaetigung ab Tier 3 — ein Klick statt eines Durchgangs."""
+    eintrag = sv_service.hole(db, eintrag_id)
+    if eintrag.prozessobjekt_id is not None:
+        prozess_service.hole_sichtbar(db, principal, eintrag.prozessobjekt_id)
+    elif eintrag.tool_objekt_id is not None:
+        asset_service.hole_tool_sichtbar(db, principal, eintrag.tool_objekt_id)
+    return SelbstverpflichtungAus.model_validate(sv_service.bestaetige(db, principal, eintrag))
 
 
 @router.post(

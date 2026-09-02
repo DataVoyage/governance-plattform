@@ -16,7 +16,7 @@ from app.models.audit import Konfiguration
 STANDARDWERTE: dict[str, tuple[str, str]] = {
     "selbstverpflichtung_gueltigkeit_tage": (
         "365",
-        "Gueltigkeitsdauer einer Selbstverpflichtung ab Tier 3 (Leitdokument A.10.5)",
+        "Gültigkeitsdauer einer Selbstverpflichtung ab Tier 3 (Leitdokument A.10.5)",
     ),
     "selbstverpflichtung_erinnerung_vorlauf_tage": (
         "60",
@@ -24,12 +24,38 @@ STANDARDWERTE: dict[str, tuple[str, str]] = {
     ),
     "bewertung_gueltigkeit_tage_tier3": (
         "365",
-        "Jaehrliche Erneuerungspflicht der Bewertung ab Tier 3",
+        "Jährliche Erneuerungspflicht der Bewertung ab Tier 3",
     ),
-    "lenkung_frist_tage_tier1": ("90", "Frist eines Lenkungsvorgangs bei Tier 1 (A.13.5)"),
-    "lenkung_frist_tage_tier2": ("30", "Frist eines Lenkungsvorgangs bei Tier 2 (A.13.5)"),
-    "lenkung_frist_tage_tier3": ("14", "Frist eines Lenkungsvorgangs bei Tier 3 (A.13.5)"),
+    "lenkung_frist_tage_tier1": (
+        "30",
+        "Arbeitstage bis zur Eskalation in Stufe 2 bei Tier 1 (A.13.5)",
+    ),
+    "lenkung_frist_tage_tier2": (
+        "15",
+        "Arbeitstage bis zur Eskalation in Stufe 2 bei Tier 2 (A.13.5)",
+    ),
+    "lenkung_frist_tage_tier3": (
+        "5",
+        "Arbeitstage bis zur Eskalation in Stufe 2 bei Tier 3 (A.13.5)",
+    ),
+    "lenkung_nachfrist_tage_tier1": (
+        "15",
+        "Zusätzliche Arbeitstage in Stufe 2 bei Tier 1, danach Stufe 3 (A.13.5)",
+    ),
+    "lenkung_nachfrist_tage_tier2": (
+        "10",
+        "Zusätzliche Arbeitstage in Stufe 2 bei Tier 2, danach Stufe 3 (A.13.5)",
+    ),
+    "lenkung_nachfrist_tage_tier3": (
+        "5",
+        "Zusätzliche Arbeitstage in Stufe 2 bei Tier 3, danach Stufe 3 (A.13.5)",
+    ),
     "asset_inaktiv_tage": ("180", "Ab wann ein Tool-Objekt im Cockpit als inaktiv gilt"),
+    "altanwendung_meldefrist_tage": (
+        "90",
+        "Frist, in der eine vorgefundene Alt-Anwendung zu melden ist; danach steht "
+        "sie im Blockierungspfad (A.16)",
+    ),
 }
 
 
@@ -76,7 +102,14 @@ def setze(db: Session, schluessel: str, wert: str) -> Konfiguration:
     return eintrag
 
 
-def lenkungsfrist_tage(db: Session, tier: int) -> int:
-    """Tier-abhaengige Frist eines Lenkungsvorgangs (Leitdokument A.13.5)."""
+def lenkungsfrist_tage(db: Session, tier: int, stufe: int = 1) -> int:
+    """Tier- und stufenabhaengige Frist in **Arbeitstagen** (A.13.5).
+
+    Stufe 1 laeuft 30/15/5 Arbeitstage je Tier. Stufe 2 setzt nicht neu an,
+    sondern gibt eine kuerzere Nachfrist von 15/10/5 — die Eskalation soll
+    Druck erzeugen, nicht die Uhr zurueckdrehen. Ab Stufe 3 gibt es keine
+    Frist mehr; dort steht die technische Massnahme an.
+    """
     tier = max(1, min(3, tier))
-    return lies_int(db, f"lenkung_frist_tage_tier{tier}")
+    schluessel = "lenkung_frist_tage" if stufe <= 1 else "lenkung_nachfrist_tage"
+    return lies_int(db, f"{schluessel}_tier{tier}")

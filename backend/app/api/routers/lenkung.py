@@ -7,6 +7,7 @@ import uuid
 from fastapi import APIRouter, status
 
 from app.api.deps import AktuellerNutzer, DbSession
+from app.models.enums import Schicht2Verbot
 from app.schemas.lenkung import (
     Abbrechen,
     Aufloesen,
@@ -15,8 +16,10 @@ from app.schemas.lenkung import (
     ZustandAus,
     ZustandMelden,
 )
+from app.schemas.rahmen import Schicht2VerbotAus
 from app.services import asset as asset_service
 from app.services import lenkung as lenkung_service
+from app.services import rahmen as rahmen_service
 
 router = APIRouter(tags=["Compliance und Lenkung"])
 
@@ -37,7 +40,8 @@ def melden(
     """Manuelle Meldung eines Zustands.
 
     Bei ``rot`` entsteht automatisch ein Lenkungsvorgang in Stufe 1 mit der
-    tier-abhaengigen Frist (Leitdokument A.13.5).
+    tier-abhaengigen Frist (Leitdokument A.13.5) — bei einem Verstoss gegen
+    Schicht 2 unmittelbar in Stufe 2, weil dort nichts zu klaeren ist.
     """
     tool = asset_service.hole_tool_sichtbar(db, principal, tool_id)
     zustand, vorgang = lenkung_service.melde_zustand(
@@ -47,11 +51,30 @@ def melden(
         farbe=daten.farbe,
         begruendung=daten.begruendung,
         abweichung_art=daten.abweichung_art,
+        schicht2_verbot=daten.schicht2_verbot,
     )
     return MeldungAus(
         zustand=ZustandAus.model_validate(zustand),
         lenkungsvorgang=LenkungAus.model_validate(vorgang) if vorgang is not None else None,
     )
+
+
+@router.get("/schicht2-verbote", response_model=list[Schicht2VerbotAus])
+def schicht2_verbote() -> list[Schicht2VerbotAus]:
+    """Die sechs organisationsweiten Verbote aus A.13.2 Schicht 2.
+
+    Abschliessend wie die Gate-2-Ausloeser: die Oberflaeche laesst genau diese
+    sechs melden und keinen freien siebten Grund. Zu jedem steht dabei, ob die
+    Anwendung ihn selbst erkennt — vier tut sie, zwei betreffen Vorgaenge in der
+    Zielplattform, von denen sie nichts sieht.
+    """
+    return [
+        Schicht2VerbotAus(
+            schluessel=verbot,
+            automatisch_erkennbar=verbot in rahmen_service.AUTOMATISCH_ERKENNBAR,
+        )
+        for verbot in Schicht2Verbot
+    ]
 
 
 @router.get("/lenkungsvorgaenge", response_model=list[LenkungAus])

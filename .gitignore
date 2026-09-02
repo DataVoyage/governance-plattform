@@ -32,6 +32,10 @@ Thumbs.db
 .vscode/
 
 
+# Lokale Abweichung dieser Maschine — sie sagt es im eigenen Kopf, stand
+# aber nirgends, was sie vor einem `git add -A` nicht geschuetzt hat.
+docker-compose.override.yml
+
 # Interne Vorgabedokumente gehoeren nicht ins Repository
 docs/architektur.md
 docs/leitdokument.md

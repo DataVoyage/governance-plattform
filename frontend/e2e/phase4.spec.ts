@@ -48,7 +48,7 @@ async function tier3Prozess(anfrage: APIRequestContext) {
         process_steps: '',
         output: '',
         customer: 'bereich',
-        ausfallfolge: 'gering',
+        ausfallfolge: 'keine',
       },
     })
   ).json();
@@ -96,31 +96,31 @@ test.describe('Phase 4 in der Oberflaeche', () => {
     await page.goto(`/de/prozesse/${prozess.id}`);
 
     await expect(
-      page.getByText('Für diesen Prozess liegt noch keine Selbstverpflichtung vor.'),
+      page.getByText('Für dieses Objekt liegt noch keine Selbstverpflichtung vor.'),
     ).toBeVisible();
 
     // Eine unvollstaendige Selbstverpflichtung genuegt nicht.
-    await page.getByRole('link', { name: 'Selbstverpflichtung abgeben' }).click();
+    await page.getByTestId('sv-oeffnen').click();
     await page.getByRole('checkbox').first().waitFor();
     await page.getByRole('checkbox').first().check();
-    await page.getByRole('button', { name: 'Abgeben' }).click();
-    await expect(page.getByTestId('sv-status')).toHaveText('Unvollständig');
+    await page.getByTestId('sv-abgeben').click();
+    await expect(page.getByText('Nicht alle verlangten Aussagen sind bestätigt.')).toBeVisible();
 
     // Vollstaendig abgeben.
-    await page.getByRole('link', { name: 'Selbstverpflichtung abgeben' }).click();
+    await page.getByTestId('sv-oeffnen').click();
     await page.getByRole('checkbox').first().waitFor();
     const anzahl = await page.getByRole('checkbox').count();
     for (let i = 0; i < anzahl; i += 1) {
       await page.getByRole('checkbox').nth(i).check();
     }
-    await page.getByRole('button', { name: 'Abgeben' }).click();
-    await expect(page.getByTestId('sv-status')).toHaveText('Vollständig abgegeben');
+    await page.getByTestId('sv-abgeben').click();
+    await expect(page.getByText('Die Erklärung liegt vor und trägt.')).toBeVisible();
 
     // Gate 1 einreichen und als Governance freigeben.
     await page.getByLabel('Gate').selectOption('1');
     await page.getByLabel('Begründung').fill('Erstfreigabe');
-    await page.getByRole('button', { name: 'Gate einreichen' }).click();
-    await expect(page.getByRole('cell', { name: 'Eingereicht' })).toBeVisible();
+    await page.getByTestId('gate-einreichen').click();
+    await expect(page.getByText('Eingereicht')).toBeVisible();
 
     await page.getByRole('link', { name: 'Gates', exact: true }).click();
     await page
@@ -142,14 +142,17 @@ test.describe('Phase 4 in der Oberflaeche', () => {
     // Genau fuenf Gruende plus Leerauswahl — kein sechster, freier Grund.
     await expect(ausloeser.getByRole('option')).toHaveCount(6);
 
-    await page.getByRole('button', { name: 'Gate einreichen' }).click();
-    // Das Formular gibt nicht ab: die Pflichtauswahl haelt es an.
-    await expect(ausloeser).toBeFocused();
+    // Ohne Ausloeser ist das Einreichen gesperrt — die Liste in A.11 ist
+    // abschliessend, ein Gate 2 ohne Grund gibt es nicht.
+    await expect(page.getByTestId('gate-einreichen')).toBeDisabled();
     await expect(page.getByText('Für diesen Prozess gibt es noch keinen Gate-Vorgang.')).toBeVisible();
 
     await ausloeser.selectOption('reichweitenerweiterung');
-    await page.getByRole('button', { name: 'Gate einreichen' }).click();
-    await expect(page.getByRole('cell', { name: 'reichweitenerweiterung' })).toBeVisible();
+    await page.getByTestId('gate-einreichen').click();
+    // Der Vorgang steht in der Liste, mit dem Namen des Auslösers.
+    await expect(page.locator('.k-zeile[data-testid^="gate-"]')).toContainText(
+      'Reichweitenerweiterung',
+    );
   });
 
   test('ohne Governance-Rolle erscheint keine Entscheidung', async ({ page, request }) => {

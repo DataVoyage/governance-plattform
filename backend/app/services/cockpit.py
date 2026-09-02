@@ -24,7 +24,9 @@ from app.core.permissions import Principal
 from app.models.enums import (
     AUSFALLFOLGE_STUFE,
     AssetStatus,
+    Befundart,
     ComplianceFarbe,
+    Herkunft,
     Rolle,
     SelbstverpflichtungTyp,
 )
@@ -35,7 +37,9 @@ from app.models.governance import (
 )
 from app.models.organisation import Organisationseinheit, Rollenzuweisung, User
 from app.services import asset as asset_service
-from app.services import erinnerung, konfiguration, lenkung
+from app.services import bewertung as bewertung_service
+from app.services import klassen as klassen_service
+from app.services import konfiguration, lenkung, selbstverpflichtung, vorschlag
 from app.services import prozess as prozess_service
 
 
@@ -137,7 +141,7 @@ def assets_ohne_prozesszuordnung(db: Session, principal: Principal, **filter) ->
     zeile = Zeile(
         "assets_ohne_prozess",
         "Assets ohne Prozesszuordnung",
-        "Tool-Objekte, die an keinem Prozessobjekt haengen und deshalb nichts erben.",
+        "Tool-Objekte, die an keinem Prozessobjekt hängen und deshalb nichts erben.",
     )
     for tool in _sichtbare_tools(db, principal, filter.get("fachbereich_id")):
         if tool.prozessobjekte:
@@ -165,7 +169,7 @@ def non_compliant_je_stufe(db: Session, principal: Principal, **filter) -> Zeile
     zeile = Zeile(
         "non_compliant",
         "Non-compliante Anwendungen je Eskalationsstufe",
-        "Offene Lenkungsvorgaenge, nach Stufe filterbar.",
+        "Offene Lenkungsvorgänge, nach Stufe filterbar.",
     )
     je_stufe: dict[int, int] = defaultdict(int)
     for vorgang in lenkung.liste(db, principal, nur_offen=True):
@@ -215,7 +219,7 @@ def datenobjekte_ohne_kategorie(db: Session, principal: Principal, **filter) -> 
     zeile = Zeile(
         "datenobjekte_ohne_kategorie",
         "Datenobjekte ohne Kategorie",
-        "Ohne Kategorie traegt ein Datenobjekt nichts zur Bewertung bei.",
+        "Ohne Kategorie trägt ein Datenobjekt nichts zur Bewertung bei.",
     )
     for datenobjekt in asset_service.liste_datenobjekte(db, principal, ohne_kategorie=True):
         zeile.eintraege.append(
@@ -238,8 +242,8 @@ def kritikalitaetsketten(db: Session, principal: Principal, **filter) -> Zeile:
     """
     zeile = Zeile(
         "kritikalitaetsketten",
-        "Kritikalitaetsketten",
-        "Prozesse, deren Kritikalitaet aus einem nachgelagerten Prozess geerbt ist.",
+        "Kritikalitätsketten",
+        "Prozesse, deren Kritikalität aus einem nachgelagerten Prozess geerbt ist.",
     )
     for prozess in _sichtbare_prozesse(db, principal, filter.get("fachbereich_id")):
         eigene = AUSFALLFOLGE_STUFE[prozess.ausfallfolge]
@@ -251,7 +255,7 @@ def kritikalitaetsketten(db: Session, principal: Principal, **filter) -> Zeile:
                 id=prozess.id,
                 titel=prozess.name,
                 hinweis=f"eigene Ausfallfolge {eigene}, geerbt {prozess.kritikalitaet} "
-                f"(ueber: {quellen})",
+                f"(über: {quellen})",
                 ziel_modul="prozesse",
                 ziel_filter={"id": str(prozess.id)},
             )
@@ -264,7 +268,7 @@ def tier_verteilung(db: Session, principal: Principal, **filter) -> Zeile:
     zeile = Zeile(
         "tier_verteilung",
         "Tier-Verteilung je Technologie und Zeit",
-        "Wie sich die Einstufungen ueber Technologien und ueber die Zeit verteilen.",
+        "Wie sich die Einstufungen über Technologien und über die Zeit verteilen.",
     )
     je_technologie: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
     for tool in _sichtbare_tools(db, principal, filter.get("fachbereich_id")):
@@ -295,7 +299,7 @@ def inaktive_assets(db: Session, principal: Principal, **filter) -> Zeile:
     zeile = Zeile(
         "inaktive_assets",
         "Inaktive Assets",
-        f"Tool-Objekte ohne Aktivitaet seit mehr als {grenze_tage} Tagen oder stillgelegt.",
+        f"Tool-Objekte ohne Aktivität seit mehr als {grenze_tage} Tagen oder stillgelegt.",
     )
     for tool in _sichtbare_tools(db, principal, filter.get("fachbereich_id")):
         letzte = _als_utc(tool.letzte_aktivitaet_am)
@@ -309,7 +313,7 @@ def inaktive_assets(db: Session, principal: Principal, **filter) -> Zeile:
                 titel=tool.name,
                 hinweis="stillgelegt"
                 if stillgelegt
-                else f"letzte Aktivitaet {letzte.date().isoformat()}",
+                else f"letzte Aktivität {letzte.date().isoformat()}",
                 ziel_modul="tools",
                 ziel_filter={"id": str(tool.id)},
             )
@@ -318,57 +322,103 @@ def inaktive_assets(db: Session, principal: Principal, **filter) -> Zeile:
 
 
 def ueberfaellige_selbstverpflichtungen(db: Session, principal: Principal, **filter) -> Zeile:
+    """Objekte, deren Selbstverpflichtung nicht (mehr) traegt.
+
+    Bis AP-5 stand hier nur der Zeitablauf. A.10.4 kennt einen zweiten,
+    haeufigeren Fall: die Erklaerung haengt an der Bewertung, zu der sie
+    abgegeben wurde, und verfaellt mit ihr. Beides gehoert in dieselbe Zeile —
+    fuer den Owner ist es dieselbe Handlung, und der Hinweis sagt ihm, welche
+    Form sie hat: bestaetigen genuegt, oder neu abgeben.
+
+    Ein Objekt ohne jede Erklaerung erscheint nur, wenn eine verlangt ist: erst
+    ab Tier 3 ist die Selbstverpflichtung Aktivierungsbedingung (A.10.5).
+    """
     jetzt = filter.get("jetzt")
     zeile = Zeile(
         "ueberfaellige_selbstverpflichtungen",
-        "Ueberfaellige Selbstverpflichtungen",
-        "Die Jahresfrist ist ohne Bestaetigung verstrichen.",
+        "Selbstverpflichtungen ohne Deckung",
+        "Die Jahresfrist ist verstrichen, die Erklärung fehlt, oder sie hängt an einer "
+        "überholten Bewertung.",
     )
-    sichtbare_prozesse = {p.id: p for p in _sichtbare_prozesse(db, principal)}
-    sichtbare_tools = {t.id: t for t in _sichtbare_tools(db, principal)}
-    for eintrag in erinnerung.ueberfaellige(db, jetzt):
-        if eintrag.prozessobjekt_id is not None:
-            prozess = sichtbare_prozesse.get(eintrag.prozessobjekt_id)
-            if prozess is None:
-                continue
-            zeile.eintraege.append(
-                Eintrag(
-                    id=eintrag.id,
-                    titel=prozess.name,
-                    hinweis="Selbstverpflichtung des Prozesseigners ueberfaellig",
-                    ziel_modul="prozesse",
-                    ziel_filter={"id": str(prozess.id)},
-                )
+    for prozess in _sichtbare_prozesse(db, principal, filter.get("fachbereich_id")):
+        bewertung = prozess_service.neueste_bewertung(prozess)
+        stand = selbstverpflichtung.deckung_fuer_prozess(db, prozess, jetzt)
+        if stand.gedeckt:
+            continue
+        if stand.grund == "keine" and (bewertung is None or bewertung.tier < 3):
+            continue
+        zeile.eintraege.append(
+            Eintrag(
+                id=prozess.id,
+                titel=prozess.name,
+                hinweis=f"Prozesseigner: {stand.grundtext}",
+                ziel_modul="prozesse",
+                ziel_filter={"id": str(prozess.id)},
             )
-        elif eintrag.tool_objekt_id is not None:
-            tool = sichtbare_tools.get(eintrag.tool_objekt_id)
-            if tool is None:
-                continue
-            zeile.eintraege.append(
-                Eintrag(
-                    id=eintrag.id,
-                    titel=tool.name,
-                    hinweis="Selbstverpflichtung des technischen Owners ueberfaellig",
-                    ziel_modul="tools",
-                    ziel_filter={"id": str(tool.id)},
-                )
+        )
+    for tool in _sichtbare_tools(db, principal, filter.get("fachbereich_id")):
+        tier = asset_service.erbe_klassifikation(tool).tier
+        stand = selbstverpflichtung.deckung_fuer_tool(db, tool, jetzt)
+        if stand.gedeckt:
+            continue
+        if stand.grund == "keine" and (tier is None or tier < 3):
+            continue
+        zeile.eintraege.append(
+            Eintrag(
+                id=tool.id,
+                titel=tool.name,
+                hinweis=f"Technischer Owner: {stand.grundtext}",
+                ziel_modul="tools",
+                ziel_filter={"id": str(tool.id)},
             )
+        )
+    return zeile
+
+
+def attestierungen_veraltet(db: Session, principal: Principal, **filter) -> Zeile:
+    """Tool-Objekte, deren Attestierung nach A.6 aelter als die Frist ist.
+
+    Die drei Erklaerungen aus A.6 sind Momentaufnahmen: sie beschreiben, was
+    ein Tool heute tut. Ein Jahr spaeter kann alles davon ueberholt sein, ohne
+    dass jemand etwas geaendert haette, das die Plattform sieht. Die Frist
+    steht in der Konfiguration und ist von der Governance-Rolle aenderbar.
+    """
+    grenze_tage = konfiguration.lies_int(db, "selbstverpflichtung_gueltigkeit_tage")
+    jetzt = filter.get("jetzt") or datetime.now(UTC)
+    zeile = Zeile(
+        "attestierungen_veraltet",
+        "Attestierungen älter als die Frist",
+        f"Die Erklärungen nach A.6 liegen mehr als {grenze_tage} Tage zurück.",
+    )
+    for tool in _sichtbare_tools(db, principal, filter.get("fachbereich_id")):
+        wann = _als_utc(tool.attestiert_am)
+        if wann is None or wann >= jetzt - timedelta(days=grenze_tage):
+            continue
+        zeile.eintraege.append(
+            Eintrag(
+                id=tool.id,
+                titel=tool.name,
+                hinweis=f"attestiert am {wann.date().isoformat()}",
+                ziel_modul="tools",
+                ziel_filter={"id": str(tool.id)},
+            )
+        )
     return zeile
 
 
 def widersprueche(db: Session, principal: Principal, **filter) -> Zeile:
     """Wo die Erklaerung dem gemessenen Zustand widerspricht.
 
-    Der technische Owner bestaetigt mit Aussage T1, dass sein Tool im
-    vorgesehenen Rahmen laeuft. Steht der aktuelle Compliance-Zustand
+    Der technische Owner bestaetigt mit einer Aussage aus A.10.3, dass sein Tool
+    im erklaerten Rahmen laeuft. Steht der aktuelle Compliance-Zustand
     gleichzeitig auf rot, widersprechen sich Erklaerung und Feststellung — und
     genau das gehoert ins Cockpit.
     """
     del filter
     zeile = Zeile(
         "widersprueche",
-        "Widersprueche zwischen Erklaerung und Zustand",
-        "Der Owner erklaert den Rahmen als eingehalten, der Zustand sagt etwas anderes.",
+        "Widersprüche zwischen Erklärung und Zustand",
+        "Der Owner erklärt den Rahmen als eingehalten, der Zustand sagt etwas anderes.",
     )
     for tool in _sichtbare_tools(db, principal):
         zustand = lenkung.aktueller_zustand(db, tool.id)
@@ -385,13 +435,166 @@ def widersprueche(db: Session, principal: Principal, **filter) -> Zeile:
         ).scalar_one_or_none()
         if erklaerung is None:
             continue
-        if not erklaerung.aussagen.get("T1", {}).get("bestaetigt", False):
+        rahmen = selbstverpflichtung.AUSSAGE_RAHMEN_EINGEHALTEN
+        if not erklaerung.aussagen.get(rahmen, {}).get("bestaetigt", False):
             continue
         zeile.eintraege.append(
             Eintrag(
                 id=tool.id,
                 titel=tool.name,
-                hinweis="T1 bestaetigt, Zustand rot",
+                hinweis=f"{rahmen} bestätigt, Zustand rot",
+                ziel_modul="tools",
+                ziel_filter={"id": str(tool.id)},
+            )
+        )
+    return zeile
+
+
+def antwort_widerspricht_datenlage(db: Session, principal: Principal, **filter) -> Zeile:
+    """Wo eine gespeicherte Bewertungsantwort der heutigen Datenlage widerspricht.
+
+    Drei Faelle sehen gleich aus und sind es nicht. Unterschieden werden sie
+    ueber den Vorschlag, der zur Bewertung mitgespeichert wurde:
+
+    * **Bewusst abgewichen, begruendet, Datenlage unveraendert.** Kein Befund,
+      sondern eine dokumentierte Entscheidung — A.8.4 laesst die Abweichung
+      ausdruecklich zu, wenn sie erklaert wird.
+    * **Die Daten haben sich seit der Bewertung geaendert.** Ein Datenobjekt
+      wurde umklassifiziert, ein Tool hat attestiert, ein Nachfolgeprozess ist
+      kritischer geworden. Die Antwort von damals steht neben einer neuen
+      Wirklichkeit, und eine Begruendung von damals bezieht sich auf eine Lage,
+      die es nicht mehr gibt.
+    * **Damals war nichts abzuleiten, heute schon.** Auch das ist ein Befund,
+      aber kein Vorwurf: zum Zeitpunkt der Bewertung gab es die Grundlage fuer
+      den Vorschlag noch nicht. Bewertungen von vor AP-4 fallen ebenfalls
+      hierunter, weil zu ihnen ueberhaupt kein Vorschlag gerechnet wurde.
+
+    Der Hinweis nennt den Fall beim Namen. Ohne den mitgespeicherten Vorschlag
+    waeren alle drei nicht auseinanderzuhalten.
+    """
+    zeile = Zeile(
+        "antwort_widerspricht_datenlage",
+        "Antwort widerspricht Datenlage",
+        "Die Bewertung sagt etwas anderes als die heutigen Daten — ohne dass das begründet wäre.",
+    )
+    for prozess in _sichtbare_prozesse(db, principal, filter.get("fachbereich_id")):
+        aktuelle = prozess_service.neueste_bewertung(prozess)
+        if aktuelle is None:
+            continue
+        heutige = vorschlag.fuer_prozess(prozess)
+        for abweichung in vorschlag.abweichungen(heutige, aktuelle.antworten):
+            damals = (aktuelle.vorschlaege or {}).get(abweichung.frage_id)
+            if damals is None:
+                grund = "damals nicht ableitbar, heute schon"
+            elif damals != abweichung.vorschlag:
+                grund = "Datenlage seit der Bewertung geändert"
+            elif abweichung.frage_id in (aktuelle.abweichungen or {}):
+                continue
+            else:
+                grund = "Abweichung ohne Begründung"
+            beleg = abweichung.belege[0].text if abweichung.belege else ""
+            zeile.eintraege.append(
+                Eintrag(
+                    id=prozess.id,
+                    titel=prozess.name,
+                    hinweis=f"Frage {abweichung.frage_id}: geantwortet "
+                    f"{'ja' if abweichung.antwort else 'nein'}, abgeleitet "
+                    f"{'ja' if abweichung.vorschlag else 'nein'} — {grund}. {beleg}".strip(),
+                    ziel_modul="prozesse",
+                    ziel_filter={"id": str(prozess.id)},
+                )
+            )
+    return zeile
+
+
+def technologie_erfuellt_klasse_nicht(db: Session, principal: Principal, **filter) -> Zeile:
+    """Wo die Technologie eine ausgeloeste Anforderungsklasse nicht traegt (A.9.3).
+
+    Drei Faelle stehen hier nebeneinander, weil alle drei denselben naechsten
+    Schritt verlangen — jemand muss entscheiden:
+
+    * **Ausschluss.** Die Matrix sagt ``nicht_erfuellbar``. Der Prozess laesst
+      sich mit dieser Technologie nicht betreiben; eine Kompensation waere eine
+      Umgehung des Kriteriums.
+    * **Kompensation fehlt.** Die Matrix sagt ``kompensierbar``, und es steht
+      keine Massnahme dabei. „Kompensierbar" ist eine Aufgabe, kein Zustand.
+    * **Ungeprueft.** Am Tool steht keine Technologie, oder die Matrix kennt
+      das Feld nicht. Eine fehlende Angabe ist kein Nachweis.
+
+    Erfuellte und kompensierte Klassen erscheinen nicht — sie sind erledigt.
+    """
+    zeile = Zeile(
+        "technologie_erfuellt_klasse_nicht",
+        "Technologie erfüllt ausgelöste Anforderungsklasse nicht",
+        "Die Technologie des Tools trägt eine Klasse nicht, die seine Prozesse auslösen.",
+    )
+    namen = bewertung_service.K_KLASSEN_BESCHREIBUNG
+    for tool in _sichtbare_tools(db, principal, filter.get("fachbereich_id")):
+        befund = klassen_service.pruefe_tool(db, tool)
+        for eintrag in befund.befunde:
+            if not eintrag.offen:
+                continue
+            grund = {
+                Befundart.AUSSCHLUSS: "Ausschluss — die Technologie kann die Klasse nicht tragen",
+                Befundart.KOMPENSATION_FEHLT: "kompensierbar, aber ohne dokumentierte Maßnahme",
+                Befundart.UNGEPRUEFT: "ungeprüft — für diese Technologie gibt es kein Matrixfeld",
+            }[eintrag.art]
+            zeile.eintraege.append(
+                Eintrag(
+                    id=tool.id,
+                    titel=tool.name,
+                    hinweis=f"{eintrag.k_klasse} {namen.get(eintrag.k_klasse, '')}: {grund}.",
+                    ziel_modul="tools",
+                    ziel_filter={"id": str(tool.id)},
+                )
+            )
+    return zeile
+
+
+def altanwendungen_im_migrationspfad(db: Session, principal: Principal, **filter) -> Zeile:
+    """Vorgefundene Anwendungen auf dem Weg in den Rahmen (Leitdokument A.16).
+
+    Alt-Anwendungen sind die, die es vor dem Rahmenwerk schon gab: in dieser
+    Anwendung erkennbar an ``herkunft = importiert``, denn sie sind vom Sync
+    **vorgefunden** und nicht von jemandem angemeldet worden.
+
+    A.16 gibt ihnen zwei Wege. Im **Meldepfad** stehen die, bei denen noch
+    etwas zu tun ist — bestaetigen, einem Prozess zuordnen, den Prozess
+    bewerten. Wer die Meldefrist verstreichen laesst, wechselt in den
+    **Blockierungspfad**: dieselbe Aufgabe, aber die Frist ist abgelaufen.
+
+    Eine Alt-Anwendung, die bestaetigt, zugeordnet und ueber ihren Prozess
+    bewertet ist, hat den Weg hinter sich und erscheint hier nicht mehr — sie
+    ist keine Alt-Anwendung mehr, sondern ein gefuehrtes Tool-Objekt.
+    """
+    frist_tage = konfiguration.lies_int(db, "altanwendung_meldefrist_tage")
+    jetzt = filter.get("jetzt") or datetime.now(UTC)
+    zeile = Zeile(
+        "altanwendungen",
+        "Alt-Anwendungen im Melde-/Blockierungspfad",
+        "Vorgefundene Anwendungen, die den Weg in den Rahmen noch vor sich haben (A.16).",
+    )
+    for tool in _sichtbare_tools(db, principal, filter.get("fachbereich_id")):
+        if tool.herkunft != Herkunft.IMPORTIERT:
+            continue
+        if tool.status == AssetStatus.IMPORTIERT_UNBESTAETIGT:
+            aufgabe = "noch nicht bestätigt"
+        elif not tool.prozessobjekte:
+            aufgabe = "bestätigt, aber keinem Prozessobjekt zugeordnet"
+        elif all(prozess_service.neueste_bewertung(p) is None for p in tool.prozessobjekte):
+            aufgabe = "zugeordnet, aber der Prozess ist unbewertet"
+        else:
+            continue
+
+        entdeckt = _als_utc(tool.erstellt_am) or jetzt
+        tage = (jetzt - entdeckt).days
+        pfad = "Blockierungspfad" if tage > frist_tage else "Meldepfad"
+        zeile.eintraege.append(
+            Eintrag(
+                id=tool.id,
+                titel=tool.name,
+                hinweis=f"{pfad}: {aufgabe}. Seit {tage} Tagen vorgefunden, "
+                f"Meldefrist {frist_tage} Tage.",
                 ziel_modul="tools",
                 ziel_filter={"id": str(tool.id)},
             )
@@ -410,7 +613,11 @@ ZEILEN = {
     "tier_verteilung": tier_verteilung,
     "inaktive_assets": inaktive_assets,
     "ueberfaellige_selbstverpflichtungen": ueberfaellige_selbstverpflichtungen,
+    "attestierungen_veraltet": attestierungen_veraltet,
     "widersprueche": widersprueche,
+    "antwort_widerspricht_datenlage": antwort_widerspricht_datenlage,
+    "technologie_erfuellt_klasse_nicht": technologie_erfuellt_klasse_nicht,
+    "altanwendungen": altanwendungen_im_migrationspfad,
 }
 
 

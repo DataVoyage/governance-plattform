@@ -19,7 +19,7 @@ from app.core.permissions import Principal, verlange
 from app.models.base import now_utc
 from app.models.enums import AlarmTyp
 from app.models.governance import Alarm, Bewertung, Prozessobjekt
-from app.services import ableitung, konfiguration
+from app.services import ableitung, konfiguration, vorschlag
 from app.services.bewertungsbaum import (
     BAUM,
     FRAGE_JE_ID,
@@ -133,7 +133,7 @@ K_KLASSEN_BESCHREIBUNG: dict[str, str] = {
     "K1": "Dokumentationspflicht des Prozessobjekts",
     "K2": "Selbstverpflichtung des Prozesseigners",
     "K3": "Benannter technischer Owner mit Betriebsverantwortung",
-    "K4": "Datenschutz-Folgenabschaetzung",
+    "K4": "Datenschutz-Folgenabschätzung",
     "K5": "Zugriffs- und Rechtekonzept",
     "K6": "KI-Transparenz und -Dokumentation nach EU AI Act",
     "K7": "Mitbestimmungsverfahren einleiten",
@@ -141,6 +141,83 @@ K_KLASSEN_BESCHREIBUNG: dict[str, str] = {
     "K9": "Notfall- und Wiederanlaufkonzept",
     "K10": "Gate-2-Pflicht vor Inbetriebnahme",
 }
+
+#: Je Klasse ein Satz, der sagt, was zu tun ist — nicht, was die Bedingung war.
+#: Eine Ergebnisseite, die nur „K4" anzeigt, verlagert die Uebersetzungsarbeit
+#: auf den Leser; genau das soll sie nicht (Architektur 9.1).
+K_KLASSEN_ERKLAERUNG: dict[str, str] = {
+    "K1": (
+        "Das Prozessobjekt ist mit Zweck, Ablauf und beteiligten Daten im Verzeichnis "
+        "zu führen und aktuell zu halten."
+    ),
+    "K2": (
+        "Der Prozesseigner gibt die Selbstverpflichtung nach A.10.2 ab und bestätigt sie jährlich."
+    ),
+    "K3": (
+        "Für den Betrieb ist ein technischer Owner namentlich zu benennen, der die "
+        "Verfügbarkeit und die Änderungen verantwortet."
+    ),
+    "K4": (
+        "Vor der Inbetriebnahme ist eine Datenschutz-Folgenabschätzung nach Art. 35 "
+        "DSGVO durchzuführen und mit dem Datenschutzbeauftragten abzustimmen."
+    ),
+    "K5": (
+        "Wer auf welche Daten zugreifen darf, ist schriftlich festzulegen und "
+        "mindestens jährlich zu überprüfen."
+    ),
+    "K6": (
+        "Der KI-Einsatz ist nach EU AI Act zu dokumentieren; Betroffene sind über "
+        "die Beteiligung eines KI-Systems zu informieren."
+    ),
+    "K7": (
+        "Der Betriebsrat ist vor der Inbetriebnahme zu beteiligen; ohne abgeschlossenes "
+        "Verfahren darf der Prozess nicht produktiv gehen."
+    ),
+    "K8": (
+        "Ergebnisse und Änderungen sind revisionssicher aufzubewahren und der "
+        "internen Revision auf Anforderung vorzulegen."
+    ),
+    "K9": (
+        "Für den Ausfall ist ein Wiederanlaufplan zu hinterlegen und die zulässige "
+        "Ausfallzeit zu benennen."
+    ),
+    "K10": (
+        "Vor der Inbetriebnahme ist Gate 2 zu durchlaufen; die Freigabe erteilt die "
+        "Governance-Rolle."
+    ),
+}
+
+
+#: Die Auflagen je Tier aus Leitdokument A.8.6. Sie gelten kumulativ: Tier 3
+#: traegt auch die Auflagen von Tier 2 und 1.
+#:
+#: Anders als die K-Klassen haengen sie nicht am Profil, sondern allein am
+#: erreichten Tier. Beide stehen auf der Ergebnisseite nebeneinander, weil sie
+#: verschiedene Fragen beantworten: die K-Klassen sagen, **was** dieser Prozess
+#: wegen seiner Eigenschaften braucht, die Auflagen sagen, **wie streng** er
+#: insgesamt gefuehrt wird.
+TIER_AUFLAGEN: dict[int, tuple[str, ...]] = {
+    1: (
+        "Registrierung im Verzeichnis der Prozessobjekte.",
+        "Selbstverpflichtung des Prozesseigners, jährlich zu bestätigen.",
+        "Änderungen am Prozessobjekt werden protokolliert.",
+    ),
+    2: (
+        "Benannter technischer Owner mit Betriebsverantwortung.",
+        "Zugriffs- und Rechtekonzept, mindestens jährlich überprüft.",
+        "Aufnahme in die regelmäßige Governance-Durchsicht.",
+    ),
+    3: (
+        "Die Bewertung verfällt nach einem Jahr und ist zu erneuern.",
+        "Freigabe durch die Governance-Rolle vor der Inbetriebnahme.",
+        "Laufende Beobachtung im Cockpit; Abweichungen lösen einen Lenkungsvorgang aus.",
+    ),
+}
+
+
+def auflagen(tier_wert: int) -> list[str]:
+    """Die kumulierten Auflagen bis zum erreichten Tier."""
+    return [satz for stufe in range(1, tier_wert + 1) for satz in TIER_AUFLAGEN.get(stufe, ())]
 
 
 def leite_k_klassen_ab(werte: dict[str, int]) -> list[str]:
@@ -181,6 +258,39 @@ def pruefe_antworten(antworten: dict[str, bool]) -> None:
         raise Ungueltig(f"Unbekannte Frage-IDs: {', '.join(unbekannt)}")
 
 
+def pruefe_begruendungen(
+    vorschlaege: dict[str, vorschlag.Vorschlag],
+    antworten: dict[str, bool],
+    begruendungen: dict[str, str],
+) -> dict[str, str]:
+    """Jede Abweichung vom Vorschlag braucht einen Satz — sonst kein Schritt.
+
+    Die Pruefung sitzt bewusst schon im Wizard-Schritt und nicht erst beim
+    Speichern. Wer erst am Ende erfaehrt, dass Frage 2b eine Begruendung
+    braucht, muesste sich an eine Entscheidung von vor fuenf Bildschirmen
+    erinnern.
+
+    Zurueck kommen die Begruendungen, die tatsaechlich zu einer Abweichung
+    gehoeren. Ein Satz zu einer Frage, die am Ende doch nicht abweicht — etwa
+    weil die Antwort zurueckgenommen wurde —, wird nicht mitgespeichert: er
+    wuerde eine Abweichung dokumentieren, die es nicht gibt.
+    """
+    behalten: dict[str, str] = {}
+    fehlend: list[str] = []
+    for abweichung in vorschlag.abweichungen(vorschlaege, antworten):
+        text = (begruendungen.get(abweichung.frage_id) or "").strip()
+        if not text:
+            fehlend.append(abweichung.frage_id)
+        else:
+            behalten[abweichung.frage_id] = text
+    if fehlend:
+        raise Ungueltig(
+            "Die Antwort weicht vom abgeleiteten Vorschlag ab. Bitte begründen Sie das "
+            f"für {'Frage' if len(fehlend) == 1 else 'die Fragen'} {', '.join(sorted(fehlend))}."
+        )
+    return behalten
+
+
 def darf_bewerten(db: Session, principal: Principal, prozess: Prozessobjekt) -> bool:
     """Bewerten darf der Prozess-Owner im eigenen Bereich oder die Governance.
 
@@ -204,6 +314,7 @@ def speichere(
     prozess: Prozessobjekt,
     antworten: dict[str, bool],
     modus: str = Modus.VOLLSTAENDIG,
+    begruendungen: dict[str, str] | None = None,
 ) -> Bewertung | Alarm:
     """Schliesst einen Durchlauf ab und legt eine neue Bewertung an.
 
@@ -216,6 +327,8 @@ def speichere(
         "Bewerten darf der Prozess-Owner im eigenen Bereich oder die Governance-Rolle",
     )
     pruefe_antworten(antworten)
+    vorschlaege = vorschlag.fuer_prozess(prozess)
+    abweichende = pruefe_begruendungen(vorschlaege, antworten, begruendungen or {})
     stand = durchlaufe(antworten, modus)
     if not stand.abgeschlossen:
         raise Ungueltig(
@@ -255,6 +368,8 @@ def speichere(
         vollstaendig=stand.vollstaendig,
         ausgeloeste_k_klassen=leite_k_klassen_ab(werte) if stand.vollstaendig else [],
         antworten=dict(antworten),
+        vorschlaege=vorschlag.werte(vorschlaege),
+        abweichungen=abweichende,
         bewertet_von=principal.user_id,
         bewertet_am=zeitpunkt,
         gueltig_bis=gueltig_bis(db, tier_wert, zeitpunkt),

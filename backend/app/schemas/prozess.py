@@ -3,6 +3,11 @@
 Genau die zehn Felder aus Leitdokument A.5 sind eingebbar. Reichweite,
 Kritikalitaet und Mitbestimmungsflag sind abgeleitet und erscheinen nur in der
 Ausgabe — sie werden nie entgegengenommen (Leitdokument P1).
+
+Die Laengengrenzen der Freitextfelder sind keine Willkuer, sondern die
+strukturelle Bremse gegen Detailtiefe aus A.5: „Keine Freitextfelder ausser den
+vorgesehenen; harte Zeichenbegrenzung." Wer mehr braucht, verlinkt einen
+weiteren Prozess — die Tiefe liegt im Graphen, nicht im Datensatz.
 """
 
 from __future__ import annotations
@@ -13,6 +18,15 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.enums import Ausfallfolge, Kundenkreis, ProzessStatus, Reichweite
+
+#: Harte Zeichenbegrenzungen der Freitextfelder (Leitdokument A.5).
+LAENGE_SUPPLIER = 200
+LAENGE_SCHRITTE = 1000
+LAENGE_OUTPUT = 200
+
+#: Mehr Schritte in der P-Spalte heissen: falsche Flughoehe (Leitdokument A.5).
+#: Das ist eine Warnung, keine Ablehnung — die Entscheidung bleibt beim Owner.
+HOECHSTZAHL_SCHRITTE = 7
 
 
 class ProzessBasis(BaseModel):
@@ -25,13 +39,14 @@ class ProzessBasis(BaseModel):
     # 4
     prozessgeber_org_id: uuid.UUID
     # 5
-    supplier: str = ""
+    supplier: str = Field(default="", max_length=LAENGE_SUPPLIER)
     # 6 — Referenz auf bestehende Datenobjekte, kein Freitext (Leitdokument P5)
     input_datenobjekt_ids: list[uuid.UUID] = Field(default_factory=list)
     # 7
-    process_steps: str = ""
-    # 8
-    output: str = ""
+    process_steps: str = Field(default="", max_length=LAENGE_SCHRITTE)
+    # 8 — Ergebnis in Worten und, als Schreibkante des SIPOC, als Referenz
+    output: str = Field(default="", max_length=LAENGE_OUTPUT)
+    output_datenobjekt_ids: list[uuid.UUID] = Field(default_factory=list)
     # 9
     customer: Kundenkreis
     # 10
@@ -42,6 +57,10 @@ class ProzessAnlegen(ProzessBasis):
     umsetzung_land_org_ids: list[uuid.UUID] = Field(default_factory=list)
     vorgelagert_ids: list[uuid.UUID] = Field(default_factory=list)
     nachgelagert_ids: list[uuid.UUID] = Field(default_factory=list)
+    #: Kein SIPOC-Feld, sondern der erklaerte Rahmen (A.13.2 Schicht 1). Beim
+    #: Anlegen loest er kein Gate aus — ein Entwurf hat noch keinen Rahmen, den
+    #: er verlassen koennte. Spaeter ergaenzte Ziele schon (A.11).
+    erlaubte_externe_ziele: list[str] = Field(default_factory=list)
 
 
 class ProzessAendern(BaseModel):
@@ -49,10 +68,11 @@ class ProzessAendern(BaseModel):
     owner_user_id: uuid.UUID | None = None
     stellvertretung_user_id: uuid.UUID | None = None
     prozessgeber_org_id: uuid.UUID | None = None
-    supplier: str | None = None
+    supplier: str | None = Field(default=None, max_length=LAENGE_SUPPLIER)
     input_datenobjekt_ids: list[uuid.UUID] | None = None
-    process_steps: str | None = None
-    output: str | None = None
+    process_steps: str | None = Field(default=None, max_length=LAENGE_SCHRITTE)
+    output: str | None = Field(default=None, max_length=LAENGE_OUTPUT)
+    output_datenobjekt_ids: list[uuid.UUID] | None = None
     customer: Kundenkreis | None = None
     ausfallfolge: Ausfallfolge | None = None
     status: ProzessStatus | None = None
@@ -101,6 +121,9 @@ class ProzessAus(BaseModel):
     reichweite: Reichweite | None = None
     kritikalitaet: int = 0
     mitbestimmung_flag: bool = False
+    #: Zahl der Schritte in der P-Spalte und die Flughoehen-Warnung aus A.5.
+    schritt_anzahl: int = 0
+    schritte_zu_viele: bool = False
 
     input_datenobjekt_ids: list[uuid.UUID] = Field(default_factory=list)
     output_datenobjekt_ids: list[uuid.UUID] = Field(default_factory=list)

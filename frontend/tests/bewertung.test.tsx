@@ -1,20 +1,53 @@
 /**
- * Bewertungs-Wizard in der Oberflaeche (Architektur 8.2, 9.1).
+ * Bewertungs-Wizard in der Oberflaeche (Architektur 8.2, 9.1, Leitdokument A.8).
+ *
+ * Der Schwerpunkt liegt auf dem, was AP-4 hinzugefuegt hat: der Vorschlag
+ * neben der Frage, die Begruendungspflicht bei Abweichung, der Weg zurueck und
+ * die Ergebnisseite mit Klassennamen und Auflagen.
  */
 
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
-import type { Bewertung, Frage } from '@/api/typen';
+import type { Beleg, Bewertung, Ergebnis, Frage } from '@/api/typen';
 import { EINHEITEN, PROFIL, fetchAttrappe, prozess, zeichne, type Route } from './hilfen';
 
-function frage(id: string, nummer: number, block: string, titel: string, text: string): Frage {
-  return { id, text, block, block_titel: titel, nummer, anzahl_bloecke: 6 };
+function frage(
+  id: string,
+  nummer: number,
+  block: string,
+  titel: string,
+  text: string,
+  vorschlag: boolean | null = null,
+  belege: Beleg[] = [],
+): Frage {
+  return { id, text, block, block_titel: titel, nummer, anzahl_bloecke: 6, vorschlag, belege };
 }
 
-const KI_FRAGE = frage('1a', 1, 'ki', 'Kuenstliche Intelligenz', 'Setzt der Prozess KI ein?');
+const KI_FRAGE = frage('1a', 1, 'ki', 'Künstliche Intelligenz', 'Setzt der Prozess KI ein?');
 const DS_FRAGE = frage('2a', 2, 'ds', 'Datenschutz', 'Besondere Kategorien?');
+const DS_MIT_VORSCHLAG = frage(
+  '2a',
+  2,
+  'ds',
+  'Datenschutz',
+  'Besondere Kategorien?',
+  true,
+  [{ text: 'Datenobjekt „Entgeltdaten“ trägt die Kategorie besondere Kategorie.', quelle: 'datenobjekt' }],
+);
+
+const ERGEBNIS: Ergebnis = {
+  tier: 3,
+  profil: { ki: 0, ds: 3, mb: 1, it: 1, rg: 2, ur: 2 },
+  ausgeloeste_k_klassen: ['K1', 'K4'],
+  klassen: [
+    { kennung: 'K1', name: 'Dokumentationspflicht des Prozessobjekts', erklaerung: 'Im Verzeichnis fuehren.' },
+    { kennung: 'K4', name: 'Datenschutz-Folgenabschätzung', erklaerung: 'Nach Art. 35 DSGVO.' },
+  ],
+  auflagen: ['Registrierung im Verzeichnis der Prozessobjekte.', 'Freigabe durch die Governance-Rolle.'],
+  vollstaendig: true,
+};
 
 function bewertung(ueberschreibungen: Partial<Bewertung> = {}): Bewertung {
   return {
@@ -31,6 +64,8 @@ function bewertung(ueberschreibungen: Partial<Bewertung> = {}): Bewertung {
     vollstaendig: true,
     ausgeloeste_k_klassen: ['K1', 'K2', 'K3', 'K4', 'K5', 'K7', 'K8', 'K9'],
     antworten: {},
+    vorschlaege: {},
+    abweichungen: {},
     bewertet_von: 'user-1',
     bewertet_am: '2026-09-01T10:00:00Z',
     gueltig_bis: '2027-09-01T10:00:00Z',
@@ -48,20 +83,29 @@ function grundrouten(bewertungen: Bewertung[] = []): Route[] {
   ];
 }
 
+/** Startet den Durchlauf im gewaehlten Modus. */
+async function starte(modus: 'Schnell' | 'Vollständig' = 'Vollständig') {
+  zeichne('/de/prozesse/p-1/bewertung');
+  await userEvent.click(await screen.findByRole('button', { name: modus }));
+  await userEvent.click(screen.getByRole('button', { name: 'Bewertung durchführen' }));
+}
+
 describe('Wizard', () => {
-  it('verlangt zu Beginn die Wahl zwischen schnell und vollstaendig', async () => {
+  it('verlangt zu Beginn die Wahl des Modus und erklaert ihre Folge', async () => {
     fetchAttrappe(grundrouten());
     zeichne('/de/prozesse/p-1/bewertung');
     expect(await screen.findByText('Wie möchten Sie den Baum durchlaufen?')).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Schnell — endet beim ersten Tier-3-Treffer' }),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: 'Vollständig — alle sechs Schritte, mit K-Klassen' }),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Vollständig' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+    expect(screen.getByText(/Alle sechs Dimensionen werden durchlaufen/)).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Schnell' }));
+    expect(screen.getByText(/sobald eine Dimension Tier 3 erreicht/)).toBeInTheDocument();
   });
 
-  it('zeigt eine Frage pro Bildschirm mit zwei Antwortknoepfen und keinen Zwischenstand', async () => {
+  it('zeigt eine Frage pro Bildschirm mit zwei Antwortflaechen und keinen Zwischenstand', async () => {
     const { aufrufe } = fetchAttrappe([
       ...grundrouten(),
       {
@@ -76,13 +120,10 @@ describe('Wizard', () => {
         },
       },
     ]);
-    zeichne('/de/prozesse/p-1/bewertung');
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Vollständig — alle sechs Schritte, mit K-Klassen' }),
-    );
+    await starte();
 
     expect(await screen.findByTestId('frage')).toHaveTextContent('Setzt der Prozess KI ein?');
-    expect(screen.getByText('Schritt 1 von 6 — Kuenstliche Intelligenz')).toBeInTheDocument();
+    expect(screen.getByText('Schritt 1 von 6 — Künstliche Intelligenz')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Ja' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Nein' })).toBeInTheDocument();
     // Kein Tier, kein Profil, solange der Durchlauf laeuft.
@@ -90,7 +131,11 @@ describe('Wizard', () => {
     expect(screen.queryByTestId('profil')).toBeNull();
 
     const erster = aufrufe.find((a) => a.url.includes('/bewertung/wizard'));
-    expect(erster?.koerper).toEqual({ modus: 'vollstaendig', antworten: {} });
+    expect(erster?.koerper).toEqual({
+      modus: 'vollstaendig',
+      antworten: {},
+      begruendungen: {},
+    });
   });
 
   it('schickt die Antwort mit und holt die naechste Frage', async () => {
@@ -108,11 +153,7 @@ describe('Wizard', () => {
         }),
       },
     ]);
-
-    zeichne('/de/prozesse/p-1/bewertung');
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Vollständig — alle sechs Schritte, mit K-Klassen' }),
-    );
+    await starte();
     await screen.findByTestId('frage');
     await userEvent.click(screen.getByRole('button', { name: 'Nein' }));
 
@@ -120,10 +161,243 @@ describe('Wizard', () => {
       expect(screen.getByTestId('frage')).toHaveTextContent('Besondere Kategorien?'),
     );
     const letzter = aufrufe.filter((a) => a.url.includes('/bewertung/wizard')).at(-1);
-    expect(letzter?.koerper).toEqual({ modus: 'vollstaendig', antworten: { '1a': false } });
+    expect(letzter?.koerper).toEqual({
+      modus: 'vollstaendig',
+      antworten: { '1a': false },
+      begruendungen: {},
+    });
   });
 
-  it('zeigt Tier, Profil und K-Klassen erst am Ende und speichert', async () => {
+  // --- Vorschlag und Abweichung (Leitdokument A.8.4) ---------------------
+
+  it('zeigt den Vorschlag mit seinem Beleg und der Quelle', async () => {
+    fetchAttrappe([
+      ...grundrouten(),
+      {
+        pfad: '/bewertung/wizard',
+        methode: 'POST',
+        koerper: {
+          naechste_frage: DS_MIT_VORSCHLAG,
+          abgeschlossen: false,
+          verboten: false,
+          vollstaendig: true,
+          vorschau: null,
+        },
+      },
+    ]);
+    await starte();
+
+    const vorschlag = await screen.findByTestId('vorschlag');
+    expect(vorschlag).toHaveAttribute('data-wert', 'true');
+    expect(vorschlag).toHaveTextContent('Vorschlag aus Ihren Daten:');
+    expect(vorschlag).toHaveTextContent('Entgeltdaten');
+    expect(vorschlag).toHaveTextContent('Datenobjekt');
+  });
+
+  it('nennt es offen, wo die Daten nichts hergeben', async () => {
+    fetchAttrappe([
+      ...grundrouten(),
+      {
+        pfad: '/bewertung/wizard',
+        methode: 'POST',
+        koerper: {
+          naechste_frage: frage('2a', 2, 'ds', 'Datenschutz', 'Besondere Kategorien?', null, [
+            { text: 'Kein Datenobjekt traegt eine besondere Kategorie.', quelle: 'datenobjekt' },
+          ]),
+          abgeschlossen: false,
+          verboten: false,
+          vollstaendig: true,
+          vorschau: null,
+        },
+      },
+    ]);
+    await starte();
+
+    const vorschlag = await screen.findByTestId('vorschlag');
+    expect(vorschlag).toHaveAttribute('data-wert', 'offen');
+    expect(vorschlag).toHaveTextContent('geben die vorhandenen Daten nichts her');
+  });
+
+  it('geht ohne Nachfrage weiter, wenn die Antwort dem Vorschlag folgt', async () => {
+    const { aufrufe } = fetchAttrappe([
+      ...grundrouten(),
+      {
+        pfad: '/bewertung/wizard',
+        methode: 'POST',
+        koerper: (nummer: number) => ({
+          naechste_frage: nummer === 1 ? DS_MIT_VORSCHLAG : KI_FRAGE,
+          abgeschlossen: false,
+          verboten: false,
+          vollstaendig: true,
+          vorschau: null,
+        }),
+      },
+    ]);
+    await starte();
+    await screen.findByTestId('vorschlag');
+    await userEvent.click(screen.getByRole('button', { name: 'Ja' }));
+
+    await waitFor(() =>
+      expect(screen.getByTestId('frage')).toHaveTextContent('Setzt der Prozess KI ein?'),
+    );
+    expect(screen.queryByTestId('begruendung')).toBeNull();
+    const letzter = aufrufe.filter((a) => a.url.includes('/bewertung/wizard')).at(-1);
+    expect(letzter?.koerper).toMatchObject({ antworten: { '2a': true }, begruendungen: {} });
+  });
+
+  it('haelt bei einer abweichenden Antwort an und verlangt eine Begruendung', async () => {
+    const { aufrufe } = fetchAttrappe([
+      ...grundrouten(),
+      {
+        pfad: '/bewertung/wizard',
+        methode: 'POST',
+        koerper: (nummer: number) => ({
+          naechste_frage: nummer === 1 ? DS_MIT_VORSCHLAG : KI_FRAGE,
+          abgeschlossen: false,
+          verboten: false,
+          vollstaendig: true,
+          vorschau: null,
+        }),
+      },
+    ]);
+    await starte();
+    await screen.findByTestId('vorschlag');
+    await userEvent.click(screen.getByRole('button', { name: 'Nein' }));
+
+    const feld = await screen.findByTestId('begruendung');
+    expect(feld).toHaveTextContent('Ihre Antwort widerspricht');
+    const weiter = screen.getByRole('button', { name: 'Weiter' });
+    expect(weiter).toBeDisabled();
+    // Ohne Begruendung ist nichts abgeschickt worden.
+    expect(aufrufe.filter((a) => a.url.includes('/bewertung/wizard'))).toHaveLength(1);
+
+    await userEvent.type(
+      screen.getByLabelText('Begründung der Abweichung'),
+      'Nur als Aggregat eingebunden.',
+    );
+    expect(weiter).toBeEnabled();
+    await userEvent.click(weiter);
+
+    await waitFor(() =>
+      expect(screen.getByTestId('frage')).toHaveTextContent('Setzt der Prozess KI ein?'),
+    );
+    const letzter = aufrufe.filter((a) => a.url.includes('/bewertung/wizard')).at(-1);
+    expect(letzter?.koerper).toMatchObject({
+      antworten: { '2a': false },
+      begruendungen: { '2a': 'Nur als Aggregat eingebunden.' },
+    });
+  });
+
+  it('laesst die Abweichung zuruecknehmen', async () => {
+    fetchAttrappe([
+      ...grundrouten(),
+      {
+        pfad: '/bewertung/wizard',
+        methode: 'POST',
+        koerper: {
+          naechste_frage: DS_MIT_VORSCHLAG,
+          abgeschlossen: false,
+          verboten: false,
+          vollstaendig: true,
+          vorschau: null,
+        },
+      },
+    ]);
+    await starte();
+    await screen.findByTestId('vorschlag');
+    await userEvent.click(screen.getByRole('button', { name: 'Nein' }));
+    await screen.findByTestId('begruendung');
+
+    await userEvent.click(screen.getByRole('button', { name: 'Abbrechen' }));
+    expect(screen.queryByTestId('begruendung')).toBeNull();
+    expect(screen.getByTestId('frage')).toHaveTextContent('Besondere Kategorien?');
+  });
+
+  // --- Zurueck und Abbruch ----------------------------------------------
+
+  it('geht einen Schritt zurueck und nimmt die letzte Antwort mit', async () => {
+    const { aufrufe } = fetchAttrappe([
+      ...grundrouten(),
+      {
+        pfad: '/bewertung/wizard',
+        methode: 'POST',
+        koerper: (nummer: number) => ({
+          naechste_frage: nummer === 1 || nummer === 3 ? KI_FRAGE : DS_FRAGE,
+          abgeschlossen: false,
+          verboten: false,
+          vollstaendig: true,
+          vorschau: null,
+        }),
+      },
+    ]);
+    await starte();
+    await screen.findByTestId('frage');
+    await userEvent.click(screen.getByRole('button', { name: 'Nein' }));
+    await waitFor(() =>
+      expect(screen.getByTestId('frage')).toHaveTextContent('Besondere Kategorien?'),
+    );
+
+    await userEvent.click(screen.getByTestId('bewertung-zurueck'));
+    await waitFor(() =>
+      expect(screen.getByTestId('frage')).toHaveTextContent('Setzt der Prozess KI ein?'),
+    );
+    const letzter = aufrufe.filter((a) => a.url.includes('/bewertung/wizard')).at(-1);
+    expect(letzter?.koerper).toMatchObject({ antworten: {} });
+  });
+
+  it('fuehrt vom ersten Schritt zurueck in die Modusauswahl', async () => {
+    fetchAttrappe([
+      ...grundrouten(),
+      {
+        pfad: '/bewertung/wizard',
+        methode: 'POST',
+        koerper: {
+          naechste_frage: KI_FRAGE,
+          abgeschlossen: false,
+          verboten: false,
+          vollstaendig: true,
+          vorschau: null,
+        },
+      },
+    ]);
+    await starte();
+    await screen.findByTestId('frage');
+    await userEvent.click(screen.getByTestId('bewertung-zurueck'));
+    expect(await screen.findByText('Wie möchten Sie den Baum durchlaufen?')).toBeInTheDocument();
+  });
+
+  it('fragt vor dem Verwerfen zurueck', async () => {
+    fetchAttrappe([
+      ...grundrouten(),
+      {
+        pfad: '/bewertung/wizard',
+        methode: 'POST',
+        koerper: {
+          naechste_frage: KI_FRAGE,
+          abgeschlossen: false,
+          verboten: false,
+          vollstaendig: true,
+          vorschau: null,
+        },
+      },
+    ]);
+    await starte();
+    await screen.findByTestId('frage');
+    await userEvent.click(screen.getByRole('button', { name: 'Bewertung abbrechen' }));
+
+    const blatt = await screen.findByRole('dialog');
+    expect(blatt).toHaveTextContent('Bewertung verwerfen?');
+    await userEvent.click(screen.getByRole('button', { name: 'Weiterbewerten' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Bewertung abbrechen' }));
+    await userEvent.click(await screen.findByTestId('abbruch-verwerfen'));
+    await screen.findByRole('heading', { name: 'Rechnungspruefung', level: 1 });
+  });
+
+  // --- Ergebnis ----------------------------------------------------------
+
+  it('zeigt Tier, Profil, Klassennamen und Auflagen erst am Ende und speichert', async () => {
     const { aufrufe } = fetchAttrappe([
       ...grundrouten(),
       {
@@ -134,12 +408,7 @@ describe('Wizard', () => {
           abgeschlossen: true,
           verboten: false,
           vollstaendig: true,
-          vorschau: {
-            tier: 3,
-            profil: { ki: 0, ds: 3, mb: 1, it: 1, rg: 2, ur: 2 },
-            ausgeloeste_k_klassen: ['K1', 'K2', 'K3', 'K4', 'K5', 'K7', 'K8', 'K9'],
-            vollstaendig: true,
-          },
+          vorschau: ERGEBNIS,
         },
       },
       {
@@ -149,19 +418,16 @@ describe('Wizard', () => {
         koerper: { bewertung: bewertung(), alarm: null },
       },
     ]);
-    zeichne('/de/prozesse/p-1/bewertung');
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Vollständig — alle sechs Schritte, mit K-Klassen' }),
-    );
+    await starte();
 
     expect(await screen.findByTestId('tier')).toHaveTextContent('3');
     expect(screen.getByTestId('profil')).toHaveTextContent('KI0-DS3-MB1-IT1-RG2-UR2');
     const klassen = screen.getByTestId('k-klassen');
-    expect(klassen).toHaveTextContent('K4');
-    expect(klassen).not.toHaveTextContent('K6');
-    expect(klassen).not.toHaveTextContent('K10');
+    expect(klassen).toHaveTextContent('Datenschutz-Folgenabschätzung');
+    expect(klassen).toHaveTextContent('Nach Art. 35 DSGVO.');
+    expect(screen.getByTestId('auflagen')).toHaveTextContent('Registrierung im Verzeichnis');
 
-    await userEvent.click(screen.getByRole('button', { name: 'Bewertung speichern' }));
+    await userEvent.click(screen.getByTestId('bewertung-speichern'));
     await screen.findByRole('heading', { name: 'Rechnungspruefung', level: 1 });
     expect(aufrufe.some((a) => a.methode === 'POST' && a.url.endsWith('/bewertungen'))).toBe(true);
   });
@@ -181,23 +447,62 @@ describe('Wizard', () => {
             tier: 3,
             profil: { ki: 0, ds: 3, mb: 0, it: 0, rg: 0, ur: 0 },
             ausgeloeste_k_klassen: [],
+            klassen: [],
+            auflagen: ['Registrierung im Verzeichnis der Prozessobjekte.'],
             vollstaendig: false,
           },
         },
       },
     ]);
-    zeichne('/de/prozesse/p-1/bewertung');
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Schnell — endet beim ersten Tier-3-Treffer' }),
-    );
+    await starte('Schnell');
     expect(await screen.findByTestId('tier')).toHaveTextContent('3');
     expect(
       screen.getByText('Der schnelle Durchlauf endet vorzeitig und liefert deshalb keine K-Klassen.'),
     ).toBeInTheDocument();
-    expect(screen.queryByTestId('k-klassen')).toBeNull();
+    expect(screen.getByText('Aus diesem Profil folgt keine Maßnahmenklasse.')).toBeInTheDocument();
   });
 
-  it('meldet den Verbotstatbestand und zeigt kein Ergebnis', async () => {
+  it('zeigt die begruendeten Abweichungen am Ergebnis', async () => {
+    fetchAttrappe([
+      ...grundrouten(),
+      {
+        pfad: '/bewertung/wizard',
+        methode: 'POST',
+        koerper: (nummer: number) =>
+          nummer === 1
+            ? {
+                naechste_frage: DS_MIT_VORSCHLAG,
+                abgeschlossen: false,
+                verboten: false,
+                vollstaendig: true,
+                vorschau: null,
+              }
+            : {
+                naechste_frage: null,
+                abgeschlossen: true,
+                verboten: false,
+                vollstaendig: true,
+                vorschau: ERGEBNIS,
+              },
+      },
+    ]);
+    await starte();
+    await screen.findByTestId('vorschlag');
+    await userEvent.click(screen.getByRole('button', { name: 'Nein' }));
+    await userEvent.type(
+      await screen.findByLabelText('Begründung der Abweichung'),
+      'Nur als Aggregat eingebunden.',
+    );
+    await userEvent.click(screen.getByRole('button', { name: 'Weiter' }));
+
+    await screen.findByTestId('tier');
+    expect(screen.getByRole('heading', { name: 'Begründete Abweichungen' })).toBeInTheDocument();
+    expect(screen.getByText('Nur als Aggregat eingebunden.')).toBeInTheDocument();
+  });
+
+  // --- Verbotstatbestand -------------------------------------------------
+
+  it('meldet den Verbotstatbestand als eigenen Ausgang und zeigt kein Ergebnis', async () => {
     fetchAttrappe([
       ...grundrouten(),
       {
@@ -212,41 +517,16 @@ describe('Wizard', () => {
         },
       },
     ]);
-    zeichne('/de/prozesse/p-1/bewertung');
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Schnell — endet beim ersten Tier-3-Treffer' }),
-    );
-    expect(
-      await screen.findByRole('heading', { name: 'Verbotene KI-Praxis' }),
-    ).toBeInTheDocument();
+    await starte('Schnell');
+    expect(await screen.findByRole('heading', { name: 'Verbotene KI-Praxis' })).toBeInTheDocument();
+    expect(screen.getByTestId('verbotstatbestand')).toHaveTextContent('Governance und Recht');
     expect(screen.getByRole('alert')).toHaveTextContent('EU AI Act');
     expect(screen.queryByTestId('tier')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Bewertung speichern' })).toBeNull();
+    expect(screen.queryByTestId('bewertung-speichern')).toBeNull();
+    expect(screen.getByTestId('alarm-ausloesen')).toBeInTheDocument();
   });
 
-  it('erlaubt einen Neustart des Durchlaufs', async () => {
-    fetchAttrappe([
-      ...grundrouten(),
-      {
-        pfad: '/bewertung/wizard',
-        methode: 'POST',
-        koerper: {
-          naechste_frage: KI_FRAGE,
-          abgeschlossen: false,
-          verboten: false,
-          vollstaendig: true,
-          vorschau: null,
-        },
-      },
-    ]);
-    zeichne('/de/prozesse/p-1/bewertung');
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Schnell — endet beim ersten Tier-3-Treffer' }),
-    );
-    await screen.findByTestId('frage');
-    await userEvent.click(screen.getByRole('button', { name: 'Von vorn beginnen' }));
-    expect(await screen.findByText('Wie möchten Sie den Baum durchlaufen?')).toBeInTheDocument();
-  });
+  // --- Fehler ------------------------------------------------------------
 
   it('meldet einen Serverfehler', async () => {
     fetchAttrappe([
@@ -258,10 +538,7 @@ describe('Wizard', () => {
         koerper: { detail: 'Bewerten darf nur der Prozess-Owner' },
       },
     ]);
-    zeichne('/de/prozesse/p-1/bewertung');
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Schnell — endet beim ersten Tier-3-Treffer' }),
-    );
+    await starte('Schnell');
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Bewerten darf nur der Prozess-Owner',
     );
@@ -278,7 +555,7 @@ describe('Wizard', () => {
           abgeschlossen: true,
           verboten: false,
           vollstaendig: true,
-          vorschau: { tier: 1, profil: {}, ausgeloeste_k_klassen: ['K1'], vollstaendig: true },
+          vorschau: { ...ERGEBNIS, tier: 1 },
         },
       },
       {
@@ -288,11 +565,8 @@ describe('Wizard', () => {
         koerper: { detail: 'Durchlauf unvollstaendig' },
       },
     ]);
-    zeichne('/de/prozesse/p-1/bewertung');
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'Vollständig — alle sechs Schritte, mit K-Klassen' }),
-    );
-    await userEvent.click(await screen.findByRole('button', { name: 'Bewertung speichern' }));
+    await starte();
+    await userEvent.click(await screen.findByTestId('bewertung-speichern'));
     expect(await screen.findByRole('alert')).toHaveTextContent('Durchlauf unvollstaendig');
   });
 });
@@ -332,9 +606,7 @@ describe('Bewertungshistorie im Prozessdetail', () => {
   });
 
   it('kennzeichnet einen schnellen Durchlauf', async () => {
-    fetchAttrappe(
-      grundrouten([bewertung({ vollstaendig: false, ausgeloeste_k_klassen: [] })]),
-    );
+    fetchAttrappe(grundrouten([bewertung({ vollstaendig: false, ausgeloeste_k_klassen: [] })]));
     zeichne('/de/prozesse/p-1');
     await screen.findByRole('heading', { name: 'Bewertungshistorie' });
     expect(screen.getByText(/\(schnell\)/)).toBeInTheDocument();

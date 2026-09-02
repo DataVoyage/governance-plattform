@@ -49,6 +49,10 @@ class ErlaubnisrahmenAus(BaseModel):
                 ],
                 "erlaubte_reichweite": "bereich",
                 "erlaubte_externe_ziele": ["sftp.partner.example"],
+                "obergrenze_datenkategorie": "vertraulich",
+                "erlaubte_zugriffsart": "lesen",
+                "erlaubte_ausfuehrungsarten": ["interaktiv", "getriggert", "geplant"],
+                "erlaubte_ausfuehrungsidentitaeten": ["benannter_dienst"],
                 "tier": 3,
                 "quelle_prozess_ids": ["1f2e…"],
             }
@@ -64,6 +68,27 @@ class ErlaubnisrahmenAus(BaseModel):
     erlaubte_externe_ziele: list[str] = Field(
         default_factory=list,
         description="Von der Governance erklaerte externe Ziele. Ein neues Ziel loest Gate 2 aus.",
+    )
+    obergrenze_datenkategorie: str | None = Field(
+        default=None,
+        description="Hoechste Datenkategorie im Rahmen. Der Rahmen deckt alles bis zu "
+        "dieser Stufe ab, nichts darueber; null, wenn kein Datenobjekt eingestuft ist.",
+    )
+    erlaubte_zugriffsart: str | None = Field(
+        default=None,
+        description="'lesen_schreiben', wenn der Prozess mindestens ein Datenobjekt als "
+        "Output fuehrt (A.4.1: die Output-Kante ist die Schreibkante), sonst 'lesen'.",
+    )
+    erlaubte_ausfuehrungsarten: list[str] = Field(
+        default_factory=list,
+        description="Zurueckgefuehrt auf Attestierung 2 (A.6): steht ein Mensch zwischen "
+        "Output und Wirkung, ist jede Ausfuehrungsart gedeckt; steht keiner dazwischen, "
+        "nur die interaktive. Ohne Attestierung ist die Liste leer.",
+    )
+    erlaubte_ausfuehrungsidentitaeten: list[str] = Field(
+        default_factory=list,
+        description="'persoenlich' bei interaktiver Ausfuehrung, 'benannter_dienst' bei "
+        "getriggerter oder geplanter. Ein geteiltes Konto ist nie erlaubt (Schicht 2).",
     )
     tier: int | None = Field(default=None, description="Hoechstes geerbtes Tier.")
     quelle_prozess_ids: list[str] = Field(

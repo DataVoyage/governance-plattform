@@ -36,11 +36,11 @@ def aktiviere(client: TestClient, anmeldung, prozess_id: str):
     Ab Tier 3 kaemen Selbstverpflichtung und Gate 1 dazu (siehe test_gates.py);
     fuer die Sichtbarkeits- und Filtertests genuegt der einfache Weg.
     """
-    from tests.test_bewertung import antworten_fuer, profil_von
+    from tests.test_bewertung import nutzlast, profil_von
 
     client.post(
         f"/api/v1/prozesse/{prozess_id}/bewertungen",
-        json={"modus": "vollstaendig", "antworten": antworten_fuer(profil_von(ur=1))},
+        json=nutzlast(profil_von(ur=1)),
         headers=anmeldung.kopf,
     )
     antwort = client.patch(
@@ -515,3 +515,134 @@ def test_unbekanntes_input_datenobjekt(
         input_datenobjekt_ids=["00000000-0000-0000-0000-000000000000"],
     )
     assert anlegen(client, owner, daten).status_code == 422
+
+
+# --- Umsetzungsplan AP-1: Schreibkante, Kette und Flughoehe ---------------
+
+
+def _datenobjekt(client: TestClient, anmeldung, name: str) -> dict:
+    antwort = client.post(
+        "/api/v1/datenobjekte", json={"name": name, "beschreibung": ""}, headers=anmeldung.kopf
+    )
+    assert antwort.status_code == 201, antwort.text
+    return antwort.json()
+
+
+def test_output_datenobjekte_sind_referenzierbar(
+    client: TestClient, owner, governance, vertretung, prozess_daten
+) -> None:
+    """Die Schreibkante des SIPOC (Leitdokument A.4.1) ist erfassbar.
+
+    Ohne sie liesse sich nicht beantworten, wer in ein Datenobjekt schreibt —
+    die Aufwaertsanalyse aus A.4.3 und der Erlaubnisrahmen aus A.13.2 haengen
+    daran.
+    """
+    eingang = _datenobjekt(client, governance, "Kreditorenstamm")
+    ergebnis = _datenobjekt(client, governance, "Buchungsjournal")
+
+    antwort = anlegen(
+        client,
+        owner,
+        prozess_daten(
+            owner.user_id,
+            vertretung.user_id,
+            input_datenobjekt_ids=[eingang["id"]],
+            output_datenobjekt_ids=[ergebnis["id"]],
+        ),
+    )
+    assert antwort.status_code == 201, antwort.text
+    prozess = antwort.json()
+    assert prozess["input_datenobjekt_ids"] == [eingang["id"]]
+    assert prozess["output_datenobjekt_ids"] == [ergebnis["id"]]
+
+
+def test_output_datenobjekte_sind_aenderbar(
+    client: TestClient, owner, governance, vertretung, prozess_daten
+) -> None:
+    ergebnis = _datenobjekt(client, governance, "Zahlungsvorschlag")
+    prozess = anlegen(client, owner, prozess_daten(owner.user_id, vertretung.user_id)).json()
+
+    antwort = client.patch(
+        f"/api/v1/prozesse/{prozess['id']}",
+        json={"output_datenobjekt_ids": [ergebnis["id"]]},
+        headers=owner.kopf,
+    )
+    assert antwort.status_code == 200, antwort.text
+    assert antwort.json()["output_datenobjekt_ids"] == [ergebnis["id"]]
+
+    geleert = client.patch(
+        f"/api/v1/prozesse/{prozess['id']}",
+        json={"output_datenobjekt_ids": []},
+        headers=owner.kopf,
+    )
+    assert geleert.json()["output_datenobjekt_ids"] == []
+
+
+def test_kette_bleibt_zyklenfrei(client: TestClient, owner, vertretung, prozess_daten) -> None:
+    """Ein Kreis in der Prozesskette wird abgelehnt (Leitdokument A.4.2)."""
+    erster = anlegen(
+        client, owner, prozess_daten(owner.user_id, vertretung.user_id, name="Erster")
+    ).json()
+    zweiter = anlegen(
+        client,
+        owner,
+        prozess_daten(
+            owner.user_id, vertretung.user_id, name="Zweiter", vorgelagert_ids=[erster["id"]]
+        ),
+    ).json()
+
+    # Zweiter liefert bereits an Erster zurueck zu machen schliesst den Kreis.
+    antwort = client.patch(
+        f"/api/v1/prozesse/{erster['id']}",
+        json={"vorgelagert_ids": [zweiter["id"]]},
+        headers=owner.kopf,
+    )
+    assert antwort.status_code == 422, antwort.text
+    assert "Kreis" in antwort.json()["detail"]
+
+
+def test_prozess_kann_sich_nicht_selbst_beliefern(
+    client: TestClient, owner, vertretung, prozess_daten
+) -> None:
+    prozess = anlegen(client, owner, prozess_daten(owner.user_id, vertretung.user_id)).json()
+    antwort = client.patch(
+        f"/api/v1/prozesse/{prozess['id']}",
+        json={"nachgelagert_ids": [prozess["id"]]},
+        headers=owner.kopf,
+    )
+    assert antwort.status_code == 422, antwort.text
+
+
+def test_flughoehenwarnung_ab_acht_schritten(
+    client: TestClient, owner, vertretung, prozess_daten
+) -> None:
+    """Mehr als sieben Schritte sind eine Warnung, keine Ablehnung (A.5)."""
+    sieben = anlegen(
+        client,
+        owner,
+        prozess_daten(
+            owner.user_id,
+            vertretung.user_id,
+            process_steps="\n".join(f"Schritt {n}" for n in range(1, 8)),
+        ),
+    ).json()
+    assert sieben["schritt_anzahl"] == 7
+    assert sieben["schritte_zu_viele"] is False
+
+    antwort = client.patch(
+        f"/api/v1/prozesse/{sieben['id']}",
+        json={"process_steps": "; ".join(f"Schritt {n}" for n in range(1, 10))},
+        headers=owner.kopf,
+    )
+    assert antwort.status_code == 200, antwort.text
+    assert antwort.json()["schritt_anzahl"] == 9
+    assert antwort.json()["schritte_zu_viele"] is True
+
+
+def test_freitextfelder_haben_harte_grenzen(
+    client: TestClient, owner, vertretung, prozess_daten
+) -> None:
+    antwort = anlegen(
+        client, owner, prozess_daten(owner.user_id, vertretung.user_id, supplier="x" * 201)
+    )
+    assert antwort.status_code == 422, antwort.text

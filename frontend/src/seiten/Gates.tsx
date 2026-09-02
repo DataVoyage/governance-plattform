@@ -4,6 +4,17 @@ import { Link } from 'react-router-dom';
 import { ApiFehler, api } from '@/api/client';
 import type { GateVorgang, Prozess } from '@/api/typen';
 import { useSprache } from '@/i18n/SprachKontext';
+import {
+  Abzeichen,
+  Feld,
+  Hinweis,
+  Karte,
+  Knopf,
+  Ladeschimmer,
+  Leerzustand,
+  Seitenkopf,
+  Werteliste,
+} from '@/ui';
 import { useSitzung } from '@/zustand/Sitzung';
 
 /**
@@ -42,62 +53,87 @@ export function Gates() {
     }
   }
 
-  if (gates === null)
-    return fehler !== null ? <p role="alert">{fehler}</p> : <p>{t('app.laden')}</p>;
+  if (gates === null) {
+    if (fehler !== null) return <Hinweis art="fehler">{fehler}</Hinweis>;
+    return <Ladeschimmer beschriftung={t('app.laden')} zeilen={4} />;
+  }
 
   const darfEntscheiden = hatRolle('governance');
 
   return (
-    <section>
-      <h1>{t('gate.arbeitsvorrat')}</h1>
+    <>
+      <Seitenkopf titel={t('gate.arbeitsvorrat')} untertitel={t('gate.arbeitsvorratHinweis')} />
+      {fehler !== null && <Hinweis art="fehler">{fehler}</Hinweis>}
+
       {gates.length === 0 ? (
-        <p>{t('gate.arbeitsvorratLeer')}</p>
+        <Leerzustand zeichen="✓" titel={t('gate.arbeitsvorratLeer')} />
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>{t('gate.prozess')}</th>
-              <th>{t('gate.typ')}</th>
-              <th>{t('gate.ausloeser')}</th>
-              <th>{t('gate.status')}</th>
-              {darfEntscheiden && <th>{t('gate.entscheiden')}</th>}
-            </tr>
-          </thead>
-          <tbody>
-            {gates.map((gate) => (
-              <tr key={gate.id}>
-                <td>
-                  <Link to={pfad(`/prozesse/${gate.prozessobjekt_id}`)}>
-                    {prozesse.find((p) => p.id === gate.prozessobjekt_id)?.name ??
-                      gate.prozessobjekt_id}
-                  </Link>
-                </td>
-                <td>{t(`gate.typ.${gate.gate_typ}` as never)}</td>
-                <td>{gate.ausloeser ?? '—'}</td>
-                <td>{t(`gate.status.${gate.status}` as never)}</td>
+        gates.map((gate) => {
+          const kommentar = kommentare[gate.id] ?? '';
+          return (
+            <Karte
+              key={gate.id}
+              titel={
+                prozesse.find((p) => p.id === gate.prozessobjekt_id)?.name ?? gate.prozessobjekt_id
+              }
+              beischrift={t(`gate.typ.${gate.gate_typ}` as never)}
+              aktion={
+                <Abzeichen ton="gelb">{t(`gate.status.${gate.status}` as never)}</Abzeichen>
+              }
+            >
+              <Werteliste
+                eintraege={[
+                  {
+                    beschriftung: t('gate.ausloeser'),
+                    wert:
+                      gate.ausloeser === null
+                        ? '—'
+                        : t(`gate.ausloeser.${gate.ausloeser}` as never),
+                  },
+                  { beschriftung: t('gate.begruendung'), wert: gate.begruendung || '—' },
+                ]}
+              />
+              {/* Entscheiden darf ausschliesslich die Governance-Rolle. Ist
+                  sie nicht da, gibt es hier gar keine Entscheidung — und die
+                  Route prueft unabhaengig nach (Architektur 10.2). */}
+              {darfEntscheiden && (
+                <Feld
+                  beschriftung={t('gate.kommentar')}
+                  wert={kommentar}
+                  aendern={(wert) => setKommentare((bisher) => ({ ...bisher, [gate.id]: wert }))}
+                  hilfe={t('gate.ablehnungBegruendung')}
+                />
+              )}
+              <div className="k-knopfreihe">
                 {darfEntscheiden && (
-                  <td>
-                    <input
-                      aria-label={`${t('gate.kommentar')} — ${gate.id}`}
-                      value={kommentare[gate.id] ?? ''}
-                      onChange={(e) =>
-                        setKommentare((bisher) => ({ ...bisher, [gate.id]: e.target.value }))
-                      }
-                    />
-                    <button type="button" onClick={() => entscheiden(gate.id, 'freigegeben')}>
+                  <>
+                    <Knopf
+                      art="gefuellt"
+                      onClick={() => entscheiden(gate.id, 'freigegeben')}
+                      data-testid={`freigeben-${gate.id}`}
+                    >
                       {t('gate.freigeben')}
-                    </button>{' '}
-                    <button type="button" onClick={() => entscheiden(gate.id, 'abgelehnt')}>
+                    </Knopf>
+                    {/* Ohne Grund keine Ablehnung: wer abgelehnt wird, erfaehrt
+                        sonst nur, dass es nicht weitergeht. */}
+                    <Knopf
+                      art="zerstoerend"
+                      onClick={() => entscheiden(gate.id, 'abgelehnt')}
+                      disabled={kommentar.trim() === ''}
+                      data-testid={`ablehnen-${gate.id}`}
+                    >
                       {t('gate.ablehnen')}
-                    </button>
-                  </td>
+                    </Knopf>
+                  </>
                 )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                <Link className="k-knopf" to={pfad(`/prozesse/${gate.prozessobjekt_id}`)}>
+                  {t('gate.prozess')}
+                </Link>
+              </div>
+            </Karte>
+          );
+        })
       )}
-      {fehler !== null && <p role="alert">{fehler}</p>}
-    </section>
+    </>
   );
 }

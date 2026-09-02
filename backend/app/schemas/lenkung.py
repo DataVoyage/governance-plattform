@@ -7,13 +7,16 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from app.models.enums import Aufloesungsart, ComplianceFarbe, LenkungStatus
+from app.models.enums import Aufloesungsart, ComplianceFarbe, LenkungStatus, Schicht2Verbot
 
 
 class ZustandMelden(BaseModel):
     farbe: ComplianceFarbe
     begruendung: str = ""
     abweichung_art: str | None = Field(default=None, max_length=64)
+    #: Eines der sechs Verbote aus A.13.2 Schicht 2. Gesetzt heisst: der
+    #: Vorgang beginnt ohne erste Stufe (A.13.5).
+    schicht2_verbot: Schicht2Verbot | None = None
 
 
 class ZustandAus(BaseModel):
@@ -24,6 +27,7 @@ class ZustandAus(BaseModel):
     farbe: ComplianceFarbe
     begruendung: str
     abweichung_art: str | None = None
+    schicht2_verbot: Schicht2Verbot | None = None
     festgestellt_am: datetime
     festgestellt_von: uuid.UUID | None = None
 
@@ -35,6 +39,7 @@ class LenkungAus(BaseModel):
     tool_objekt_id: uuid.UUID
     compliance_zustand_id: uuid.UUID | None = None
     eskalationsstufe: int
+    schicht2_verbot: Schicht2Verbot | None = None
     frist: datetime
     zugewiesen_an: uuid.UUID | None = None
     status: LenkungStatus

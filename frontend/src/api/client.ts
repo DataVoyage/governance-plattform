@@ -6,10 +6,13 @@
  */
 
 import type {
+  Anforderungsklasse,
+  Attestierung,
   Bewertung,
   BewertungAbschluss,
   BewertungsModus,
   DatenObjekt,
+  Datennutzung,
   Datenkategorie,
   Aufloesungsart,
   AussageEingabe,
@@ -17,6 +20,7 @@ import type {
   CockpitZeile,
   CockpitZeilenkopf,
   ComplianceZustand,
+  Deckung,
   Fachbereich,
   GateStatus,
   GateTyp,
@@ -27,12 +31,29 @@ import type {
   Profil,
   Prozess,
   ProzessEingabe,
+  Einstellung,
+  Klassenbewertung,
   Lenkungsvorgang,
+  Matrixfeld,
+  Nachweiseintrag,
   Meldung,
+  Rahmen,
+  Rolle,
+  RolleErklaert,
+  Rollenzuweisung,
+  ScopeTyp,
+  Schicht2Verbot,
+  Schicht2VerbotEintrag,
+  Rollenwirkung,
+  Technologie,
+  Toolbefund,
   Selbstverpflichtung,
+  ToolEingabe,
   ToolObjekt,
   Umsetzung,
+  Wirkung,
   WizardSchritt,
+  Zugriffsart,
 } from './typen';
 
 export const API_BASIS: string =
@@ -98,17 +119,22 @@ export const api = {
   prozess: (token: string, id: string) => anfrage<Prozess>(`/api/v1/prozesse/${id}`, { token }),
   prozessAnlegen: (token: string, daten: ProzessEingabe) =>
     anfrage<Prozess>('/api/v1/prozesse', { methode: 'POST', koerper: daten, token }),
-  prozessAendern: (token: string, id: string, daten: Partial<ProzessEingabe>) =>
+  prozessAendern: (
+    token: string,
+    id: string,
+    daten: Partial<ProzessEingabe> & { status?: Prozess['status']; erlaubte_externe_ziele?: string[] },
+  ) =>
     anfrage<Prozess>(`/api/v1/prozesse/${id}`, { methode: 'PATCH', koerper: daten, token }),
   wizardSchritt: (
     token: string,
     prozessId: string,
     modus: BewertungsModus,
     antworten: Record<string, boolean>,
+    begruendungen: Record<string, string> = {},
   ) =>
     anfrage<WizardSchritt>(`/api/v1/prozesse/${prozessId}/bewertung/wizard`, {
       methode: 'POST',
-      koerper: { modus, antworten },
+      koerper: { modus, antworten, begruendungen },
       token,
     }),
   bewertungAbschliessen: (
@@ -116,10 +142,11 @@ export const api = {
     prozessId: string,
     modus: BewertungsModus,
     antworten: Record<string, boolean>,
+    begruendungen: Record<string, string> = {},
   ) =>
     anfrage<BewertungAbschluss>(`/api/v1/prozesse/${prozessId}/bewertungen`, {
       methode: 'POST',
-      koerper: { modus, antworten },
+      koerper: { modus, antworten, begruendungen },
       token,
     }),
   bewertungen: (token: string, prozessId: string) =>
@@ -127,8 +154,16 @@ export const api = {
   tools: (token: string, abfrage = '') =>
     anfrage<ToolObjekt[]>(`/api/v1/tools${abfrage}`, { token }),
   tool: (token: string, id: string) => anfrage<ToolObjekt>(`/api/v1/tools/${id}`, { token }),
-  toolAnlegen: (token: string, daten: { name: string; beschreibung?: string }) =>
+  toolAnlegen: (token: string, daten: ToolEingabe) =>
     anfrage<ToolObjekt>('/api/v1/tools', { methode: 'POST', koerper: daten, token }),
+  toolAendern: (token: string, id: string, daten: Partial<ToolEingabe>) =>
+    anfrage<ToolObjekt>(`/api/v1/tools/${id}`, { methode: 'PATCH', koerper: daten, token }),
+  toolAttestieren: (token: string, id: string, daten: Attestierung) =>
+    anfrage<ToolObjekt>(`/api/v1/tools/${id}/attestierungen`, {
+      methode: 'PUT',
+      koerper: daten,
+      token,
+    }),
   toolBestaetigen: (token: string, id: string) =>
     anfrage<ToolObjekt>(`/api/v1/tools/${id}/bestaetigung`, { methode: 'POST', token }),
   toolMitProzessVerknuepfen: (token: string, id: string, prozessId: string) =>
@@ -142,10 +177,95 @@ export const api = {
       methode: 'DELETE',
       token,
     }),
+  anforderungsklassen: (token: string) =>
+    anfrage<Anforderungsklasse[]>('/api/v1/anforderungsklassen', { token }),
+  technologien: (token: string) => anfrage<Technologie[]>('/api/v1/technologien', { token }),
+  technologiematrix: (token: string) =>
+    anfrage<Matrixfeld[]>('/api/v1/technologiematrix', { token }),
+  matrixfeldSetzen: (
+    token: string,
+    technologie: string,
+    klasse: string,
+    daten: { bewertung: Klassenbewertung; begruendung: string },
+  ) =>
+    anfrage<Matrixfeld>(`/api/v1/technologiematrix/${technologie}/${klasse}`, {
+      methode: 'PUT',
+      koerper: daten,
+      token,
+    }),
+  toolKlassenbefund: (token: string, id: string) =>
+    anfrage<Toolbefund>(`/api/v1/tools/${id}/klassenbefund`, { token }),
+  prozessKlassenbefund: (token: string, id: string) =>
+    anfrage<Toolbefund[]>(`/api/v1/prozesse/${id}/klassenbefund`, { token }),
+  kompensationSetzen: (token: string, toolId: string, klasse: string, massnahme: string) =>
+    anfrage<{ id: string }>(`/api/v1/tools/${toolId}/kompensationen/${klasse}`, {
+      methode: 'PUT',
+      koerper: { massnahme },
+      token,
+    }),
+  toolErlaubnisrahmen: (token: string, id: string) =>
+    anfrage<Rahmen>(`/api/v1/tools/${id}/erlaubnisrahmen`, { token }),
+  toolDatennutzung: (token: string, id: string) =>
+    anfrage<Datennutzung[]>(`/api/v1/tools/${id}/datenobjekte`, { token }),
+  toolMitDatenobjektVerknuepfen: (
+    token: string,
+    id: string,
+    datenobjektId: string,
+    zugriffsart: Zugriffsart,
+  ) =>
+    anfrage<void>(`/api/v1/tools/${id}/datenobjekte`, {
+      methode: 'POST',
+      koerper: { datenobjekt_id: datenobjektId, zugriffsart },
+      token,
+    }),
+  toolZugriffsartAendern: (
+    token: string,
+    id: string,
+    datenobjektId: string,
+    zugriffsart: Zugriffsart,
+  ) =>
+    anfrage<void>(`/api/v1/tools/${id}/datenobjekte/${datenobjektId}`, {
+      methode: 'PATCH',
+      koerper: { zugriffsart },
+      token,
+    }),
+  toolVonDatenobjektLoesen: (token: string, id: string, datenobjektId: string) =>
+    anfrage<void>(`/api/v1/tools/${id}/datenobjekte/${datenobjektId}`, {
+      methode: 'DELETE',
+      token,
+    }),
   datenobjekte: (token: string, abfrage = '') =>
     anfrage<DatenObjekt[]>(`/api/v1/datenobjekte${abfrage}`, { token }),
-  datenobjektAnlegen: (token: string, daten: { name: string; beschreibung?: string }) =>
-    anfrage<DatenObjekt>('/api/v1/datenobjekte', { methode: 'POST', koerper: daten, token }),
+  datenobjektAnlegen: (
+    token: string,
+    daten: {
+      name: string;
+      beschreibung?: string;
+      kategorie?: Datenkategorie | null;
+      owner_user_id?: string | null;
+      fachbereich_id?: string | null;
+      quellsystem?: string | null;
+    },
+  ) => anfrage<DatenObjekt>('/api/v1/datenobjekte', { methode: 'POST', koerper: daten, token }),
+  datenobjekt: (token: string, id: string) =>
+    anfrage<DatenObjekt>(`/api/v1/datenobjekte/${id}`, { token }),
+  datenobjektAendern: (
+    token: string,
+    id: string,
+    daten: Partial<{
+      name: string;
+      beschreibung: string;
+      kategorie: Datenkategorie | null;
+      owner_user_id: string | null;
+      fachbereich_id: string | null;
+      quellsystem: string | null;
+    }>,
+  ) => anfrage<DatenObjekt>(`/api/v1/datenobjekte/${id}`, { methode: 'PATCH', koerper: daten, token }),
+  datenobjektWirkung: (token: string, id: string, kategorie?: Datenkategorie | null) =>
+    anfrage<Wirkung>(
+      `/api/v1/datenobjekte/${id}/wirkung${kategorie ? `?kategorie=${kategorie}` : ''}`,
+      { token },
+    ),
   datenobjektKategorisieren: (token: string, id: string, kategorie: Datenkategorie | null) =>
     anfrage<DatenObjekt>(`/api/v1/datenobjekte/${id}`, {
       methode: 'PATCH',
@@ -166,6 +286,25 @@ export const api = {
     anfrage<Selbstverpflichtung>('/api/v1/selbstverpflichtungen', {
       methode: 'POST',
       koerper: { typ: 'prozesseigner', prozessobjekt_id: prozessId, aussagen },
+      token,
+    }),
+  toolVerpflichtungAbgeben: (
+    token: string,
+    toolId: string,
+    aussagen: Record<string, AussageEingabe>,
+  ) =>
+    anfrage<Selbstverpflichtung>('/api/v1/selbstverpflichtungen', {
+      methode: 'POST',
+      koerper: { typ: 'technischer_owner', tool_objekt_id: toolId, aussagen },
+      token,
+    }),
+  prozessDeckung: (token: string, prozessId: string) =>
+    anfrage<Deckung>(`/api/v1/prozesse/${prozessId}/selbstverpflichtung`, { token }),
+  toolDeckung: (token: string, toolId: string) =>
+    anfrage<Deckung>(`/api/v1/tools/${toolId}/selbstverpflichtung/deckung`, { token }),
+  verpflichtungBestaetigen: (token: string, eintragId: string) =>
+    anfrage<Selbstverpflichtung>(`/api/v1/selbstverpflichtungen/${eintragId}/bestaetigung`, {
+      methode: 'POST',
       token,
     }),
   gates: (token: string, prozessId: string) =>
@@ -193,13 +332,20 @@ export const api = {
   complianceMelden: (
     token: string,
     toolId: string,
-    daten: { farbe: ComplianceFarbe; begruendung?: string; abweichung_art?: string | null },
+    daten: {
+      farbe: ComplianceFarbe;
+      begruendung?: string;
+      abweichung_art?: string | null;
+      schicht2_verbot?: Schicht2Verbot | null;
+    },
   ) =>
     anfrage<Meldung>(`/api/v1/tools/${toolId}/compliance`, {
       methode: 'POST',
       koerper: daten,
       token,
     }),
+  schicht2Verbote: (token: string) =>
+    anfrage<Schicht2VerbotEintrag[]>('/api/v1/schicht2-verbote', { token }),
   lenkungsvorgaenge: (token: string, abfrage = '') =>
     anfrage<Lenkungsvorgang[]>(`/api/v1/lenkungsvorgaenge${abfrage}`, { token }),
   lenkungAufloesen: (
@@ -212,6 +358,54 @@ export const api = {
       koerper: daten,
       token,
     }),
+  rollen: (token: string) => anfrage<RolleErklaert[]>('/api/v1/admin/rollen', { token }),
+  rollenzuweisungen: (token: string, userId?: string) =>
+    anfrage<Rollenzuweisung[]>(
+      `/api/v1/admin/rollenzuweisungen${userId ? `?user_id=${userId}` : ''}`,
+      { token },
+    ),
+  rolleZuweisen: (
+    token: string,
+    daten: { user_id: string; rolle: Rolle; scope_typ: ScopeTyp; scope_id: string | null },
+  ) =>
+    anfrage<Rollenzuweisung>('/api/v1/admin/rollenzuweisungen', {
+      methode: 'POST',
+      koerper: daten,
+      token,
+    }),
+  rolleEntziehen: (token: string, zuweisungId: string) =>
+    anfrage<void>(`/api/v1/admin/rollenzuweisungen/${zuweisungId}`, {
+      methode: 'DELETE',
+      token,
+    }),
+  rollenwirkung: (
+    token: string,
+    daten: { user_id: string; rolle: Rolle; scope_typ: ScopeTyp; scope_id: string | null },
+  ) => {
+    const abfrage = new URLSearchParams({
+      user_id: daten.user_id,
+      rolle: daten.rolle,
+      scope_typ: daten.scope_typ,
+      ...(daten.scope_id === null ? {} : { scope_id: daten.scope_id }),
+    });
+    return anfrage<Rollenwirkung>(`/api/v1/admin/rollenzuweisungen/wirkung?${abfrage}`, {
+      token,
+    });
+  },
+  nutzerAendern: (
+    token: string,
+    id: string,
+    daten: { ist_aktiv?: boolean; fuehrungskraft_user_id?: string | null },
+  ) => anfrage<Nutzer>(`/api/v1/admin/users/${id}`, { methode: 'PATCH', koerper: daten, token }),
+  nachweis: (token: string, abfrage = '') =>
+    anfrage<Nachweiseintrag[]>(`/api/v1/nachweis${abfrage}`, { token }),
+  konfiguration: (token: string) => anfrage<Einstellung[]>('/api/v1/konfiguration', { token }),
+  konfigurationSetzen: (token: string, schluessel: string, wert: string) =>
+    anfrage<Einstellung>(`/api/v1/konfiguration/${schluessel}`, {
+      methode: 'PUT',
+      koerper: { wert },
+      token,
+    }),
   cockpit: (token: string, abfrage = '') =>
     anfrage<CockpitZeilenkopf[]>(`/api/v1/cockpit${abfrage}`, { token }),
   cockpitZeile: (token: string, schluessel: string, abfrage = '') =>
@@ -220,6 +414,22 @@ export const api = {
     anfrage<Umsetzung>(`/api/v1/prozesse/${prozessId}/umsetzungen`, {
       methode: 'POST',
       koerper: { land_org_id: landOrgId },
+      token,
+    }),
+  umsetzungAendern: (
+    token: string,
+    prozessId: string,
+    umsetzungId: string,
+    lokaleAbweichung: string | null,
+  ) =>
+    anfrage<Umsetzung>(`/api/v1/prozesse/${prozessId}/umsetzungen/${umsetzungId}`, {
+      methode: 'PATCH',
+      koerper: { lokale_abweichung: lokaleAbweichung },
+      token,
+    }),
+  umsetzungEntfernen: (token: string, prozessId: string, umsetzungId: string) =>
+    anfrage<void>(`/api/v1/prozesse/${prozessId}/umsetzungen/${umsetzungId}`, {
+      methode: 'DELETE',
       token,
     }),
 };

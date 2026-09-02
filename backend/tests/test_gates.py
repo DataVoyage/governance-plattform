@@ -7,10 +7,10 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.test_bewertung import antworten_fuer, profil_von
+from tests.test_bewertung import nutzlast, profil_von
 
-P_AUSSAGEN = ["P1", "P2", "P3", "P4", "P5", "P6"]
-T_AUSSAGEN = ["T1", "T2", "T3", "T4", "T5", "T6"]
+P_AUSSAGEN = ["PE1", "PE2", "PE3", "PE4", "PE5", "PE6"]
+T_AUSSAGEN = ["TO1", "TO2", "TO3", "TO4", "TO5", "TO6"]
 
 
 def alle_bestaetigt(ids: list[str]) -> dict:
@@ -50,7 +50,7 @@ def prozess(client: TestClient, owner, vertretung, prozess_daten):
 def bewerte(client: TestClient, anmeldung, prozess_id: str, **profil):
     antwort = client.post(
         f"/api/v1/prozesse/{prozess_id}/bewertungen",
-        json={"modus": "vollstaendig", "antworten": antworten_fuer(profil_von(**profil))},
+        json=nutzlast(profil_von(**profil)),
         headers=anmeldung.kopf,
     )
     assert antwort.status_code == 201, antwort.text
@@ -128,7 +128,7 @@ def test_unvollstaendige_selbstverpflichtung_reicht_nicht(
 ) -> None:
     bewerte(client, owner, prozess["id"], ds=3)
     teilweise = alle_bestaetigt(P_AUSSAGEN)
-    teilweise["P4"] = {"bestaetigt": False, "kommentar": "Noch offen"}
+    teilweise["PE4"] = {"bestaetigt": False, "kommentar": "Noch offen"}
     abgegeben = gib_selbstverpflichtung(client, owner, prozess["id"], teilweise)
     assert abgegeben.status_code == 201
     assert abgegeben.json()["vollstaendig"] is False
@@ -248,12 +248,13 @@ def test_technischer_owner_verpflichtet_sich_fuer_sein_tool(
 
 
 def test_tool_selbstverpflichtung_erbt_die_befristung_des_prozesses(
-    client: TestClient, governance, owner, prozess
+    client: TestClient, governance, owner, prozess, attestieren
 ) -> None:
     bewerte(client, owner, prozess["id"], ds=3)
     tool = client.post(
         "/api/v1/tools", json={"name": "Tier-3-Tool"}, headers=governance.kopf
     ).json()
+    attestieren(governance.kopf, tool["id"])
     client.post(
         f"/api/v1/tools/{tool['id']}/prozesse",
         json={"prozessobjekt_id": prozess["id"]},
@@ -278,7 +279,71 @@ def test_gate_2_ohne_ausloeser_wird_abgelehnt(client: TestClient, owner, prozess
     """Abnahmekriterium 4.2."""
     antwort = gate_einreichen(client, owner, prozess["id"], gate_typ="2")
     assert antwort.status_code == 422
-    assert "Ausloeser" in antwort.json()["detail"]
+    assert "Auslöser" in antwort.json()["detail"]
+
+
+def test_neues_externes_ziel_loest_gate_2_von_selbst_aus(
+    client: TestClient, owner, governance, prozess
+) -> None:
+    """Leitdokument A.11 (Vorgang V-PRO-23).
+
+    Wer ein Ziel ergaenzt, meldet damit den Ausloeser. Ihn zusaetzlich zum
+    Einreichen aufzufordern hiesse, dem Anwender die Regel aufzubuerden, die
+    die Anwendung selbst kennt.
+    """
+    bewerte(client, owner, prozess["id"], ur=1)
+    client.patch(f"/api/v1/prozesse/{prozess['id']}", json={"status": "aktiv"}, headers=owner.kopf)
+
+    antwort = client.patch(
+        f"/api/v1/prozesse/{prozess['id']}",
+        json={"erlaubte_externe_ziele": ["sftp.partner.example"]},
+        headers=owner.kopf,
+    )
+    assert antwort.status_code == 200
+    assert antwort.json()["erlaubte_externe_ziele"] == ["sftp.partner.example"]
+
+    gates = client.get(f"/api/v1/prozesse/{prozess['id']}/gates", headers=owner.kopf).json()
+    assert [(g["gate_typ"], g["ausloeser"]) for g in gates] == [("2", "neues_externes_ziel")]
+    assert "sftp.partner.example" in gates[0]["begruendung"]
+
+    # Ein zweites Ziel verdoppelt den offenen Vorgang nicht.
+    client.patch(
+        f"/api/v1/prozesse/{prozess['id']}",
+        json={"erlaubte_externe_ziele": ["sftp.partner.example", "api.partner.example"]},
+        headers=owner.kopf,
+    )
+    assert (
+        len(client.get(f"/api/v1/prozesse/{prozess['id']}/gates", headers=owner.kopf).json()) == 1
+    )
+    del governance
+
+
+def test_entwurf_loest_kein_gate_2_aus(client: TestClient, owner, prozess) -> None:
+    """Ein Entwurf hat noch keinen Rahmen, den er verlassen koennte."""
+    client.patch(
+        f"/api/v1/prozesse/{prozess['id']}",
+        json={"erlaubte_externe_ziele": ["sftp.partner.example"]},
+        headers=owner.kopf,
+    )
+    assert client.get(f"/api/v1/prozesse/{prozess['id']}/gates", headers=owner.kopf).json() == []
+
+
+def test_unveraendertes_ziel_loest_kein_gate_2_aus(client: TestClient, owner, prozess) -> None:
+    """Nur ein **neues** Ziel ist der Ausloeser, nicht jedes Speichern."""
+    bewerte(client, owner, prozess["id"], ur=1)
+    client.patch(
+        f"/api/v1/prozesse/{prozess['id']}",
+        json={"status": "aktiv", "erlaubte_externe_ziele": ["sftp.partner.example"]},
+        headers=owner.kopf,
+    )
+    vorher = client.get(f"/api/v1/prozesse/{prozess['id']}/gates", headers=owner.kopf).json()
+    client.patch(
+        f"/api/v1/prozesse/{prozess['id']}",
+        json={"erlaubte_externe_ziele": ["sftp.partner.example"], "output": "Andere Rechnung"},
+        headers=owner.kopf,
+    )
+    nachher = client.get(f"/api/v1/prozesse/{prozess['id']}/gates", headers=owner.kopf).json()
+    assert len(nachher) == len(vorher)
 
 
 def test_gate_2_kennt_nur_die_fuenf_ausloeser(client: TestClient, owner, prozess) -> None:
@@ -355,7 +420,7 @@ def test_kein_zweites_offenes_gate_desselben_typs(client: TestClient, owner, pro
 
 def test_gate_historie_und_arbeitsvorrat(client: TestClient, owner, governance, prozess) -> None:
     erstes = gate_einreichen(client, owner, prozess["id"], gate_typ="1").json()
-    gate_entscheiden(client, governance, erstes["id"], "abgelehnt")
+    gate_entscheiden(client, governance, erstes["id"], "abgelehnt", "Reichweite unklar")
     gate_einreichen(client, owner, prozess["id"], gate_typ="2", ausloeser="reichweitenerweiterung")
 
     historie = client.get(f"/api/v1/prozesse/{prozess['id']}/gates", headers=owner.kopf).json()
@@ -468,7 +533,7 @@ def test_unbefristete_selbstverpflichtung_laeuft_nicht_ab(
 
 
 def test_erinnerung_geht_an_den_technischen_owner(
-    client: TestClient, governance, owner, prozess, db
+    client: TestClient, governance, owner, prozess, db, attestieren
 ) -> None:
     from app.models.governance import Benachrichtigung, Selbstverpflichtung
     from app.services import erinnerung
@@ -479,6 +544,7 @@ def test_erinnerung_geht_an_den_technischen_owner(
         json={"name": "Tier-3-Tool", "technischer_owner_user_id": governance.user_id},
         headers=governance.kopf,
     ).json()
+    attestieren(governance.kopf, tool["id"])
     client.post(
         f"/api/v1/tools/{tool['id']}/prozesse",
         json={"prozessobjekt_id": prozess["id"]},

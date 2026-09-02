@@ -56,8 +56,18 @@ npm ci
 npm run build
 npm run coverage
 
-schritt "Oberflaeche: headless (Playwright/Chromium)"
+schritt "Oberflaeche: technische Laeufe je Phase (Playwright/Chromium)"
+# Die aelteren Abnahmetests je Phase. Sie belegen die Fachlogik hinter einem
+# Kriterium und bleiben als zweites Netz stehen.
 npm run e2e
+
+schritt "Abnahme: die Anwendervorgaenge aus docs/vorgaenge.md"
+# Seit AP-10 die Abnahmegrundlage (Befund B15). Die Abnahmekriterien sind als
+# Aussagen ueber eine Rolle formuliert — „ein Prozess-Owner kann" —, also als
+# Aussagen ueber einen Menschen an einem Bildschirm. Dieser Durchlauf faehrt
+# jeden dieser Handgriffe ueber die Oberflaeche, mit eigener Datenbank, und
+# haelt Katalog, Umsetzungsplan und docs/phasen.md gegeneinander.
+npm run vorgaenge
 
 if [ "$MIT_IMAGES" = "--images" ]; then
   schritt "Images gegen zwei Registry-Ziele (Abnahmekriterium 1.6)"

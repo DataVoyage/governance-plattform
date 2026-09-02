@@ -9,7 +9,9 @@ from app.api.routers import (
     bewertungen,
     cockpit,
     integration,
+    klassen,
     lenkung,
+    nachweis,
     organisation,
     prozesse,
     query,
@@ -24,9 +26,11 @@ api_router.include_router(prozesse.router)
 api_router.include_router(bewertungen.router)
 api_router.include_router(assets.router)
 api_router.include_router(verpflichtung.router)
+api_router.include_router(klassen.router)
 api_router.include_router(lenkung.router)
 api_router.include_router(cockpit.router)
 api_router.include_router(query.router)
 api_router.include_router(integration.router)
+api_router.include_router(nachweis.router)
 
 __all__ = ["api_router"]

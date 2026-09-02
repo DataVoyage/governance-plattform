@@ -1,11 +1,23 @@
 import { useEffect, useState, type FormEvent } from 'react';
 
 import { ApiFehler, api } from '@/api/client';
-import type { ComplianceFarbe, ComplianceZustand } from '@/api/typen';
+import type {
+  ComplianceFarbe,
+  ComplianceZustand,
+  Schicht2Verbot,
+  Schicht2VerbotEintrag,
+} from '@/api/typen';
 import { useSprache } from '@/i18n/SprachKontext';
+import { Abzeichen, Auswahl, Feld, Gruppe, Hinweis, Karte, Knopf, Zeile, type Ton } from '@/ui';
 import { useSitzung } from '@/zustand/Sitzung';
 
 const FARBEN: ComplianceFarbe[] = ['gruen', 'gelb', 'rot'];
+
+const FARBTON: Record<ComplianceFarbe, Ton> = {
+  gruen: 'gruen',
+  gelb: 'gelb',
+  rot: 'rot',
+};
 
 /**
  * Compliance-Zeitreihe eines Tool-Objekts (Architektur 8.6).
@@ -14,21 +26,29 @@ const FARBEN: ComplianceFarbe[] = ['gruen', 'gelb', 'rot'];
  * der Verlauf einer Abweichung nachvollziehbar bleibt. Eine rote Meldung
  * eröffnet serverseitig einen Lenkungsvorgang — die Oberfläche weist darauf
  * hin, entscheidet es aber nicht.
+ *
+ * Wer einen Verstoß gegen Schicht 2 meldet, wählt ihn aus der abschließenden
+ * Liste der sechs Verbote (A.13.2). Ein siebter, freier Grund ist nicht
+ * wählbar: eine Liste, die sich ergänzen lässt, wäre keine.
  */
 export function ToolCompliance({ toolId }: { toolId: string }) {
   const { t } = useSprache();
   const { token } = useSitzung();
   const [verlauf, setVerlauf] = useState<ComplianceZustand[]>([]);
+  const [verbote, setVerbote] = useState<Schicht2VerbotEintrag[]>([]);
   const [farbe, setFarbe] = useState<ComplianceFarbe>('gruen');
   const [begruendung, setBegruendung] = useState('');
   const [abweichung, setAbweichung] = useState('');
+  const [verbot, setVerbot] = useState('');
   const [fehler, setFehler] = useState<string | null>(null);
 
   useEffect(() => {
     if (token === null) return;
-    api
-      .compliance(token, toolId)
-      .then(setVerlauf)
+    Promise.all([api.compliance(token, toolId), api.schicht2Verbote(token)])
+      .then(([eintraege, liste]) => {
+        setVerlauf(eintraege);
+        setVerbote(liste);
+      })
       .catch(() => setFehler(t('app.fehler')));
   }, [token, toolId, t]);
 
@@ -41,78 +61,97 @@ export function ToolCompliance({ toolId }: { toolId: string }) {
         farbe,
         begruendung,
         abweichung_art: abweichung || null,
+        schicht2_verbot: farbe === 'rot' && verbot ? (verbot as Schicht2Verbot) : null,
       });
       setVerlauf((bisher) => [meldung.zustand, ...bisher]);
       setBegruendung('');
       setAbweichung('');
+      setVerbot('');
     } catch (ausnahme) {
       setFehler(ausnahme instanceof ApiFehler ? ausnahme.message : t('app.fehler'));
     }
   }
 
+  /** Woran der Eintrag lag — mit Namen, nie mit dem technischen Schlüssel. */
+  const anlass = (zustand: ComplianceZustand) =>
+    [
+      zustand.begruendung,
+      zustand.schicht2_verbot === null
+        ? zustand.abweichung_art
+        : t(`schicht2.${zustand.schicht2_verbot}` as never),
+    ]
+      .filter(Boolean)
+      .join(' · ') || undefined;
+
   return (
-    <section>
-      <h2>{t('compliance.titel')}</h2>
-      <p>{t('compliance.hinweis')}</p>
+    <Karte titel={t('compliance.titel')} beischrift={t('compliance.hinweis')}>
+      {fehler !== null && <Hinweis art="fehler">{fehler}</Hinweis>}
 
       {verlauf.length === 0 ? (
-        <p>{t('compliance.leer')}</p>
+        <p className="leerhinweis">{t('compliance.leer')}</p>
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>{t('compliance.farbe')}</th>
-              <th>{t('compliance.begruendung')}</th>
-              <th>{t('compliance.abweichung')}</th>
-              <th>{t('compliance.festgestelltAm')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {verlauf.map((zustand, i) => (
-              <tr key={zustand.id} data-testid={i === 0 ? 'aktueller-zustand' : undefined}>
-                <td>{t(`compliance.farbe.${zustand.farbe}` as never)}</td>
-                <td>{zustand.begruendung || '—'}</td>
-                <td>{zustand.abweichung_art ?? '—'}</td>
-                <td>{zustand.festgestellt_am.slice(0, 10)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <Gruppe>
+          {verlauf.map((zustand, nummer) => (
+            <Zeile
+              key={zustand.id}
+              pruefkennung={nummer === 0 ? 'aktueller-zustand' : undefined}
+              haupt={
+                <Abzeichen ton={FARBTON[zustand.farbe]}>
+                  {t(`compliance.farbe.${zustand.farbe}` as never)}
+                </Abzeichen>
+              }
+              zweitzeile={anlass(zustand)}
+              wert={zustand.festgestellt_am.slice(0, 10)}
+            />
+          ))}
+        </Gruppe>
       )}
 
-      <form className="formular" onSubmit={melden}>
-        <label htmlFor="compliance-farbe">{t('compliance.melden')}</label>
-        <select
-          id="compliance-farbe"
-          value={farbe}
-          onChange={(e) => setFarbe(e.target.value as ComplianceFarbe)}
-        >
-          {FARBEN.map((wert) => (
-            <option key={wert} value={wert}>
-              {t(`compliance.farbe.${wert}` as never)}
-            </option>
-          ))}
-        </select>
-        {farbe === 'rot' && <small>{t('compliance.rotHinweis')}</small>}
-
-        <label htmlFor="compliance-begruendung">{t('compliance.begruendung')}</label>
-        <input
-          id="compliance-begruendung"
-          value={begruendung}
-          onChange={(e) => setBegruendung(e.target.value)}
+      <form onSubmit={melden}>
+        <Auswahl
+          beschriftung={t('compliance.melden')}
+          wert={farbe}
+          aendern={(wert) => setFarbe(wert as ComplianceFarbe)}
+          optionen={FARBEN.map((wert) => ({
+            wert,
+            text: t(`compliance.farbe.${wert}` as never),
+          }))}
+          hilfe={farbe === 'rot' ? t('compliance.rotHinweis') : undefined}
         />
-
-        <label htmlFor="compliance-abweichung">{t('compliance.abweichung')}</label>
-        <input
-          id="compliance-abweichung"
-          value={abweichung}
-          onChange={(e) => setAbweichung(e.target.value)}
+        {farbe === 'rot' && (
+          <Auswahl
+            beschriftung={t('compliance.schicht2')}
+            wert={verbot}
+            aendern={setVerbot}
+            hilfe={t('compliance.schicht2Hilfe')}
+            optionen={[
+              { wert: '', text: t('compliance.schicht2.keiner') },
+              ...verbote.map((eintrag) => ({
+                wert: eintrag.schluessel,
+                text: t(`schicht2.${eintrag.schluessel}` as never),
+              })),
+            ]}
+          />
+        )}
+        {farbe === 'rot' && verbot !== '' && (
+          <Hinweis art="warnung">{t('compliance.schicht2Folge')}</Hinweis>
+        )}
+        <Feld
+          beschriftung={t('compliance.begruendung')}
+          wert={begruendung}
+          aendern={setBegruendung}
         />
-
-        <button type="submit">{t('compliance.melden')}</button>
+        <Feld
+          beschriftung={t('compliance.abweichung')}
+          wert={abweichung}
+          aendern={setAbweichung}
+        />
+        <div className="formularfuss">
+          <Knopf type="submit" art="gefuellt">
+            {t('compliance.melden')}
+          </Knopf>
+        </div>
       </form>
-
-      {fehler !== null && <p role="alert">{fehler}</p>}
-    </section>
+    </Karte>
   );
 }

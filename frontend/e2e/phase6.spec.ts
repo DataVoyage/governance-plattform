@@ -22,7 +22,11 @@ const ZEILEN = [
   'tier_verteilung',
   'inaktive_assets',
   'ueberfaellige_selbstverpflichtungen',
+  'attestierungen_veraltet',
   'widersprueche',
+  'antwort_widerspricht_datenlage',
+  'technologie_erfuellt_klasse_nicht',
+  'altanwendungen',
 ];
 
 async function kopf(anfrage: APIRequestContext, subject = ADMIN, name = 'E2E Administrator') {
@@ -49,8 +53,8 @@ test.describe('Phase 6 in der Oberflaeche', () => {
     for (const schluessel of ZEILEN) {
       await expect(page.getByTestId(`anzahl-${schluessel}`)).toBeVisible();
     }
-    // Genau zehn Zeilen, jede mit eigenem Einstieg.
-    await expect(page.getByRole('link', { name: 'Ansehen' })).toHaveCount(ZEILEN.length);
+    // Jede Zeile eine eigene Kachel — keine mehr, keine weniger.
+    await expect(page.locator('[data-testid^="kachel-"]')).toHaveCount(ZEILEN.length);
 
     for (const schluessel of ZEILEN) {
       await page.goto(`/de/cockpit/${schluessel}`);
@@ -69,15 +73,20 @@ test.describe('Phase 6 in der Oberflaeche', () => {
 
     await anmelden(page);
     await page.goto('/de/cockpit/datenobjekte_ohne_kategorie');
-    const zeile = page
-      .getByRole('row')
-      .filter({ hasText: name });
+    const zeile = page.getByRole('link').filter({ hasText: name });
     await expect(zeile).toBeVisible();
-    await zeile.getByRole('link', { name: 'datenobjekte' }).click();
+    // Das Ziel steht mit seinem Namen da, nicht mit seinem Schluessel.
+    await expect(zeile).toContainText('Datenobjekt');
+    await zeile.click();
 
     await expect(page).toHaveURL(/\/de\/datenobjekte\?ohne_kategorie=true/);
     await expect(page.getByRole('heading', { name: 'Datenobjekte' })).toBeVisible();
-    await expect(page.getByLabel(`Kategorie — ${name}`)).toBeVisible();
+    // Der Befund ist in der Liste sichtbar; gepflegt wird die Kategorie am
+    // Datenobjekt selbst, weil dort die Wirkung der Aenderung angezeigt wird.
+    const treffer = page.getByRole('link', { name: new RegExp(name) });
+    await expect(treffer).toContainText('Ohne Kategorie');
+    await treffer.click();
+    await expect(page.getByLabel('Kategorie')).toHaveValue('');
   });
 
   test('ein Nutzer ohne Rolle sieht ein leeres Cockpit', async ({ page, request }) => {

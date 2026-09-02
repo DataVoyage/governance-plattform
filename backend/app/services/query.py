@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from app.models.governance import Prozessobjekt, ToolObjekt
 from app.services import bewertung as bewertung_service
 from app.services import changelog
+from app.services import rahmen as rahmen_service
 from app.services.asset import erbe_klassifikation
 from app.services.prozess import NichtGefunden, neueste_bewertung
 
@@ -51,7 +52,7 @@ def tier_und_profil(db: Session, prozess_id: uuid.UUID) -> dict:
     prozess = _hole_prozess(db, prozess_id)
     bewertung = neueste_bewertung(prozess)
     if bewertung is None:
-        raise NichtGefunden("Fuer dieses Prozessobjekt liegt keine Bewertung vor")
+        raise NichtGefunden("Für dieses Prozessobjekt liegt keine Bewertung vor")
     return {
         "tier": bewertung.tier,
         "profil": {
@@ -78,28 +79,39 @@ def k_klassen(db: Session, prozess_id: uuid.UUID) -> dict:
 
 
 def erlaubnisrahmen(db: Session, tool_id: uuid.UUID) -> dict:
-    """Schicht 1 aus Leitdokument A.13.2: was dieses Tool-Objekt darf.
+    """Alle sieben Elemente aus Leitdokument A.13.2 Schicht 1.
 
     Der Rahmen ist die Vereinigung ueber alle Prozesskanten — bei der
-    Reichweite gilt, wie ueberall, das Maximum (A.4.4).
+    Reichweite gilt, wie ueberall, das Maximum (A.4.4). Die Fachlogik steht in
+    ``services/rahmen.py``; hier wird sie nur in den veroeffentlichten Vertrag
+    uebersetzt. Eine andockende Anwendung bekommt ausschliesslich die
+    **erlaubten** Werte: was am Tool gemessen wurde, ist ihre eigene Sache und
+    nicht Gegenstand einer Auskunft darueber, was erlaubt ist.
     """
     tool = _hole_tool(db, tool_id)
     datenobjekte: dict[uuid.UUID, str] = {}
-    externe_ziele: list[str] = []
     for prozess in tool.prozessobjekte:
         for datenobjekt in [*prozess.input_datenobjekte, *prozess.output_datenobjekte]:
             datenobjekte[datenobjekt.id] = datenobjekt.name
-        for ziel in prozess.erlaubte_externe_ziele or []:
-            if ziel not in externe_ziele:
-                externe_ziele.append(ziel)
 
     geerbt = erbe_klassifikation(tool)
+    befund = rahmen_service.erlaubnisrahmen(db, tool)
+
+    def einzeln(schluessel: str) -> str | None:
+        """Elemente mit genau einem zulaessigen Wert stehen im Vertrag flach."""
+        erlaubt = befund.element(schluessel).erlaubt
+        return erlaubt[0] if erlaubt else None
+
     return {
         "erlaubte_datenobjekte": [
             {"id": str(kennung), "name": name} for kennung, name in datenobjekte.items()
         ],
         "erlaubte_reichweite": geerbt.reichweite,
-        "erlaubte_externe_ziele": sorted(externe_ziele),
+        "erlaubte_externe_ziele": list(befund.element("externe_ziele").erlaubt),
+        "obergrenze_datenkategorie": einzeln("datenkategorie"),
+        "erlaubte_zugriffsart": einzeln("zugriffsart"),
+        "erlaubte_ausfuehrungsarten": list(befund.element("ausfuehrungsart").erlaubt),
+        "erlaubte_ausfuehrungsidentitaeten": list(befund.element("ausfuehrungsidentitaet").erlaubt),
         "tier": geerbt.tier,
         "quelle_prozess_ids": [str(k) for k in geerbt.quelle_prozess_ids],
     }

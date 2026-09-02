@@ -3,7 +3,7 @@
  * nicht die sichtbaren Daten (Architektur 9.2).
  */
 
-import { screen, waitFor } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
@@ -68,12 +68,12 @@ describe('Sprachpfad', () => {
     const { aufrufe } = fetchAttrappe(routen());
     zeichne('/de/prozesse');
     await screen.findByRole('heading', { name: 'Prozessobjekte' });
-    const vorher = await screen.findAllByRole('row');
+    const vorher = await screen.findAllByRole('link', { name: /pruefung|lauf/ });
 
-    await userEvent.selectOptions(screen.getByLabelText('Sprache'), 'fr');
+    await userEvent.click(within(screen.getByRole('group', { name: 'Sprache' })).getByRole('button', { name: 'FR' }));
 
     await screen.findByRole('heading', { name: 'Objets de processus' });
-    const nachher = await screen.findAllByRole('row');
+    const nachher = await screen.findAllByRole('link', { name: /pruefung|lauf/ });
     expect(nachher.length).toBe(vorher.length);
     expect(screen.getByText('Rechnungspruefung')).toBeInTheDocument();
     expect(screen.getByText('Zahlungslauf')).toBeInTheDocument();

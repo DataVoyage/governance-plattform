@@ -95,18 +95,27 @@ docker compose up -d datenbank
 | Backend | `cd backend && uv run pytest --cov` | 90 % (erzwungen) |
 | Frontend | `cd frontend && npm run coverage` | 90 % (erzwungen) |
 | Oberfläche, headless | `cd frontend && npm run e2e` | — |
+| Anwendervorgänge | `cd frontend && npm run vorgaenge` | — |
 
 Die Oberflächentests laufen ausschließlich gegen einen **headless** Chromium
 (Playwright); es wird kein realer, vom Entwickler bedienter Browser
-angesteuert. Playwright startet dafür selbst ein Backend mit temporärer
-SQLite-Datenbank und die gebaute Single-Page-Application.
+angesteuert. Playwright startet dafür selbst ein Backend und die gebaute
+Single-Page-Application.
+
+**Zwei Durchläufe, zwei Fragen.** `npm run e2e` fährt die Abnahmekriterien je
+Phase: *funktioniert es*. `npm run vorgaenge` fährt den Vorgangskatalog aus
+[`docs/vorgaenge.md`](docs/vorgaenge.md): *ist es vollständig* — jeder Handgriff,
+den ein Anwender später tut, mit seinem erwarteten Ergebnis. Noch nicht
+umgesetzte Vorgänge erscheinen als übersprungen mit ihrem Arbeitspaket, statt zu
+fehlen; eine Prüfung im Durchlauf hält Katalog und Umsetzungsplan gegeneinander.
 
 Die Testsuite läuft gegen **dieselbe PostgreSQL** wie Entwicklung und
 Produktion — es gibt keine abweichende Testdatenbank (Architektur 6.5). Jede
 Ebene benutzt eine eigene Datenbank auf demselben Server: `governance` für die
 Entwicklung, `governance_test` für die Backend-Tests, `governance_e2e` für die
-Oberflächentests. Übersteuerbar über `GP_TEST_DATABASE_URL` beziehungsweise
-`GP_E2E_DATABASE_URL`.
+Oberflächentests und `governance_vorgaenge` für die Anwendervorgänge.
+Übersteuerbar über `GP_TEST_DATABASE_URL`, `GP_E2E_DATABASE_URL` beziehungsweise
+`GP_VORGAENGE_DATABASE_URL`.
 
 Das Schema entsteht einmal je Testlauf aus denselben Alembic-Migrationen wie in
 Produktion; zwischen den Tests werden die Tabellen geleert.
@@ -142,6 +151,13 @@ Zwei idempotente Läufe, produktiv als Kubernetes-`CronJob` (Architektur 6.2):
 ```bash
 python -m app.jobs erinnerungen   # erinnert an ablaufende Selbstverpflichtungen
 python -m app.jobs eskalationen   # rückt fällige Lenkungsvorgänge weiter
+```
+
+Dazu ein Wartungslauf, der nicht nach Kalender läuft, sondern nach einem
+Release, das eine Ableitungsregel ändert (siehe `docs/entscheidungen.md`, E-19):
+
+```bash
+python -m app.jobs ableitungen    # rechnet Reichweite, Kritikalität und Mitbestimmung neu
 ```
 
 ## Governance-Query-API

@@ -86,7 +86,7 @@ async function landschaft(anfrage: APIRequestContext) {
         process_steps: '',
         output: '',
         customer: 'bereich',
-        ausfallfolge: 'gering',
+        ausfallfolge: 'spuerbar',
       },
     }),
   );
@@ -103,10 +103,20 @@ async function landschaft(anfrage: APIRequestContext) {
   const tool = await json(
     await anfrage.post(`${API}/api/v1/tools`, { headers: h, data: { name: `Tool ${kennung}` } }),
   );
-  await anfrage.post(`${API}/api/v1/tools/${tool.id}/prozesse`, {
+  // Ohne die drei Erklaerungen aus A.6 gibt es keine Prozesskante.
+  await anfrage.put(`${API}/api/v1/tools/${tool.id}/attestierungen`, {
+    headers: h,
+    data: {
+      attest_entscheidung_ueber_personen: false,
+      attest_mensch_dazwischen: true,
+      attest_undeklarierte_quellen: false,
+    },
+  });
+  const kante = await anfrage.post(`${API}/api/v1/tools/${tool.id}/prozesse`, {
     headers: h,
     data: { prozessobjekt_id: prozess.id },
   });
+  if (kante.status() !== 201) throw new Error(`Kante nicht angelegt: ${await kante.text()}`);
   return { prozessId: prozess.id, toolId: tool.id, datenobjektName: datenobjekt.name, kopfzeilen: h };
 }
 

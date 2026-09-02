@@ -70,7 +70,7 @@ async function tier3Tool(anfrage: APIRequestContext) {
         process_steps: '',
         output: '',
         customer: 'bereich',
-        ausfallfolge: 'gering',
+        ausfallfolge: 'keine',
       },
     }),
     'Prozessobjekt anlegen',
@@ -78,7 +78,13 @@ async function tier3Tool(anfrage: APIRequestContext) {
   await json(
     await anfrage.post(`${API}/api/v1/prozesse/${prozess.id}/bewertungen`, {
       headers: h,
-      data: { modus: 'vollstaendig', antworten: TIER3_ANTWORTEN },
+      data: {
+        modus: 'vollstaendig',
+        antworten: TIER3_ANTWORTEN,
+        begruendungen: Object.fromEntries(
+          Object.keys(TIER3_ANTWORTEN).map((frage) => [frage, 'Vorbedingung des Abnahmetests.']),
+        ),
+      },
     }),
     'Bewertung im Aufbau',
   );
@@ -88,10 +94,27 @@ async function tier3Tool(anfrage: APIRequestContext) {
       data: { name: `Tool ${kennung}`, technischer_owner_user_id: ich.id },
     })
   ).json();
-  await anfrage.post(`${API}/api/v1/tools/${tool.id}/prozesse`, {
-    headers: h,
-    data: { prozessobjekt_id: prozess.id },
-  });
+  // Ohne die drei Erklaerungen aus A.6 gibt es keine Prozesskante — und ohne
+  // sie erbte das Tool kein Tier, sodass die tier-abhaengige Frist gar nicht
+  // geprueft waere.
+  await json(
+    await anfrage.put(`${API}/api/v1/tools/${tool.id}/attestierungen`, {
+      headers: h,
+      data: {
+        attest_entscheidung_ueber_personen: false,
+        attest_mensch_dazwischen: true,
+        attest_undeklarierte_quellen: false,
+      },
+    }),
+    'Attestierung im Aufbau',
+  );
+  await json(
+    await anfrage.post(`${API}/api/v1/tools/${tool.id}/prozesse`, {
+      headers: h,
+      data: { prozessobjekt_id: prozess.id },
+    }),
+    'Prozesskante im Aufbau',
+  );
   return { toolId: tool.id, toolName: tool.name, prozessId: prozess.id, kopfzeilen: h };
 }
 
@@ -103,12 +126,12 @@ async function anmelden(seite: Page) {
   await expect(seite.getByRole('heading', { name: 'Prozessobjekte' })).toBeVisible();
 }
 
-/** Die Zeile eines Vorgangs, ueber den Namen des betroffenen Tool-Objekts.
+/** Die Karte eines Vorgangs, ueber den Namen des betroffenen Tool-Objekts.
 
     Die Liste zeigt alle offenen Vorgaenge; jeder Test arbeitet deshalb auf
-    seiner eigenen Zeile statt auf der ersten. */
-function zeile(seite: Page, toolName: string) {
-  return seite.getByRole('row').filter({ has: seite.getByRole('link', { name: toolName }) });
+    seiner eigenen Karte statt auf der ersten. */
+function karte(seite: Page, toolName: string) {
+  return seite.locator('.k-karte').filter({ hasText: toolName });
 }
 
 test.describe('Phase 5 in der Oberflaeche', () => {
@@ -136,10 +159,11 @@ test.describe('Phase 5 in der Oberflaeche', () => {
     );
 
     await page.getByRole('link', { name: 'Lenkung', exact: true }).click();
-    const meine = zeile(page, toolName);
+    const meine = karte(page, toolName);
     await expect(meine).toBeVisible();
-    // Stufe 1, mit der Tier-3-Frist von 14 Tagen ab heute.
-    await expect(meine.getByTestId(/^stufe-/)).toHaveText('1');
+    // Stufe 1, mit der Tier-3-Frist von fuenf Arbeitstagen ab heute (A.13.5).
+    await expect(meine.getByTestId(/^stufe-/)).toHaveText('Stufe 1');
+    await expect(meine.getByTestId(/^frist-/)).toHaveText('5');
   });
 
   test('Anpassen schliesst den Vorgang und setzt den Zustand auf gruen', async ({
@@ -154,9 +178,9 @@ test.describe('Phase 5 in der Oberflaeche', () => {
 
     await anmelden(page);
     await page.getByRole('link', { name: 'Lenkung', exact: true }).click();
-    const meine = zeile(page, toolName);
-    await meine.getByRole('button', { name: 'Auflösen' }).click();
-    await expect(meine).toHaveCount(0);
+    await karte(page, toolName).getByRole('button', { name: 'Anpassen' }).click();
+    await page.getByTestId('aufloesen').click();
+    await expect(karte(page, toolName)).toHaveCount(0);
 
     await page.goto(`/de/tools/${toolId}`);
     await expect(page.getByTestId('aktueller-zustand')).toContainText('Grün');
@@ -171,28 +195,37 @@ test.describe('Phase 5 in der Oberflaeche', () => {
 
     await anmelden(page);
     await page.getByRole('link', { name: 'Lenkung', exact: true }).click();
-    const meine = zeile(page, toolName);
-    await meine.getByLabel(/^Auflösungsart/).selectOption('rahmen_erweitern');
-    await expect(
-      meine.getByText('Der Vorgang schließt erst, wenn die neue Bewertung abgeschlossen ist.'),
-    ).toBeVisible();
+    await karte(page, toolName).getByRole('button', { name: 'Rahmen erweitern' }).click();
 
-    // Ohne Bewertung bleibt der Vorgang offen.
-    await meine.getByRole('button', { name: 'Auflösen' }).click();
-    await expect(page.getByRole('alert')).toContainText('neue Bewertung');
-    await expect(meine).toBeVisible();
+    // Ohne neue Bewertung gibt es nichts zu waehlen — und keinen Knopf, der
+    // in eine Ablehnung liefe.
+    await expect(page.getByText(/keine neue Bewertung/)).toBeVisible();
+    await expect(page.getByTestId('aufloesen')).toHaveCount(0);
+    await page.keyboard.press('Escape');
+    await expect(karte(page, toolName)).toBeVisible();
 
-    // Nach einer neuen Bewertung schliesst er.
+    // Nach einer neuen Bewertung steht sie zur Wahl und schliesst den Vorgang.
     const neue = await json<{ bewertung: { id: string } | null }>(
       await request.post(`${API}/api/v1/prozesse/${prozessId}/bewertungen`, {
         headers: kopfzeilen,
-        data: { modus: 'vollstaendig', antworten: { ...TIER3_ANTWORTEN, '4b': true } },
+        data: {
+          modus: 'vollstaendig',
+          antworten: { ...TIER3_ANTWORTEN, '4b': true },
+          begruendungen: Object.fromEntries(
+            Object.keys({ ...TIER3_ANTWORTEN, '4b': true }).map((frage) => [
+              frage,
+              'Vorbedingung des Abnahmetests.',
+            ]),
+          ),
+        },
       }),
       'Neue Bewertung fuer Rahmenerweiterung',
     );
     expect(neue.bewertung, 'Der Durchlauf muss eine Bewertung liefern').not.toBeNull();
-    await meine.getByLabel(/^Neue Bewertung/).fill(neue.bewertung!.id);
-    await meine.getByRole('button', { name: 'Auflösen' }).click();
-    await expect(meine).toHaveCount(0);
+
+    await page.reload();
+    await karte(page, toolName).getByRole('button', { name: 'Rahmen erweitern' }).click();
+    await page.getByTestId(`bewertung-${neue.bewertung!.id}`).click();
+    await expect(karte(page, toolName)).toHaveCount(0);
   });
 });

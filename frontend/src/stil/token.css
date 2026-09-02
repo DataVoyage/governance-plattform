@@ -1,0 +1,161 @@
+/*
+ * Design-System „Klar" — Token (Umsetzungsplan 1.2 bis 1.5).
+ *
+ * Komponenten benutzen ausschliesslich diese Variablen, nie einen Rohwert.
+ * Das Farbschema folgt der Systemeinstellung und laesst sich ueber das
+ * Attribut ``data-farbschema`` am Wurzelelement uebersteuern.
+ */
+
+:root {
+  /* --- Farbe: hell ---------------------------------------------------- */
+  --farbe-akzent: #007aff;
+  --farbe-akzent-gedaempft: #007aff1f;
+  --farbe-gruen: #248a3d;
+  --farbe-gruen-gedaempft: #34c7591f;
+  --farbe-gelb: #b25000;
+  --farbe-gelb-gedaempft: #ff9f0a24;
+  --farbe-rot: #d70015;
+  --farbe-rot-gedaempft: #ff3b301f;
+  --farbe-lila: #8944ab;
+  --farbe-lila-gedaempft: #af52de1f;
+  --farbe-blau: #0060df;
+  --farbe-blau-gedaempft: #0060df1f;
+  --farbe-grau: #6c6c70;
+  --farbe-grau-gedaempft: #78788014;
+
+  --text-primaer: #000000d9;
+  --text-sekundaer: #3c3c4399;
+  --text-tertiaer: #3c3c434d;
+  --text-auf-akzent: #ffffff;
+
+  --flaeche: #ffffff;
+  --flaeche-gruppiert: #f2f2f7;
+  --flaeche-erhoben: #ffffff;
+  --flaeche-material: #ffffffb8;
+  --flaeche-seitenleiste: #ffffffb8;
+  --fuellung-steuerung: #78788014;
+  --fuellung-steuerung-aktiv: #ffffff;
+
+  --trennlinie: #3c3c432e;
+  --trennlinie-kraeftig: #3c3c4347;
+
+  /* --- Typografie ----------------------------------------------------- */
+  --schrift: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+
+  --gross-titel: 700 2.125rem / 2.5625rem var(--schrift);
+  --titel-1: 700 1.75rem / 2.125rem var(--schrift);
+  --titel-2: 600 1.375rem / 1.75rem var(--schrift);
+  --titel-3: 600 1.25rem / 1.5625rem var(--schrift);
+  --kopfzeile-schrift: 600 1.0625rem / 1.375rem var(--schrift);
+  --flies: 400 1.0625rem / 1.375rem var(--schrift);
+  --hinweis-schrift: 400 0.9375rem / 1.25rem var(--schrift);
+  --fussnote: 400 0.8125rem / 1.125rem var(--schrift);
+  --etikett: 600 0.75rem / 1rem var(--schrift);
+
+  /* --- Raster --------------------------------------------------------- */
+  --abstand-1: 0.25rem;
+  --abstand-2: 0.5rem;
+  --abstand-3: 0.75rem;
+  --abstand-4: 1rem;
+  --abstand-5: 1.25rem;
+  --abstand-6: 1.5rem;
+  --abstand-8: 2rem;
+  --abstand-12: 3rem;
+
+  --breite-inhalt: 60rem;
+  --breite-formular: 40rem;
+  --breite-seitenleiste: 15rem;
+
+  /* --- Radien --------------------------------------------------------- */
+  --radius-steuerung: 0.5rem;
+  --radius-karte: 0.75rem;
+  --radius-blatt: 1.25rem;
+  --radius-pille: 999px;
+
+  /* --- Tiefe: genau drei Stufen --------------------------------------- */
+  --tiefe-karte: 0 1px 3px #0000000f, 0 8px 24px #00000008;
+  --tiefe-erhoben: 0 4px 12px #00000014, 0 16px 40px #0000000f;
+  --tiefe-blatt: 0 24px 64px #0000003d;
+
+  /* --- Bewegung ------------------------------------------------------- */
+  --dauer-schnell: 150ms;
+  --dauer-mittel: 200ms;
+  --dauer-blatt: 260ms;
+  --kurve: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-farbschema='hell']) {
+    --farbe-akzent: #0a84ff;
+    --farbe-akzent-gedaempft: #0a84ff2e;
+    --farbe-gruen: #30d158;
+    --farbe-gruen-gedaempft: #30d1582e;
+    --farbe-gelb: #ffd60a;
+    --farbe-gelb-gedaempft: #ffd60a24;
+    --farbe-rot: #ff453a;
+    --farbe-rot-gedaempft: #ff453a2e;
+    --farbe-lila: #bf5af2;
+    --farbe-lila-gedaempft: #bf5af22e;
+    --farbe-blau: #6cb0ff;
+    --farbe-blau-gedaempft: #6cb0ff2e;
+    --farbe-grau: #98989d;
+    --farbe-grau-gedaempft: #7878805c;
+
+    --text-primaer: #ffffffeb;
+    --text-sekundaer: #ebebf599;
+    --text-tertiaer: #ebebf54d;
+    --text-auf-akzent: #ffffff;
+
+    --flaeche: #1c1c1e;
+    --flaeche-gruppiert: #000000;
+    --flaeche-erhoben: #2c2c2e;
+    --flaeche-material: #1c1c1ecc;
+    --flaeche-seitenleiste: #1c1c1ecc;
+    --fuellung-steuerung: #7878803d;
+    --fuellung-steuerung-aktiv: #636366;
+
+    --trennlinie: #54545866;
+    --trennlinie-kraeftig: #545458a6;
+
+    --tiefe-karte: 0 1px 3px #00000052, 0 8px 24px #0000002e;
+    --tiefe-erhoben: 0 4px 12px #00000066, 0 16px 40px #00000047;
+    --tiefe-blatt: 0 24px 64px #000000a3;
+  }
+}
+
+:root[data-farbschema='dunkel'] {
+  --farbe-akzent: #0a84ff;
+  --farbe-akzent-gedaempft: #0a84ff2e;
+  --farbe-gruen: #30d158;
+  --farbe-gruen-gedaempft: #30d1582e;
+  --farbe-gelb: #ffd60a;
+  --farbe-gelb-gedaempft: #ffd60a24;
+  --farbe-rot: #ff453a;
+  --farbe-rot-gedaempft: #ff453a2e;
+  --farbe-lila: #bf5af2;
+  --farbe-lila-gedaempft: #bf5af22e;
+  --farbe-blau: #6cb0ff;
+  --farbe-blau-gedaempft: #6cb0ff2e;
+  --farbe-grau: #98989d;
+  --farbe-grau-gedaempft: #7878805c;
+
+  --text-primaer: #ffffffeb;
+  --text-sekundaer: #ebebf599;
+  --text-tertiaer: #ebebf54d;
+
+  --flaeche: #1c1c1e;
+  --flaeche-gruppiert: #000000;
+  --flaeche-erhoben: #2c2c2e;
+  --flaeche-material: #1c1c1ecc;
+  --flaeche-seitenleiste: #1c1c1ecc;
+  --fuellung-steuerung: #7878803d;
+  --fuellung-steuerung-aktiv: #636366;
+
+  --trennlinie: #54545866;
+  --trennlinie-kraeftig: #545458a6;
+
+  --tiefe-karte: 0 1px 3px #00000052, 0 8px 24px #0000002e;
+  --tiefe-erhoben: 0 4px 12px #00000066, 0 16px 40px #00000047;
+  --tiefe-blatt: 0 24px 64px #000000a3;
+}

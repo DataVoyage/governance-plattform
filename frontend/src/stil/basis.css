@@ -1,0 +1,338 @@
+/*
+ * Design-System „Klar" — Grundlage.
+ *
+ * Zuruecksetzung, Grundtypografie, Fokus und die Anwendungshuelle. Alles
+ * Weitere liegt in ``src/ui/ui.css``.
+ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+/**
+ * ``color-scheme`` muss der gewaehlten Darstellung folgen, nicht nur der des
+ * Geraets. Sonst malt der Browser seine eigenen Flaechen — Formularfelder,
+ * Bildlaufleisten, die Klappliste eines ``select``, ausgefuellte Felder — nach
+ * dem Geraeteschema, waehrend die Anwendung nach ``data-farbschema`` malt. Wer
+ * auf einem dunklen Telefon „Hell" waehlt, bekam dann weisse Browserschrift auf
+ * weisser Flaeche.
+ */
+html {
+  -webkit-text-size-adjust: 100%;
+  color-scheme: light dark;
+}
+
+:root[data-farbschema='hell'] {
+  color-scheme: light;
+}
+
+:root[data-farbschema='dunkel'] {
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  font: var(--flies);
+  color: var(--text-primaer);
+  background: var(--flaeche-gruppiert);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+h1,
+h2,
+h3,
+p,
+figure,
+dl,
+dd {
+  margin: 0;
+}
+
+h1 {
+  font: var(--titel-1);
+  letter-spacing: -0.01em;
+}
+
+h2 {
+  font: var(--titel-2);
+  letter-spacing: -0.005em;
+}
+
+h3 {
+  font: var(--titel-3);
+}
+
+a {
+  color: var(--farbe-akzent);
+  text-decoration: none;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+ul,
+ol {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--farbe-akzent);
+  outline-offset: 2px;
+  border-radius: var(--radius-steuerung);
+}
+
+::selection {
+  background: var(--farbe-akzent-gedaempft);
+}
+
+/* --- Anwendungshuelle ------------------------------------------------- */
+
+.huelle {
+  display: grid;
+  grid-template-columns: var(--breite-seitenleiste) 1fr;
+  min-height: 100vh;
+}
+
+.seitenleiste {
+  position: sticky;
+  top: 0;
+  align-self: start;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  gap: var(--abstand-4);
+  padding: var(--abstand-4) var(--abstand-3);
+  background: var(--flaeche-seitenleiste);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border-inline-end: 0.5px solid var(--trennlinie);
+}
+
+.seitenleiste .marke {
+  display: flex;
+  align-items: center;
+  line-height: 1.2;
+  gap: var(--abstand-2);
+  padding: var(--abstand-2);
+  font: var(--kopfzeile-schrift);
+  color: var(--text-primaer);
+  letter-spacing: -0.01em;
+}
+
+.seitenleiste .marke:hover {
+  text-decoration: none;
+}
+
+.seitenleiste .marke .zeichen {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.5rem;
+  background: linear-gradient(160deg, var(--farbe-akzent), var(--farbe-lila));
+  color: #fff;
+  font: var(--etikett);
+}
+
+.seitenleiste nav {
+  display: flex;
+  flex-direction: column;
+  gap: 0.125rem;
+}
+
+.seitenleiste nav a {
+  display: flex;
+  align-items: center;
+  gap: var(--abstand-3);
+  min-height: 2.25rem;
+  padding: 0 var(--abstand-3);
+  border-radius: var(--radius-steuerung);
+  color: var(--text-primaer);
+  font: var(--hinweis-schrift);
+  transition: background var(--dauer-schnell) ease-out;
+}
+
+.seitenleiste nav a:hover {
+  background: var(--fuellung-steuerung);
+  text-decoration: none;
+}
+
+.seitenleiste nav a {
+  min-height: 2.375rem;
+}
+
+.seitenleiste nav a[aria-current='page'] {
+  background: var(--farbe-akzent);
+  color: var(--text-auf-akzent);
+  font-weight: 700;
+  box-shadow: 0 2px 10px var(--farbe-akzent-gedaempft);
+}
+
+.seitenleiste nav a[aria-current='page'] .symbol {
+  opacity: 1;
+}
+
+.seitenleiste nav a .symbol {
+  width: 1.25rem;
+  text-align: center;
+  opacity: 0.8;
+}
+
+.seitenleiste-fuss {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--abstand-2);
+  padding-top: var(--abstand-3);
+  border-top: 0.5px solid var(--trennlinie);
+}
+
+.nutzerzeile {
+  display: flex;
+  align-items: center;
+  gap: var(--abstand-2);
+  padding: var(--abstand-1) var(--abstand-2);
+}
+
+.nutzerzeile .kreis {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: none;
+  border-radius: var(--radius-pille);
+  background: var(--fuellung-steuerung);
+  font: var(--etikett);
+  color: var(--text-sekundaer);
+}
+
+.nutzerzeile .name {
+  font: var(--fussnote);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inhalt {
+  min-width: 0;
+  padding: var(--abstand-8) var(--abstand-8) var(--abstand-12);
+}
+
+.inhalt > * {
+  max-width: var(--breite-inhalt);
+  margin-inline: auto;
+}
+
+@media (max-width: 48rem) {
+  .huelle {
+    grid-template-columns: 1fr;
+  }
+
+  .seitenleiste {
+    position: static;
+    height: auto;
+    flex-direction: row;
+    align-items: center;
+    overflow-x: auto;
+    border-inline-end: none;
+    border-block-end: 0.5px solid var(--trennlinie);
+  }
+
+  .seitenleiste nav {
+    flex-direction: row;
+  }
+
+  .seitenleiste-fuss {
+    margin: 0 0 0 auto;
+    flex-direction: row;
+    border: none;
+    padding: 0;
+  }
+
+  .inhalt {
+    padding: var(--abstand-5) var(--abstand-4) var(--abstand-8);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* --- Anmeldemaske ------------------------------------------------------ */
+
+.anmeldeflaeche {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: var(--abstand-6);
+  background:
+    radial-gradient(60rem 40rem at 50% -10%, var(--farbe-akzent-gedaempft), transparent 70%),
+    var(--flaeche-gruppiert);
+}
+
+.anmeldekarte {
+  width: min(26rem, 100%);
+  background: var(--flaeche);
+  border-radius: var(--radius-blatt);
+  box-shadow: var(--tiefe-erhoben);
+  padding: var(--abstand-8);
+  text-align: center;
+}
+
+.anmeldekarte .zeichen {
+  display: grid;
+  place-items: center;
+  width: 3rem;
+  height: 3rem;
+  margin: 0 auto var(--abstand-4);
+  border-radius: 0.875rem;
+  background: linear-gradient(160deg, var(--farbe-akzent), var(--farbe-lila));
+  color: #fff;
+  font: var(--titel-2);
+}
+
+.anmeldekarte .untertitel {
+  margin-block: var(--abstand-2) var(--abstand-6);
+  font: var(--hinweis-schrift);
+  color: var(--text-sekundaer);
+}
+
+.anmeldekarte .entwicklungsmodus {
+  text-align: start;
+  padding: var(--abstand-4);
+  border-radius: var(--radius-karte);
+  background: var(--flaeche-gruppiert);
+}
+
+.anmeldekarte .entwicklungsmodus > .etikett {
+  display: block;
+  margin-block-end: var(--abstand-3);
+  font: var(--etikett);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-sekundaer);
+}
+
+.anmeldekarte .k-feld:last-of-type {
+  margin-block-end: var(--abstand-4);
+}

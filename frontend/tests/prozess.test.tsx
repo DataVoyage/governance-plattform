@@ -6,7 +6,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
-import { EINHEITEN, PROFIL, fetchAttrappe, prozess, zeichne } from './hilfen';
+import { EINHEITEN, PROFIL, fetchAttrappe, prozess, zeichne, type Route } from './hilfen';
 
 const NUTZER = [
   { id: 'user-1', email: 'owner@beispiel-ag.de', name: 'Olivia Owner', ist_aktiv: true },
@@ -48,7 +48,7 @@ describe('Prozessliste', () => {
       { pfad: '/api/v1/prozesse/p-1', koerper: prozess() },
     ]);
     zeichne('/de/prozesse');
-    await userEvent.click(await screen.findByRole('link', { name: 'Rechnungspruefung' }));
+    await userEvent.click(await screen.findByRole('link', { name: /Rechnungspruefung/ }));
     expect(
       await screen.findByRole('heading', { name: 'Rechnungspruefung', level: 1 }),
     ).toBeInTheDocument();
@@ -65,7 +65,7 @@ describe('Prozessdetail', () => {
       },
     ]);
     zeichne('/de/prozesse/p-1');
-    expect(await screen.findByTestId('reichweite')).toHaveTextContent('unternehmen');
+    expect(await screen.findByTestId('reichweite')).toHaveTextContent('Unternehmen');
     expect(screen.getByTestId('kritikalitaet')).toHaveTextContent('3');
     expect(screen.getByTestId('mitbestimmung')).toHaveTextContent('Ja');
     // Die abgeleiteten Werte sind Text, kein Eingabefeld.
@@ -97,8 +97,9 @@ describe('Prozessdetail', () => {
       },
     ]);
     zeichne('/de/prozesse/p-1');
-    expect(await screen.findByText(/LAND-DE — Freigabegrenze 5.000 EUR/)).toBeInTheDocument();
-    expect(screen.getByText('LAND-FR')).toBeInTheDocument();
+    expect(await screen.findByText('Finance — Land DE')).toBeInTheDocument();
+    expect(screen.getByText('Freigabegrenze 5.000 EUR')).toBeInTheDocument();
+    expect(screen.getByText('Finance — Land FR')).toBeInTheDocument();
   });
 
   it('zeigt einen Hinweis ohne Umsetzung', async () => {
@@ -155,8 +156,8 @@ describe('Prozessformular', () => {
     await userEvent.type(screen.getByLabelText('Lieferant'), 'Kreditoren');
     await userEvent.selectOptions(screen.getByLabelText('Kundenkreis'), 'bereich');
     await userEvent.selectOptions(screen.getByLabelText('Ausfallfolge'), 'spuerbar');
-    await userEvent.click(screen.getByLabelText('LAND-DE'));
-    await userEvent.click(screen.getByLabelText('LAND-FR'));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Finance — Land DE' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Finance — Land FR' }));
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
 
     await screen.findByRole('heading', { name: 'Rechnungspruefung', level: 1 });
@@ -185,8 +186,8 @@ describe('Prozessformular', () => {
     await userEvent.type(await screen.findByLabelText('Name'), 'X');
     await userEvent.selectOptions(screen.getByLabelText('Stellvertretung'), 'user-2');
     await userEvent.selectOptions(screen.getByLabelText('Prozessgeber (INT)'), 'org-int');
-    await userEvent.click(screen.getByLabelText('LAND-DE'));
-    await userEvent.click(screen.getByLabelText('LAND-DE'));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Finance — Land DE' }));
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Finance — Land DE' }));
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     await waitFor(() => expect(aufrufe.some((a) => a.methode === 'POST')).toBe(true));
     expect(
@@ -236,5 +237,204 @@ describe('Prozessformular', () => {
     ]);
     zeichne('/de/prozesse/neu');
     expect(await screen.findByRole('alert')).toBeInTheDocument();
+  });
+});
+
+// --- Umsetzungsplan AP-1: Kanten, Bearbeiten, Status ---------------------
+
+const DATENOBJEKTE = [
+  {
+    id: 'do-1',
+    name: 'Entgeltdaten',
+    beschreibung: '',
+    kategorie: 'besondere_kategorie',
+    owner_user_id: null,
+    fachbereich_id: 'fb-1',
+    herkunft: 'manuell',
+    quelle: 'SAP HCM',
+    externe_id: null,
+    status: 'bestaetigt',
+    metadaten: {},
+    schreibgeschuetzte_felder: [],
+  },
+  {
+    id: 'do-2',
+    name: 'Buchungsjournal',
+    beschreibung: '',
+    kategorie: null,
+    owner_user_id: null,
+    fachbereich_id: 'fb-1',
+    herkunft: 'manuell',
+    quelle: null,
+    externe_id: null,
+    status: 'bestaetigt',
+    metadaten: {},
+    schreibgeschuetzte_felder: [],
+  },
+];
+
+function mitBestand(weitere: Route[] = []) {
+  return [
+    ...grundrouten(),
+    ...weitere,
+    { pfad: '/api/v1/datenobjekte', koerper: DATENOBJEKTE },
+  ];
+}
+
+describe('Prozessformular — Referenzen statt Freitext', () => {
+  it('bietet alle vier SIPOC-Kanten als Referenz-Waehler an', async () => {
+    fetchAttrappe(mitBestand([{ pfad: '/api/v1/prozesse', koerper: [prozess({ id: 'p-9' })] }]));
+    zeichne('/de/prozesse/neu');
+    for (const feld of [
+      'Vorgelagerte Prozesse',
+      'Input — Datenobjekte',
+      'Output — Datenobjekte',
+      'Nachgelagerte Prozesse',
+    ]) {
+      expect(await screen.findByLabelText(feld)).toBeInTheDocument();
+    }
+  });
+
+  it('schickt die gewaehlten Datenobjekte und Kettenglieder mit', async () => {
+    const { aufrufe } = fetchAttrappe(
+      mitBestand([
+        { pfad: '/api/v1/prozesse', koerper: [prozess({ id: 'p-9', name: 'Zahlungslauf' })] },
+        { pfad: '/api/v1/prozesse', methode: 'POST', status: 201, koerper: prozess() },
+        { pfad: '/api/v1/prozesse/p-1', koerper: prozess() },
+      ]),
+    );
+    zeichne('/de/prozesse/neu');
+
+    await userEvent.type(await screen.findByLabelText('Name'), 'Rechnungspruefung');
+    await userEvent.selectOptions(screen.getByLabelText('Prozess-Owner'), 'user-1');
+    await userEvent.selectOptions(screen.getByLabelText('Stellvertretung'), 'user-2');
+    await userEvent.selectOptions(screen.getByLabelText('Prozessgeber (INT)'), 'org-int');
+
+    await userEvent.type(screen.getByLabelText('Input — Datenobjekte'), 'Entgelt');
+    await userEvent.click(await screen.findByText('Entgeltdaten'));
+    await userEvent.type(screen.getByLabelText('Output — Datenobjekte'), 'Buchung');
+    await userEvent.click(await screen.findByText('Buchungsjournal'));
+    await userEvent.type(screen.getByLabelText('Nachgelagerte Prozesse'), 'Zahlung');
+    await userEvent.click(await screen.findByText('Zahlungslauf'));
+
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(aufrufe.some((a) => a.methode === 'POST')).toBe(true));
+
+    expect(aufrufe.find((a) => a.methode === 'POST')?.koerper).toMatchObject({
+      input_datenobjekt_ids: ['do-1'],
+      output_datenobjekt_ids: ['do-2'],
+      nachgelagert_ids: ['p-9'],
+    });
+  });
+
+  it('zeigt die Kategorie eines Datenobjekts schon bei der Auswahl', async () => {
+    fetchAttrappe(mitBestand([{ pfad: '/api/v1/prozesse', koerper: [] }]));
+    zeichne('/de/prozesse/neu');
+    await userEvent.type(await screen.findByLabelText('Input — Datenobjekte'), 'Entgelt');
+    const liste = screen.getByRole('listbox', { name: 'Input — Datenobjekte' });
+    expect(within(liste).getByText('Personenbezogen — besonders')).toBeInTheDocument();
+    expect(within(liste).getByText('SAP HCM')).toBeInTheDocument();
+  });
+
+  it('warnt ab dem achten Prozessschritt', async () => {
+    fetchAttrappe(mitBestand([{ pfad: '/api/v1/prozesse', koerper: [] }]));
+    zeichne('/de/prozesse/neu');
+    const schritte = await screen.findByLabelText('Prozessschritte');
+    await userEvent.type(schritte, 'a;b;c;d;e;f;g');
+    expect(screen.queryByText(/falsche Flughöhe/)).toBeNull();
+    await userEvent.type(schritte, ';h');
+    expect(screen.getByText(/falsche Flughöhe/)).toBeInTheDocument();
+  });
+
+  it('fuellt beim Bearbeiten vor und schickt eine Aenderung', async () => {
+    const { aufrufe } = fetchAttrappe(
+      mitBestand([
+        { pfad: '/api/v1/prozesse', koerper: [] },
+        {
+          pfad: '/api/v1/prozesse/p-1',
+          koerper: prozess({ input_datenobjekt_ids: ['do-1'] }),
+        },
+        { pfad: '/api/v1/prozesse/p-1', methode: 'PATCH', koerper: prozess() },
+      ]),
+    );
+    zeichne('/de/prozesse/p-1/bearbeiten');
+
+    expect(await screen.findByLabelText('Name')).toHaveValue('Rechnungspruefung');
+    expect(screen.getByRole('button', { name: 'Entgeltdaten entfernen' })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Entgeltdaten entfernen' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(aufrufe.some((a) => a.methode === 'PATCH')).toBe(true));
+    expect(aufrufe.find((a) => a.methode === 'PATCH')?.koerper).toMatchObject({
+      input_datenobjekt_ids: [],
+    });
+  });
+});
+
+describe('Prozessdetail — Kanten, Wirkung und Status', () => {
+  it('zeigt Datenobjekte und Kette als Verweise und die Wirkung transitiv', async () => {
+    fetchAttrappe(
+      mitBestand([
+        {
+          pfad: '/api/v1/prozesse/p-1',
+          koerper: prozess({
+            input_datenobjekt_ids: ['do-1'],
+            output_datenobjekt_ids: ['do-2'],
+            nachgelagert_ids: ['p-2'],
+          }),
+        },
+        {
+          pfad: '/api/v1/prozesse',
+          koerper: [
+            prozess({ input_datenobjekt_ids: ['do-1'], nachgelagert_ids: ['p-2'] }),
+            prozess({ id: 'p-2', name: 'KPI-Report', nachgelagert_ids: ['p-3'] }),
+            prozess({ id: 'p-3', name: 'Produktionsfreigabe' }),
+          ],
+        },
+      ]),
+    );
+    zeichne('/de/prozesse/p-1');
+
+    expect(await screen.findByText('Entgeltdaten')).toBeInTheDocument();
+    expect(screen.getByText('Buchungsjournal')).toBeInTheDocument();
+
+    // Abwaerts zaehlt die ganze Kette, nicht nur die direkte Kante (A.4.3).
+    const abwaerts = screen.getByTestId('wirkung-abwaerts');
+    expect(within(abwaerts).getByText('KPI-Report')).toBeInTheDocument();
+    expect(within(abwaerts).getByText('Produktionsfreigabe')).toBeInTheDocument();
+  });
+
+  it('nennt den Grund, wenn die Aktivierung abgelehnt wird', async () => {
+    fetchAttrappe(
+      mitBestand([
+        { pfad: '/api/v1/prozesse/p-1', koerper: prozess() },
+        { pfad: '/api/v1/prozesse', koerper: [prozess()] },
+        {
+          pfad: '/api/v1/prozesse/p-1',
+          methode: 'PATCH',
+          status: 422,
+          koerper: { detail: 'Ein Prozessobjekt wird erst nach einer Bewertung aktiv' },
+        },
+      ]),
+    );
+    zeichne('/de/prozesse/p-1');
+    await userEvent.click(await screen.findByRole('button', { name: 'Aktivieren' }));
+    expect(
+      await screen.findByText('Ein Prozessobjekt wird erst nach einer Bewertung aktiv'),
+    ).toBeInTheDocument();
+  });
+
+  it('bietet den Weg ins Bearbeiten-Formular an', async () => {
+    fetchAttrappe(
+      mitBestand([
+        { pfad: '/api/v1/prozesse/p-1', koerper: prozess() },
+        { pfad: '/api/v1/prozesse', koerper: [prozess()] },
+      ]),
+    );
+    zeichne('/de/prozesse/p-1');
+    expect(await screen.findByRole('link', { name: 'Bearbeiten' })).toHaveAttribute(
+      'href',
+      '/de/prozesse/p-1/bearbeiten',
+    );
   });
 });

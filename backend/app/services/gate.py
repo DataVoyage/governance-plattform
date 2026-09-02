@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 
 from app.core.permissions import Principal, verlange
 from app.models.base import now_utc
-from app.models.enums import Gate2Ausloeser, GateStatus, GateTyp
+from app.models.enums import Gate2Ausloeser, GateStatus, GateTyp, ProzessStatus
 from app.models.governance import GateVorgang, Prozessobjekt
 from app.services.changelog import protokolliere_aenderung, protokolliere_erstellung, snapshot
 from app.services.prozess import NichtGefunden, Ungueltig, darf_lesen, darf_schreiben
@@ -36,20 +36,20 @@ def einreichen(
 ) -> GateVorgang:
     verlange(
         darf_schreiben(db, principal, prozess.prozessgeber_org_id),
-        "Gate-Vorgaenge reicht der Prozess- oder technische Owner ein",
+        "Gate-Vorgänge reicht der Prozess- oder technische Owner ein",
     )
     if gate_typ == GateTyp.GATE_2:
         if ausloeser is None:
             raise Ungueltig(
-                "Gate 2 verlangt die Angabe, welcher der fuenf Ausloeser aus A.11 vorliegt"
+                "Gate 2 verlangt die Angabe, welcher der fünf Auslöser aus A.11 vorliegt"
             )
         if ausloeser not in set(Gate2Ausloeser):
-            raise Ungueltig(f"Unzulaessiger Gate-2-Ausloeser: {ausloeser}")
+            raise Ungueltig(f"Unzulässiger Gate-2-Auslöser: {ausloeser}")
     elif ausloeser is not None:
-        raise Ungueltig("Gate 1 kennt keinen Ausloeser — es ist die Tier-3-Erstfreigabe")
+        raise Ungueltig("Gate 1 kennt keinen Auslöser — es ist die Tier-3-Erstfreigabe")
 
     if offener_vorgang(db, prozess.id, gate_typ) is not None:
-        raise Ungueltig("Fuer diesen Prozess ist bereits ein Gate dieses Typs offen")
+        raise Ungueltig("Für diesen Prozess ist bereits ein Gate dieses Typs offen")
 
     vorgang = GateVorgang(
         prozessobjekt_id=prozess.id,
@@ -65,6 +65,35 @@ def einreichen(
     return vorgang
 
 
+def wegen_neuem_externen_ziel(
+    db: Session, principal: Principal, prozess: Prozessobjekt, ziele: list[str]
+) -> GateVorgang | None:
+    """Ein neu erklaertes externes Ziel loest Gate 2 aus (Leitdokument A.11).
+
+    Nur an einem **aktiven** Prozessobjekt: ein Entwurf hat noch keinen Rahmen,
+    den er verlassen koennte, und die Erstfreigabe laeuft ueber Gate 1. Ist
+    bereits ein Gate 2 offen, entsteht kein zweites — der Vorgang ist schon da,
+    und die neue Erklaerung steht in der Historie des Prozessobjekts.
+
+    Der Vorgang entsteht hier von selbst, statt darauf zu warten, dass jemand
+    ihn einreicht. Wer ein Ziel ergaenzt, meldet damit den Auslöser; ihn
+    zusaetzlich zum Einreichen aufzufordern hiesse, die Regel dem Anwender
+    aufzubuerden, die die Anwendung kennt.
+    """
+    if prozess.status != ProzessStatus.AKTIV or not ziele:
+        return None
+    if offener_vorgang(db, prozess.id, GateTyp.GATE_2) is not None:
+        return None
+    return einreichen(
+        db,
+        principal,
+        prozess,
+        gate_typ=GateTyp.GATE_2,
+        ausloeser=Gate2Ausloeser.NEUES_EXTERNES_ZIEL,
+        begruendung=f"Neu erklärtes externes Ziel: {', '.join(sorted(ziele))}",
+    )
+
+
 def entscheiden(
     db: Session,
     principal: Principal,
@@ -75,12 +104,16 @@ def entscheiden(
 ) -> GateVorgang:
     """Nur die Governance-Rolle entscheidet (Matrix 5.3)."""
     verlange(
-        principal.ist_governance, "Gate-Vorgaenge entscheidet ausschliesslich die Governance-Rolle"
+        principal.ist_governance, "Gate-Vorgänge entscheidet ausschließlich die Governance-Rolle"
     )
     if status not in (GateStatus.FREIGEGEBEN, GateStatus.ABGELEHNT, GateStatus.IN_PRUEFUNG):
-        raise Ungueltig("Unzulaessiger Zielstatus fuer eine Gate-Entscheidung")
+        raise Ungueltig("Unzulässiger Zielstatus für eine Gate-Entscheidung")
     if vorgang.status not in OFFENE_STATUS:
         raise Ungueltig("Dieser Gate-Vorgang ist bereits entschieden")
+    # Eine Ablehnung ohne Grund ist fuer den Einreichenden nicht handhabbar:
+    # er erfaehrt, dass es nicht weitergeht, aber nicht, was zu aendern waere.
+    if status == GateStatus.ABGELEHNT and not kommentar.strip():
+        raise Ungueltig("Eine Ablehnung ist zu begründen — sonst weiß niemand, was zu tun ist")
 
     vorher = snapshot(vorgang)
     vorgang.status = status

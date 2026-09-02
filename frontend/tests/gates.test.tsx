@@ -6,7 +6,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
-import type { GateVorgang, Selbstverpflichtung } from '@/api/typen';
+import type { Deckung, GateVorgang, Selbstverpflichtung } from '@/api/typen';
 import { EINHEITEN, PROFIL, fetchAttrappe, prozess, zeichne, type Route } from './hilfen';
 
 const AUSLOESER = [
@@ -20,13 +20,31 @@ const AUSLOESER = [
 const KATALOG = [
   {
     typ: 'prozesseigner',
+    version: 2,
     aussagen: [
-      { id: 'P1', text: 'Das Prozessobjekt ist vollstaendig beschrieben.' },
-      { id: 'P2', text: 'Die Bewertung wurde vollstaendig durchgefuehrt.' },
+      { id: 'PE1', text: 'Der Zweck ist vollstaendig beschrieben.', ab_tier: 1 },
+      { id: 'PE2', text: 'Die Datenobjekte decken alle Daten ab.', ab_tier: 1 },
+      { id: 'PE3', text: 'Der Empfaengerkreis ist vollstaendig angegeben.', ab_tier: 2 },
     ],
   },
-  { typ: 'technischer_owner', aussagen: [{ id: 'T1', text: 'Das Tool laeuft im Rahmen.' }] },
+  {
+    typ: 'technischer_owner',
+    version: 2,
+    aussagen: [{ id: 'TO1', text: 'Die Anforderungsklassen sind umgesetzt.', ab_tier: 1 }],
+  },
 ];
+
+function deckung(ueberschreibungen: Partial<Deckung> = {}): Deckung {
+  return {
+    gedeckt: false,
+    grund: 'keine',
+    grundtext: 'Für dieses Objekt liegt noch keine Selbstverpflichtung vor.',
+    verlangte_aussagen: ['PE1', 'PE2', 'PE3'],
+    tier: 3,
+    aktuelle: null,
+    ...ueberschreibungen,
+  };
+}
 
 function gate(ueberschreibungen: Partial<GateVorgang> = {}): GateVorgang {
   return {
@@ -55,6 +73,9 @@ function selbstverpflichtung(
     tool_objekt_id: null,
     aussagen: {},
     vollstaendig: true,
+    katalog_version: 2,
+    bewertung_id: 'b-1',
+    tier_bei_abgabe: 3,
     abgegeben_von: 'user-1',
     abgegeben_am: '2026-09-01T10:00:00Z',
     gueltig_bis: '2027-09-01T10:00:00Z',
@@ -63,16 +84,13 @@ function selbstverpflichtung(
   };
 }
 
-function detailrouten(
-  gates: GateVorgang[] = [],
-  sv: Selbstverpflichtung[] = [],
-): Route[] {
+function detailrouten(gates: GateVorgang[] = [], stand: Deckung = deckung()): Route[] {
   return [
     { pfad: '/api/v1/auth/me', koerper: PROFIL },
     { pfad: '/api/v1/organisationseinheiten', koerper: EINHEITEN },
     { pfad: '/api/v1/prozesse/p-1', koerper: prozess() },
     { pfad: '/api/v1/prozesse/p-1/bewertungen', koerper: [] },
-    { pfad: '/api/v1/prozesse/p-1/selbstverpflichtungen', koerper: sv },
+    { pfad: '/api/v1/prozesse/p-1/selbstverpflichtung', koerper: stand },
     { pfad: '/api/v1/prozesse/p-1/gates', koerper: gates },
     { pfad: '/api/v1/gates/ausloeser', koerper: AUSLOESER },
     { pfad: '/api/v1/tools', koerper: [] },
@@ -80,20 +98,90 @@ function detailrouten(
 }
 
 describe('Selbstverpflichtung', () => {
-  it('zeigt jede Aussage als eigene Checkbox mit Kommentarfeld', async () => {
+  it('zeigt jede verlangte Aussage einzeln mit einklappbarem Kommentar', async () => {
     fetchAttrappe([
       ...detailrouten(),
       { pfad: '/api/v1/selbstverpflichtungen/katalog', koerper: KATALOG },
     ]);
     zeichne('/de/prozesse/p-1/selbstverpflichtung');
+    expect(await screen.findByLabelText('Der Zweck ist vollstaendig beschrieben.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Die Datenobjekte decken alle Daten ab.')).toBeInTheDocument();
+    expect(screen.getByLabelText('Der Empfaengerkreis ist vollstaendig angegeben.')).toBeInTheDocument();
+
+    // Kein Freitextfeld statt der Checkliste. Der Kommentar ist eingeklappt,
+    // weil er die Ausnahme ist — je Aussage einer.
+    expect(screen.queryByLabelText(/^Kommentar/)).toBeNull();
+    await userEvent.click(screen.getByTestId('kommentar-oeffnen-PE2'));
+    expect(await screen.findByLabelText('Kommentar — PE2')).toBeInTheDocument();
+  });
+
+  it('verlangt bei Tier 1 nur die Kurzform', async () => {
+    // Welche Aussagen verlangt sind, entscheidet der Server (A.10.5).
+    fetchAttrappe([
+      ...detailrouten([], deckung({ tier: 1, verlangte_aussagen: ['PE1', 'PE2'] })),
+      { pfad: '/api/v1/selbstverpflichtungen/katalog', koerper: KATALOG },
+    ]);
+    zeichne('/de/prozesse/p-1/selbstverpflichtung');
+    expect(await screen.findByLabelText('Der Zweck ist vollstaendig beschrieben.')).toBeInTheDocument();
+    expect(screen.queryByLabelText('Der Empfaengerkreis ist vollstaendig angegeben.')).toBeNull();
+    expect(screen.getByText(/Kurzform/)).toBeInTheDocument();
+  });
+
+  it('nennt den Grund, wenn die Erklaerung nicht mehr traegt', async () => {
+    fetchAttrappe([
+      ...detailrouten(
+        [],
+        deckung({
+          grund: 'profil_veraltet',
+          grundtext: 'Die Erklärung hängt an einer überholten Bewertung.',
+          aktuelle: selbstverpflichtung(),
+        }),
+      ),
+      { pfad: '/api/v1/selbstverpflichtungen/katalog', koerper: KATALOG },
+    ]);
+    zeichne('/de/prozesse/p-1/selbstverpflichtung');
+    expect(await screen.findByText(/überholten Bewertung/)).toBeInTheDocument();
+    expect(screen.getAllByText('Verfallen').length).toBeGreaterThan(0);
+    // Die bestehende Erklaerung ist der Ausgangspunkt, nicht ein leeres Blatt.
+    expect(screen.getByText('2026-09-01')).toBeInTheDocument();
+  });
+
+  it('verlaengert eine abgelaufene Erklaerung mit einem Klick', async () => {
+    const { aufrufe } = fetchAttrappe([
+      ...detailrouten(
+        [],
+        deckung({
+          grund: 'frist_abgelaufen',
+          grundtext: 'Die Jahresfrist ist verstrichen; eine Bestätigung genügt.',
+          aktuelle: selbstverpflichtung(),
+        }),
+      ),
+      { pfad: '/api/v1/selbstverpflichtungen/katalog', koerper: KATALOG },
+      {
+        pfad: '/api/v1/selbstverpflichtungen/sv-1/bestaetigung',
+        methode: 'POST',
+        koerper: selbstverpflichtung({ id: 'sv-2' }),
+      },
+    ]);
+    zeichne('/de/prozesse/p-1/selbstverpflichtung');
+    await userEvent.click(await screen.findByTestId('sv-bestaetigen'));
+    await screen.findByRole('heading', { name: 'Rechnungspruefung', level: 1 });
     expect(
-      await screen.findByLabelText('Das Prozessobjekt ist vollstaendig beschrieben.'),
-    ).toBeInTheDocument();
-    expect(
-      screen.getByLabelText('Die Bewertung wurde vollstaendig durchgefuehrt.'),
-    ).toBeInTheDocument();
-    // Kein Freitextfeld statt der Checkliste, sondern Kommentar je Aussage.
-    expect(screen.getAllByLabelText('Kommentar')).toHaveLength(2);
+      aufrufe.some((a) => a.methode === 'POST' && a.url.endsWith('/sv-1/bestaetigung')),
+    ).toBe(true);
+  });
+
+  it('bietet die Jahresbestaetigung nur an, wo sie genuegt', async () => {
+    fetchAttrappe([
+      ...detailrouten(
+        [],
+        deckung({ grund: 'profil_veraltet', grundtext: 'Verfallen.', aktuelle: selbstverpflichtung() }),
+      ),
+      { pfad: '/api/v1/selbstverpflichtungen/katalog', koerper: KATALOG },
+    ]);
+    zeichne('/de/prozesse/p-1/selbstverpflichtung');
+    await screen.findByText('Verfallen.');
+    expect(screen.queryByTestId('sv-bestaetigen')).toBeNull();
   });
 
   it('gibt die bestaetigten Aussagen samt Kommentar ab', async () => {
@@ -108,21 +196,48 @@ describe('Selbstverpflichtung', () => {
       },
     ]);
     zeichne('/de/prozesse/p-1/selbstverpflichtung');
-    await userEvent.click(
-      await screen.findByLabelText('Das Prozessobjekt ist vollstaendig beschrieben.'),
-    );
-    await userEvent.type(screen.getAllByLabelText('Kommentar')[1], 'Noch offen');
-    await userEvent.click(screen.getByRole('button', { name: 'Abgeben' }));
+    await userEvent.click(await screen.findByLabelText('Der Zweck ist vollstaendig beschrieben.'));
+    await userEvent.click(screen.getByTestId('kommentar-oeffnen-PE2'));
+    await userEvent.type(await screen.findByLabelText('Kommentar — PE2'), 'Noch offen');
+    await userEvent.click(screen.getByTestId('sv-abgeben'));
 
     await screen.findByRole('heading', { name: 'Rechnungspruefung', level: 1 });
     expect(aufrufe.find((a) => a.methode === 'POST')?.koerper).toEqual({
       typ: 'prozesseigner',
       prozessobjekt_id: 'p-1',
       aussagen: {
-        P1: { bestaetigt: true, kommentar: '' },
-        P2: { bestaetigt: false, kommentar: 'Noch offen' },
+        PE1: { bestaetigt: true, kommentar: '' },
+        PE2: { bestaetigt: false, kommentar: 'Noch offen' },
       },
     });
+  });
+
+  it('gibt die Erklaerung des technischen Owners am Tool-Objekt ab', async () => {
+    const { aufrufe } = fetchAttrappe([
+      { pfad: '/api/v1/auth/me', koerper: PROFIL },
+      { pfad: '/api/v1/organisationseinheiten', koerper: EINHEITEN },
+      { pfad: '/api/v1/selbstverpflichtungen/katalog', koerper: KATALOG },
+      {
+        pfad: '/api/v1/tools/t-1/selbstverpflichtung/deckung',
+        koerper: deckung({ verlangte_aussagen: ['TO1'], tier: 1 }),
+      },
+      {
+        pfad: '/api/v1/selbstverpflichtungen',
+        methode: 'POST',
+        status: 201,
+        koerper: selbstverpflichtung({ typ: 'technischer_owner' }),
+      },
+    ]);
+    zeichne('/de/tools/t-1/selbstverpflichtung');
+    await userEvent.click(await screen.findByLabelText('Die Anforderungsklassen sind umgesetzt.'));
+    await userEvent.click(screen.getByTestId('sv-abgeben'));
+    await waitFor(() =>
+      expect(aufrufe.find((a) => a.methode === 'POST')?.koerper).toEqual({
+        typ: 'technischer_owner',
+        tool_objekt_id: 't-1',
+        aussagen: { TO1: { bestaetigt: true, kommentar: '' } },
+      }),
+    );
   });
 
   it('meldet einen abgelehnten Versuch', async () => {
@@ -137,7 +252,7 @@ describe('Selbstverpflichtung', () => {
       },
     ]);
     zeichne('/de/prozesse/p-1/selbstverpflichtung');
-    await userEvent.click(await screen.findByRole('button', { name: 'Abgeben' }));
+    await userEvent.click(await screen.findByTestId('sv-abgeben'));
     expect(await screen.findByRole('alert')).toHaveTextContent('Prozesseigner');
   });
 
@@ -153,17 +268,22 @@ describe('Selbstverpflichtung', () => {
 
 describe('Gate-Einreichung am Prozessobjekt', () => {
   it('zeigt den Stand der Selbstverpflichtung', async () => {
-    fetchAttrappe(detailrouten([], [selbstverpflichtung()]));
+    fetchAttrappe(
+      detailrouten(
+        [],
+        deckung({ gedeckt: true, grund: '', grundtext: 'Die Erklärung liegt vor und trägt.', aktuelle: selbstverpflichtung() }),
+      ),
+    );
     zeichne('/de/prozesse/p-1');
-    expect(await screen.findByTestId('sv-status')).toHaveTextContent('Vollständig abgegeben');
+    expect(await screen.findByText('Die Erklärung liegt vor und trägt.')).toBeInTheDocument();
     expect(screen.getByText('2027-09-01')).toBeInTheDocument();
   });
 
-  it('meldet eine fehlende Selbstverpflichtung', async () => {
+  it('meldet eine fehlende Selbstverpflichtung mit ihrem Grund', async () => {
     fetchAttrappe(detailrouten());
     zeichne('/de/prozesse/p-1');
     expect(
-      await screen.findByText('Für diesen Prozess liegt noch keine Selbstverpflichtung vor.'),
+      await screen.findByText('Für dieses Objekt liegt noch keine Selbstverpflichtung vor.'),
     ).toBeInTheDocument();
   });
 
@@ -178,6 +298,8 @@ describe('Gate-Einreichung am Prozessobjekt', () => {
     // Genau die fuenf abschliessend aufgezaehlten Gruende, kein freier sechster.
     expect(within(ausloeserwahl).getAllByRole('option')).toHaveLength(AUSLOESER.length + 1);
     expect(ausloeserwahl).toBeRequired();
+    // Ohne Ausloeser ist Gate 2 nicht einreichbar.
+    expect(screen.getByTestId('gate-einreichen')).toBeDisabled();
   });
 
   it('reicht ein Gate 2 mit Ausloeser ein', async () => {
@@ -194,11 +316,9 @@ describe('Gate-Einreichung am Prozessobjekt', () => {
     await userEvent.selectOptions(await screen.findByLabelText('Gate'), '2');
     await userEvent.selectOptions(screen.getByLabelText('Auslöser'), 'reichweitenerweiterung');
     await userEvent.type(screen.getByLabelText('Begründung'), 'Neues Land');
-    await userEvent.click(screen.getByRole('button', { name: 'Gate einreichen' }));
+    await userEvent.click(screen.getByTestId('gate-einreichen'));
 
-    await waitFor(() =>
-      expect(screen.getByRole('cell', { name: 'reichweitenerweiterung' })).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(screen.getByTestId('gate-g-1')).toBeInTheDocument());
     expect(aufrufe.find((a) => a.methode === 'POST')?.koerper).toEqual({
       gate_typ: '2',
       ausloeser: 'reichweitenerweiterung',
@@ -247,8 +367,8 @@ describe('Gate-Einreichung am Prozessobjekt', () => {
     zeichne('/de/prozesse/p-1');
     await screen.findByRole('heading', { name: 'Gate-Vorgänge' });
     expect(screen.getByText('Abgelehnt')).toBeInTheDocument();
-    expect(screen.getByText('Zu riskant')).toBeInTheDocument();
-    expect(screen.getByText('neues_externes_ziel')).toBeInTheDocument();
+    expect(screen.getByTestId('gate-g-1')).toHaveTextContent('Zu riskant');
+    expect(screen.getByTestId('gate-g-2')).toHaveTextContent('Neues externes Ziel');
   });
 
   it('meldet einen Ladefehler', async () => {
@@ -276,7 +396,7 @@ describe('Arbeitsvorrat der Governance', () => {
     {
       id: 'rz-2',
       user_id: 'user-1',
-      rolle: 'governance',
+      rolle: 'governance' as const,
       scope_typ: 'global' as const,
       scope_id: null,
     },
@@ -306,7 +426,7 @@ describe('Arbeitsvorrat der Governance', () => {
     ]);
     zeichne('/de/gates');
     await userEvent.type(
-      await screen.findByLabelText('Entscheidungskommentar — g-1'),
+      await screen.findByLabelText('Entscheidungskommentar'),
       'Passt',
     );
     await userEvent.click(screen.getByRole('button', { name: 'Freigeben' }));
@@ -319,7 +439,7 @@ describe('Arbeitsvorrat der Governance', () => {
     });
   });
 
-  it('lehnt einen Vorgang ab', async () => {
+  it('verlangt fuer eine Ablehnung eine Begruendung', async () => {
     const { aufrufe } = fetchAttrappe([
       ...vorratrouten([gate()], GOVERNANCE),
       {
@@ -329,11 +449,20 @@ describe('Arbeitsvorrat der Governance', () => {
       },
     ]);
     zeichne('/de/gates');
-    await userEvent.click(await screen.findByRole('button', { name: 'Ablehnen' }));
+    // Ohne Grund keine Ablehnung: wer abgelehnt wird, erfaehrt sonst nur,
+    // dass es nicht weitergeht.
+    expect(await screen.findByTestId('ablehnen-g-1')).toBeDisabled();
+    expect(screen.getByTestId('freigeben-g-1')).toBeEnabled();
+
+    await userEvent.type(
+      screen.getByLabelText('Entscheidungskommentar'),
+      'Reichweite unklar',
+    );
+    await userEvent.click(screen.getByTestId('ablehnen-g-1'));
     await waitFor(() =>
       expect(aufrufe.find((a) => a.methode === 'POST')?.koerper).toEqual({
         status: 'abgelehnt',
-        kommentar: '',
+        kommentar: 'Reichweite unklar',
       }),
     );
   });
@@ -349,7 +478,7 @@ describe('Arbeitsvorrat der Governance', () => {
       },
     ]);
     zeichne('/de/gates');
-    await userEvent.click(await screen.findByRole('button', { name: 'Freigeben' }));
+    await userEvent.click(await screen.findByTestId('freigeben-g-1'));
     expect(await screen.findByRole('alert')).toHaveTextContent('Governance-Rolle');
   });
 

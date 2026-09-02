@@ -5,7 +5,7 @@ from __future__ import annotations
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.test_bewertung import antworten_fuer, profil_von
+from tests.test_bewertung import nutzlast, profil_von
 
 #: Passt zu GP_QUERY_API_SERVICE_TOKENS aus der Testumgebung.
 SERVICE_KOPF = {"X-Service-Token": "service-token-1"}
@@ -42,7 +42,7 @@ def prozess(client: TestClient, owner, vertretung, prozess_daten):
 def bewerte(client: TestClient, anmeldung, prozess_id: str, **profil):
     return client.post(
         f"/api/v1/prozesse/{prozess_id}/bewertungen",
-        json={"modus": "vollstaendig", "antworten": antworten_fuer(profil_von(**profil))},
+        json=nutzlast(profil_von(**profil)),
         headers=anmeldung.kopf,
     ).json()["bewertung"]
 
@@ -79,10 +79,7 @@ def test_nutzer_token_genuegt_nicht(client: TestClient, governance) -> None:
 def test_tier_und_profil_entsprechen_dem_wizard(client: TestClient, owner, prozess) -> None:
     vorschau = client.post(
         f"/api/v1/prozesse/{prozess['id']}/bewertung/wizard",
-        json={
-            "modus": "vollstaendig",
-            "antworten": antworten_fuer(profil_von(ds=3, mb=1, it=1, rg=2, ur=2)),
-        },
+        json=nutzlast(profil_von(ds=3, mb=1, it=1, rg=2, ur=2)),
         headers=owner.kopf,
     ).json()["vorschau"]
     bewerte(client, owner, prozess["id"], ds=3, mb=1, it=1, rg=2, ur=2)
@@ -114,7 +111,7 @@ def test_k_klassen_auch_nach_schnellem_durchlauf(client: TestClient, owner, proz
     """Die schnelle Variante speichert keine K-Klassen — die API leitet sie ab."""
     client.post(
         f"/api/v1/prozesse/{prozess['id']}/bewertungen",
-        json={"modus": "schnell", "antworten": antworten_fuer(profil_von(ds=3))},
+        json=nutzlast(profil_von(ds=3), modus="schnell"),
         headers=owner.kopf,
     )
     antwort = frage(client, f"/prozess/{prozess['id']}/k-klassen")
@@ -142,7 +139,7 @@ def test_unbekanntes_prozessobjekt(client: TestClient) -> None:
 
 
 def test_erlaubnisrahmen_vereinigt_die_prozesskanten(
-    client: TestClient, governance, owner, vertretung, prozess_daten
+    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren
 ) -> None:
     kreditoren = client.post(
         "/api/v1/datenobjekte", json={"name": "Kreditorenstamm"}, headers=governance.kopf
@@ -181,6 +178,7 @@ def test_erlaubnisrahmen_vereinigt_die_prozesskanten(
     )
 
     tool = client.post("/api/v1/tools", json={"name": "Gemeinsam"}, headers=governance.kopf).json()
+    attestieren(governance.kopf, tool["id"])
     for prozessobjekt in (eng, weit):
         client.post(
             f"/api/v1/tools/{tool['id']}/prozesse",
@@ -204,12 +202,23 @@ def test_erlaubnisrahmen_vereinigt_die_prozesskanten(
 
 
 def test_erlaubnisrahmen_ohne_prozesskante(client: TestClient, governance) -> None:
+    """Positivlistenprinzip: ohne Prozesskante deckt der Rahmen nichts ab.
+
+    Die einzige Ausnahme ist die Ausfuehrungsidentitaet — sie haengt nicht am
+    Prozess, sondern an der Ausfuehrungsart des Tools. Ist die unbekannt,
+    bleiben beide Identitaeten moeglich; ein geteiltes Konto ist auch hier
+    nicht dabei.
+    """
     tool = client.post("/api/v1/tools", json={"name": "Frei"}, headers=governance.kopf).json()
     rahmen = frage(client, f"/tool/{tool['id']}/erlaubnisrahmen").json()
     assert rahmen == {
         "erlaubte_datenobjekte": [],
         "erlaubte_reichweite": None,
         "erlaubte_externe_ziele": [],
+        "obergrenze_datenkategorie": None,
+        "erlaubte_zugriffsart": "lesen",
+        "erlaubte_ausfuehrungsarten": [],
+        "erlaubte_ausfuehrungsidentitaeten": ["persoenlich", "benannter_dienst"],
         "tier": None,
         "quelle_prozess_ids": [],
     }
@@ -321,7 +330,7 @@ def test_openapi_dokumentiert_die_vier_endpunkte(client: TestClient) -> None:
 
 
 def test_probeintegration_mit_platzhalter_client(
-    client: TestClient, governance, owner, prozess
+    client: TestClient, governance, owner, prozess, attestieren
 ) -> None:
     """Ein andockender Client, der nur der Dokumentation folgt.
 
@@ -333,6 +342,7 @@ def test_probeintegration_mit_platzhalter_client(
     tool = client.post(
         "/api/v1/tools", json={"name": "Andocker-Tool"}, headers=governance.kopf
     ).json()
+    attestieren(governance.kopf, tool["id"])
     client.post(
         f"/api/v1/tools/{tool['id']}/prozesse",
         json={"prozessobjekt_id": prozess["id"]},

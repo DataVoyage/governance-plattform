@@ -155,9 +155,17 @@ def test_setze_legt_an_und_aktualisiert(db: Session) -> None:
     assert konfiguration.lies_int(db, "asset_inaktiv_tage") == 30
 
 
-@pytest.mark.parametrize(("tier", "erwartet"), [(1, 90), (2, 30), (3, 14), (9, 14), (0, 90)])
+@pytest.mark.parametrize(("tier", "erwartet"), [(1, 30), (2, 15), (3, 5), (9, 5), (0, 30)])
 def test_lenkungsfrist_je_tier(db: Session, tier: int, erwartet: int) -> None:
+    """30/15/5 Arbeitstage je Tier (Leitdokument A.13.5)."""
     assert konfiguration.lenkungsfrist_tage(db, tier) == erwartet
+
+
+@pytest.mark.parametrize(("tier", "erwartet"), [(1, 15), (2, 10), (3, 5)])
+def test_nachfrist_der_zweiten_stufe(db: Session, tier: int, erwartet: int) -> None:
+    """Stufe 2 gibt *zusaetzlich* 15/10/5 Tage, nicht noch einmal die volle Frist."""
+    assert konfiguration.lenkungsfrist_tage(db, tier, stufe=2) == erwartet
+    assert konfiguration.lenkungsfrist_tage(db, tier, stufe=3) == erwartet
 
 
 def test_governance_aendert_einstellung_im_betrieb(
@@ -178,7 +186,7 @@ def test_governance_aendert_einstellung_im_betrieb(
 
     db.expire_all()
     eintrag = db.query(ChangeLog).filter(ChangeLog.entity_type == "konfiguration").one()
-    assert eintrag.vorher["wert"] == "14"
+    assert eintrag.vorher["wert"] == "5"
     assert eintrag.nachher["wert"] == "7"
 
 

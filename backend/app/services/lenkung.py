@@ -31,6 +31,7 @@ from app.models.enums import (
     Aufloesungsart,
     ComplianceFarbe,
     LenkungStatus,
+    Schicht2Verbot,
 )
 from app.models.governance import (
     Benachrichtigung,
@@ -51,6 +52,15 @@ from app.services.prozess import NichtGefunden, Ungueltig
 
 #: Hoechste Eskalationsstufe: Kennzeichnung fuer eine technische Massnahme.
 HOECHSTE_STUFE = 3
+
+#: Namen der drei Aufloesungen fuer die Zeitreihe. Der Eintrag, den eine
+#: Aufloesung hinterlaesst, steht spaeter auf dem Bildschirm — dort gehoert
+#: kein technischer Schluessel hin.
+AUFLOESUNG_TEXT: dict[str, str] = {
+    Aufloesungsart.ANPASSEN: "angepasst",
+    Aufloesungsart.RAHMEN_ERWEITERN: "Rahmen erweitert",
+    Aufloesungsart.STILLLEGEN: "stillgelegt",
+}
 
 ANLASS_ESKALATION = "lenkungsvorgang_eskaliert"
 ANLASS_LENKUNG_NEU = "lenkungsvorgang_eroeffnet"
@@ -95,24 +105,37 @@ def melde_zustand(
     farbe: ComplianceFarbe,
     begruendung: str = "",
     abweichung_art: str | None = None,
+    schicht2_verbot: str | None = None,
     jetzt: datetime | None = None,
 ) -> tuple[ComplianceZustand, Lenkungsvorgang | None]:
     """Traegt einen Zustand in die Zeitreihe ein.
 
-    Bei ``rot`` entsteht automatisch ein Lenkungsvorgang in Stufe 1 — es sei
-    denn, fuer dieses Tool ist bereits einer offen: eine zweite Meldung
-    derselben Abweichung soll den Vorgang nicht verdoppeln.
+    Bei ``rot`` entsteht automatisch ein Lenkungsvorgang — in Stufe 1, oder bei
+    einem Verstoss gegen Schicht 2 unmittelbar in Stufe 2 (A.13.5: „Bei
+    Verletzung von Schicht 2 entfaellt Stufe 1"). Ist fuer dieses Tool schon
+    einer offen, wird er nicht verdoppelt: eine zweite Meldung derselben
+    Abweichung ist dieselbe Abweichung. Ein Schicht-2-Verstoss hebt einen
+    laufenden Stufe-1-Vorgang aber sofort auf Stufe 2 — sonst haette die
+    Reihenfolge der Meldungen ueber die Schwere entschieden.
     """
     verlange(
         darf_tool_schreiben(db, principal, tool),
         "Compliance-Meldungen erfasst der technische Owner oder die Governance-Rolle",
     )
+    if schicht2_verbot is not None and schicht2_verbot not in set(Schicht2Verbot):
+        raise Ungueltig(f"Unzulässiges Schicht-2-Verbot: {schicht2_verbot}")
+    if schicht2_verbot is not None and farbe != ComplianceFarbe.ROT:
+        raise Ungueltig(
+            "Ein Verstoß gegen Schicht 2 ist kein gelber Befund — er ist rot, "
+            "weil ihn keine Bewertung freischaltet"
+        )
     zeitpunkt = jetzt or now_utc()
     zustand = ComplianceZustand(
         tool_objekt_id=tool.id,
         farbe=farbe,
         begruendung=begruendung,
         abweichung_art=abweichung_art,
+        schicht2_verbot=schicht2_verbot,
         festgestellt_am=zeitpunkt,
         festgestellt_von=principal.user_id,
     )
@@ -122,19 +145,78 @@ def melde_zustand(
 
     if farbe != ComplianceFarbe.ROT:
         return zustand, None
+    stufe = 2 if schicht2_verbot is not None else 1
     bestehend = offener_vorgang(db, tool.id)
     if bestehend is not None:
+        if stufe > bestehend.eskalationsstufe:
+            _hebe_auf_stufe(db, principal, bestehend, tool, zustand, zeitpunkt)
         return zustand, bestehend
-    return zustand, _eroeffne_lenkungsvorgang(db, principal, tool, zustand, zeitpunkt)
+    return zustand, _eroeffne_lenkungsvorgang(db, principal, tool, zustand, zeitpunkt, stufe=stufe)
+
+
+def _hebe_auf_stufe(
+    db: Session,
+    principal: Principal,
+    vorgang: Lenkungsvorgang,
+    tool: ToolObjekt,
+    zustand: ComplianceZustand,
+    zeitpunkt: datetime,
+) -> None:
+    """Hebt einen laufenden Vorgang wegen eines Schicht-2-Verstosses auf Stufe 2."""
+    vorher = snapshot(vorgang)
+    vorgang.eskalationsstufe = 2
+    vorgang.schicht2_verbot = zustand.schicht2_verbot
+    vorgang.frist = frist_fuer(db, tool, zeitpunkt, stufe=2)
+    db.flush()
+    protokolliere_aenderung(
+        db,
+        vorgang,
+        vorher,
+        akteur_user_id=principal.user_id,
+        beschreibung="Verstoß gegen Schicht 2 — Stufe 1 entfällt",
+    )
+    empfaenger = _eskalationsempfaenger(db, vorgang)
+    if empfaenger is not None:
+        _benachrichtige(
+            db,
+            vorgang,
+            empfaenger,
+            ANLASS_ESKALATION,
+            "Lenkungsvorgang in Eskalationsstufe 2",
+            "Für das Tool-Objekt wurde ein Verstoß gegen ein organisationsweites "
+            "Verbot gemeldet. Solche Fälle beginnen ohne erste Stufe.",
+        )
 
 
 # --- Lenkungsvorgang ------------------------------------------------------
 
 
-def frist_fuer(db: Session, tool: ToolObjekt, ab: datetime) -> datetime:
-    """Tier-abhaengige Frist (Leitdokument A.13.5), Tier aus der Vererbung."""
+def arbeitstage_addieren(ab: datetime, tage: int) -> datetime:
+    """Zaehlt ``tage`` Arbeitstage ab ``ab``, Samstag und Sonntag uebersprungen.
+
+    A.13.5 rechnet in Arbeitstagen, nicht in Kalendertagen. Der Unterschied ist
+    kein Detail: fuenf Kalendertage ueber ein Wochenende sind drei Arbeitstage,
+    und eine Frist, die am Samstag ablaeuft, laeuft praktisch am Freitag ab.
+
+    Feiertage bleiben aussen vor. Ein Feiertagskalender ist landesabhaengig,
+    und die Anwendung laeuft in mehreren Laendern — eine halbe Loesung waere
+    hier schlechter als eine erklaerte Vereinfachung. Ein Vorgang gewinnt
+    dadurch hoechstens einen Tag; die Fristen sind nicht auf den Tag genau
+    gedacht, sondern als Eskalationsdruck.
+    """
+    zeitpunkt = ab
+    verbleibend = max(0, tage)
+    while verbleibend > 0:
+        zeitpunkt += timedelta(days=1)
+        if zeitpunkt.weekday() < 5:
+            verbleibend -= 1
+    return zeitpunkt
+
+
+def frist_fuer(db: Session, tool: ToolObjekt, ab: datetime, stufe: int = 1) -> datetime:
+    """Tier- und stufenabhaengige Frist (A.13.5), Tier aus der Vererbung."""
     tier = erbe_klassifikation(tool).tier or 1
-    return ab + timedelta(days=konfiguration.lenkungsfrist_tage(db, tier))
+    return arbeitstage_addieren(ab, konfiguration.lenkungsfrist_tage(db, tier, stufe))
 
 
 def _betroffener_owner(tool: ToolObjekt) -> uuid.UUID | None:
@@ -151,12 +233,15 @@ def _eroeffne_lenkungsvorgang(
     tool: ToolObjekt,
     zustand: ComplianceZustand,
     zeitpunkt: datetime,
+    *,
+    stufe: int = 1,
 ) -> Lenkungsvorgang:
     vorgang = Lenkungsvorgang(
         tool_objekt_id=tool.id,
         compliance_zustand_id=zustand.id,
-        eskalationsstufe=1,
-        frist=frist_fuer(db, tool, zeitpunkt),
+        eskalationsstufe=stufe,
+        schicht2_verbot=zustand.schicht2_verbot,
+        frist=frist_fuer(db, tool, zeitpunkt, stufe=stufe),
         zugewiesen_an=_betroffener_owner(tool),
         status=LenkungStatus.OFFEN,
         beschreibung=zustand.begruendung,
@@ -170,10 +255,25 @@ def _eroeffne_lenkungsvorgang(
             vorgang,
             vorgang.zugewiesen_an,
             ANLASS_LENKUNG_NEU,
-            "Rahmenueberschreitung festgestellt",
-            "Fuer ein von Ihnen verantwortetes Tool-Objekt wurde eine "
-            f"Rahmenueberschreitung erfasst. Frist: {vorgang.frist.date().isoformat()}.",
+            "Rahmenüberschreitung festgestellt",
+            "Für ein von Ihnen verantwortetes Tool-Objekt wurde eine "
+            f"Rahmenüberschreitung erfasst. Frist: {vorgang.frist.date().isoformat()}.",
         )
+    # Stufe 2 heisst nach A.13.5: die Fuehrungskraft ist informiert. Wer dort
+    # beginnt, muss sie deshalb sofort erreichen und nicht erst beim naechsten
+    # Fristablauf.
+    if stufe >= 2:
+        empfaenger = _eskalationsempfaenger(db, vorgang)
+        if empfaenger is not None:
+            _benachrichtige(
+                db,
+                vorgang,
+                empfaenger,
+                ANLASS_ESKALATION,
+                "Lenkungsvorgang in Eskalationsstufe 2",
+                "Für das Tool-Objekt wurde ein Verstoß gegen ein organisationsweites "
+                "Verbot gemeldet. Solche Fälle beginnen ohne erste Stufe.",
+            )
     return vorgang
 
 
@@ -244,9 +344,11 @@ def liste(
 def eskaliere_faellige(db: Session, jetzt: datetime | None = None) -> list[Lenkungsvorgang]:
     """Rueckt jeden offenen Vorgang weiter, dessen Frist verstrichen ist.
 
-    Stufe 2 benachrichtigt die Fuehrungskraft des betroffenen Owners; Stufe 3
-    kennzeichnet den Vorgang fuer eine technische Massnahme. In Stufe 3 wird
-    nicht weiter gerueckt — hoeher geht es in dieser Anwendung nicht.
+    Stufe 2 benachrichtigt die Fuehrungskraft des betroffenen Owners und laeuft
+    nur noch die **Nachfrist** — nicht noch einmal die volle Tier-Frist. Stufe 3
+    kennzeichnet den Vorgang fuer eine technische Massnahme; dort gibt es keine
+    Frist mehr, weil nichts mehr abzuwarten ist. In Stufe 3 wird nicht weiter
+    gerueckt — hoeher geht es in dieser Anwendung nicht.
     """
     zeitpunkt = jetzt or datetime.now(UTC)
     offene = db.execute(
@@ -261,8 +363,8 @@ def eskaliere_faellige(db: Session, jetzt: datetime | None = None) -> list[Lenku
         vorher = snapshot(vorgang)
         vorgang.eskalationsstufe += 1
         tool = db.get(ToolObjekt, vorgang.tool_objekt_id)
-        if tool is not None:
-            vorgang.frist = frist_fuer(db, tool, zeitpunkt)
+        if tool is not None and vorgang.eskalationsstufe < HOECHSTE_STUFE:
+            vorgang.frist = frist_fuer(db, tool, zeitpunkt, stufe=vorgang.eskalationsstufe)
         db.flush()
         protokolliere_aenderung(db, vorgang, vorher, beschreibung="Automatische Eskalation")
 
@@ -274,11 +376,11 @@ def eskaliere_faellige(db: Session, jetzt: datetime | None = None) -> list[Lenku
                 empfaenger,
                 ANLASS_ESKALATION,
                 f"Lenkungsvorgang in Eskalationsstufe {vorgang.eskalationsstufe}",
-                "Die Frist ist ohne Aufloesung verstrichen. "
+                "Die Frist ist ohne Auflösung verstrichen. "
                 + (
-                    "Der Vorgang ist fuer eine technische Massnahme gekennzeichnet."
+                    "Der Vorgang ist für eine technische Maßnahme gekennzeichnet."
                     if vorgang.eskalationsstufe >= HOECHSTE_STUFE
-                    else "Die Fuehrungskraft des betroffenen Owners ist informiert."
+                    else "Die Führungskraft des betroffenen Owners ist informiert."
                 ),
             )
         gerueckt.append(vorgang)
@@ -321,7 +423,7 @@ def loese_auf(
         darf_tool_schreiben(db, principal, tool)
         or vorgang.zugewiesen_an == principal.user_id
         or principal.ist_governance,
-        "Lenkungsvorgaenge bearbeitet der Betroffene oder die Governance-Rolle",
+        "Lenkungsvorgänge bearbeitet der Betroffene oder die Governance-Rolle",
     )
     if vorgang.status != LenkungStatus.OFFEN:
         raise Ungueltig("Dieser Lenkungsvorgang ist bereits abgeschlossen")
@@ -353,7 +455,7 @@ def loese_auf(
         zustand = ComplianceZustand(
             tool_objekt_id=tool.id,
             farbe=ComplianceFarbe.GRUEN,
-            begruendung=f"Lenkungsvorgang aufgeloest: {art.value}",
+            begruendung=f"Lenkungsvorgang aufgelöst: {AUFLOESUNG_TEXT[art]}",
             festgestellt_am=zeitpunkt,
             festgestellt_von=principal.user_id,
         )
@@ -373,7 +475,7 @@ def _pruefe_neue_bewertung(
     """
     if bewertung_id is None:
         raise Ungueltig(
-            "'Rahmen erweitern' verlangt eine neue Bewertung; der Vorgang schliesst "
+            "'Rahmen erweitern' verlangt eine neue Bewertung; der Vorgang schließt "
             "erst nach deren Abschluss"
         )
     bewertung = db.get(Bewertung, bewertung_id)
@@ -383,7 +485,7 @@ def _pruefe_neue_bewertung(
     eroeffnet_am = _als_utc(vorgang.erstellt_am)
     if bewertet_am is not None and eroeffnet_am is not None and bewertet_am < eroeffnet_am:
         raise Ungueltig(
-            "Die angegebene Bewertung stammt von vor der Eroeffnung des Lenkungsvorgangs"
+            "Die angegebene Bewertung stammt von vor der Eröffnung des Lenkungsvorgangs"
         )
     return bewertung
 
@@ -392,7 +494,7 @@ def brich_ab(
     db: Session, principal: Principal, vorgang: Lenkungsvorgang, kommentar: str = ""
 ) -> Lenkungsvorgang:
     """Abbruch durch die Governance-Rolle, etwa bei einer Fehlmeldung."""
-    verlange(principal.ist_governance, "Abbrechen darf ausschliesslich die Governance-Rolle")
+    verlange(principal.ist_governance, "Abbrechen darf ausschließlich die Governance-Rolle")
     if vorgang.status != LenkungStatus.OFFEN:
         raise Ungueltig("Dieser Lenkungsvorgang ist bereits abgeschlossen")
     vorher = snapshot(vorgang)

@@ -2,59 +2,107 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { api } from '@/api/client';
-import type { Prozess } from '@/api/typen';
+import type { Fachbereich, Organisationseinheit, Prozess } from '@/api/typen';
 import { useSprache } from '@/i18n/SprachKontext';
+import { orgBezeichnung } from '@/nutzen/bezeichnungen';
+import {
+  Abzeichen,
+  Gruppe,
+  Hinweis,
+  Ladeschimmer,
+  Leerzustand,
+  Seitenkopf,
+  Suchfeld,
+  ZeileVerweis,
+  type Ton,
+} from '@/ui';
 import { useSitzung } from '@/zustand/Sitzung';
+
+function tierTon(tier: number | null): Ton {
+  if (tier === 3) return 'rot';
+  if (tier === 2) return 'gelb';
+  return 'neutral';
+}
 
 export function ProzessListe() {
   const { t, pfad } = useSprache();
   const { token } = useSitzung();
   const [prozesse, setProzesse] = useState<Prozess[] | null>(null);
+  const [einheiten, setEinheiten] = useState<Organisationseinheit[]>([]);
+  const [fachbereiche, setFachbereiche] = useState<Fachbereich[]>([]);
+  const [suche, setSuche] = useState('');
   const [fehler, setFehler] = useState<string | null>(null);
 
   useEffect(() => {
     if (token === null) return;
-    api
-      .prozesse(token)
-      .then(setProzesse)
+    Promise.all([api.prozesse(token), api.organisationseinheiten(token), api.fachbereiche(token)])
+      .then(([alle, orgs, bereiche]) => {
+        setProzesse(alle);
+        setEinheiten(orgs);
+        setFachbereiche(bereiche);
+      })
       .catch(() => setFehler(t('app.fehler')));
   }, [token, t]);
 
-  if (fehler !== null) return <p role="alert">{fehler}</p>;
-  if (prozesse === null) return <p>{t('app.laden')}</p>;
+  if (fehler !== null) return <Hinweis art="fehler">{fehler}</Hinweis>;
+  if (prozesse === null) return <Ladeschimmer beschriftung={t('app.laden')} zeilen={4} />;
+
+  const begriff = suche.trim().toLowerCase();
+  const treffer = prozesse.filter((p) => p.name.toLowerCase().includes(begriff));
 
   return (
-    <section>
-      <h1>{t('prozess.liste.titel')}</h1>
-      <Link className="knopf" to={pfad('/prozesse/neu')}>
-        {t('prozess.liste.neu')}
-      </Link>
+    <>
+      <Seitenkopf
+        titel={t('prozess.liste.titel')}
+        aktionen={
+          prozesse.length === 0 ? undefined : (
+            <Link className="k-knopf k-knopf--gefuellt" to={pfad('/prozesse/neu')}>
+              {t('prozess.liste.neu')}
+            </Link>
+          )
+        }
+      />
+
       {prozesse.length === 0 ? (
-        <p>{t('prozess.liste.leer')}</p>
+        <Leerzustand
+          zeichen="▤"
+          titel={t('prozess.liste.leer')}
+          text={t('prozess.hilfe.nachgelagert')}
+          aktion={
+            <Link className="k-knopf k-knopf--gefuellt" to={pfad('/prozesse/neu')}>
+              {t('prozess.liste.neu')}
+            </Link>
+          }
+        />
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>{t('prozess.feld.name')}</th>
-              <th>{t('prozess.feld.status')}</th>
-              <th>{t('prozess.feld.reichweite')}</th>
-              <th>{t('prozess.feld.kritikalitaet')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {prozesse.map((p) => (
-              <tr key={p.id}>
-                <td>
-                  <Link to={pfad(`/prozesse/${p.id}`)}>{p.name}</Link>
-                </td>
-                <td>{t(`status.${p.status}` as never)}</td>
-                <td>{p.reichweite ?? '—'}</td>
-                <td>{p.kritikalitaet}</td>
-              </tr>
+        <>
+          <div className="listenkopf">
+            <Suchfeld beschriftung={t('prozess.feld.name')} wert={suche} aendern={setSuche} />
+          </div>
+          <Gruppe>
+            {treffer.map((p) => (
+              <ZeileVerweis
+                key={p.id}
+                ziel={pfad(`/prozesse/${p.id}`)}
+                haupt={p.name}
+                zweitzeile={`${orgBezeichnung(
+                  einheiten.find((e) => e.id === p.prozessgeber_org_id),
+                  fachbereiche,
+                )} · ${t(`status.${p.status}` as never)}`}
+                wert={
+                  <>
+                    {p.mitbestimmung_flag && <Abzeichen ton="lila">MB</Abzeichen>}
+                    <Abzeichen>{`${t('prozess.feld.kritikalitaet')} ${p.kritikalitaet}`}</Abzeichen>
+                    {p.tier !== null && (
+                      <Abzeichen ton={tierTon(p.tier)}>{`Tier ${p.tier}`}</Abzeichen>
+                    )}
+                  </>
+                }
+              />
             ))}
-          </tbody>
-        </table>
+          </Gruppe>
+        </>
       )}
-    </section>
+    </>
   );
 }

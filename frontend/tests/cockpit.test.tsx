@@ -108,14 +108,16 @@ describe('Cockpit-Uebersicht', () => {
       { pfad: /\/api\/v1\/cockpit/, koerper: [kopf()] },
     ]);
     zeichne('/de/cockpit');
-    await userEvent.selectOptions(await screen.findByLabelText('Fachbereich'), 'fb-2');
+    // Erst auf die Optionen warten: die Auswahl steht sofort da, ihre
+    // Fachbereiche kommen aus einer zweiten Anfrage.
+    await screen.findByRole('option', { name: 'HR' });
+    await userEvent.selectOptions(screen.getByLabelText('Fachbereich'), 'fb-2');
     expect(
       aufrufe.some((a) => a.url.includes('/api/v1/cockpit?fachbereich_id=fb-2')),
     ).toBe(true);
 
-    // Der Link in die Zeile traegt den Filter weiter.
-    const link = screen.getByRole('link', { name: 'Ansehen' });
-    expect(link).toHaveAttribute(
+    // Die Kachel traegt den Filter weiter.
+    expect(screen.getByTestId('kachel-prozesse_ohne_owner')).toHaveAttribute(
       'href',
       '/de/cockpit/prozesse_ohne_owner?fachbereich=fb-2',
     );
@@ -163,8 +165,11 @@ describe('Cockpit-Zeile', () => {
       { pfad: '/api/v1/datenobjekte', koerper: [] },
     ]);
     zeichne('/de/cockpit/datenobjekte_ohne_kategorie');
-    const zieleLink = await screen.findByRole('link', { name: 'datenobjekte' });
+    const zieleLink = await screen.findByTestId('eintrag-do-1');
     expect(zieleLink).toHaveAttribute('href', '/de/datenobjekte?ohne_kategorie=true');
+    // Das Ziel steht mit seinem Namen da, nicht mit seinem Schlüssel.
+    expect(zieleLink).toHaveTextContent('Datenobjekt');
+    expect(zieleLink).toHaveTextContent('Kategorie fehlt');
 
     await userEvent.click(zieleLink);
     expect(
@@ -179,13 +184,13 @@ describe('Cockpit-Zeile', () => {
       { pfad: '/api/v1/prozesse/p-1', koerper: prozess() },
     ]);
     zeichne('/de/cockpit/prozesse_ohne_owner');
-    await userEvent.click(await screen.findByRole('link', { name: 'prozesse' }));
+    await userEvent.click(await screen.findByTestId('eintrag-p-1'));
     expect(
       await screen.findByRole('heading', { name: 'Rechnungspruefung', level: 1 }),
     ).toBeInTheDocument();
   });
 
-  it('zeigt ein Aggregat, wo die Zeile eines liefert', async () => {
+  it('zeigt die Verteilung als Balken, mit Zahl am Segment', async () => {
     fetchAttrappe([
       ...grundrouten(),
       {
@@ -201,10 +206,17 @@ describe('Cockpit-Zeile', () => {
       },
     ]);
     zeichne('/de/cockpit/tier_verteilung');
-    const aggregat = await screen.findByTestId('aggregat');
-    expect(within(aggregat).getByText('je_technologie')).toBeInTheDocument();
-    expect(within(aggregat).getByText('apps-script: Tier 3 × 2')).toBeInTheDocument();
-    expect(within(aggregat).getByText('2026-09: Tier 3 × 2')).toBeInTheDocument();
+    const technologie = await screen.findByTestId('verteilung-je_technologie');
+    // Die Kategorie mit ihrem Namen, die Menge als Zahl am Segment — nicht
+    // als Länge, die man auf eine Skala beziehen müsste.
+    expect(within(technologie).getByText('Apps Script')).toBeInTheDocument();
+    expect(within(technologie).getAllByText('2').length).toBeGreaterThan(0);
+    // Die Legende benennt die Stufen — Farbe trägt die Aussage nie allein.
+    expect(screen.getAllByText(/^Tier 3$/).length).toBeGreaterThan(0);
+    // Zweimal: als Überschrift der Karte und als Beschriftung der Tabelle
+    // für Vorleseprogramme.
+    expect(screen.getAllByText('Tier-Verteilung je Technologie')).toHaveLength(2);
+    expect(within(screen.getByTestId('verteilung-je_monat')).getByText('2026-09')).toBeInTheDocument();
   });
 
   it('kehrt zur Uebersicht zurueck', async () => {

@@ -53,7 +53,7 @@ async function prozessAnlegen(anfrage: APIRequestContext, name: string): Promise
         process_steps: 'Schritte',
         output: 'Ergebnis',
         customer: 'bereich',
-        ausfallfolge: 'gering',
+        ausfallfolge: 'spuerbar',
       },
     })
   ).json();
@@ -102,12 +102,11 @@ test.describe('Phase 2 in der Oberflaeche', () => {
     await anmelden(page);
     await page.goto(`/de/prozesse/${id}/bewertung`);
 
-    await page
-      .getByRole('button', { name: 'Vollständig — alle sechs Schritte, mit K-Klassen' })
-      .click();
+    await page.getByRole('button', { name: 'Vollständig' }).click();
+    await page.getByRole('button', { name: 'Bewertung durchführen' }).click();
 
     // Profil KI0-DS3-MB1-IT1-RG2-UR2 aus dem durchgerechneten Beispiel.
-    await expect(page.getByText('Schritt 1 von 6 — Kuenstliche Intelligenz')).toBeVisible();
+    await expect(page.getByText('Schritt 1 von 6 — Künstliche Intelligenz')).toBeVisible();
     await antworte(page, 'Nein'); // 1a: kein KI-Einsatz
     await expect(page.getByText('Schritt 2 von 6 — Datenschutz')).toBeVisible();
     // Der Zwischenstand bleibt bis zum Ende unsichtbar.
@@ -130,17 +129,14 @@ test.describe('Phase 2 in der Oberflaeche', () => {
 
     await expect(page.getByTestId('tier')).toHaveText('3');
     await expect(page.getByTestId('profil')).toHaveText('KI0-DS3-MB1-IT1-RG2-UR2');
+    // Die Klassen stehen mit Namen da; die Kennung bleibt als Abzeichen davor.
     const klassen = page.getByTestId('k-klassen');
-    await expect(klassen.getByRole('listitem')).toHaveText([
-      'K1',
-      'K2',
-      'K3',
-      'K4',
-      'K5',
-      'K7',
-      'K8',
-      'K9',
-    ]);
+    await expect(klassen.getByRole('listitem')).toHaveCount(8);
+    for (const kennung of ['K1', 'K2', 'K3', 'K4', 'K5', 'K7', 'K8', 'K9']) {
+      await expect(klassen.getByRole('listitem').filter({ hasText: kennung })).toHaveCount(1);
+    }
+    await expect(klassen).toContainText('Datenschutz-Folgenabschätzung');
+    await expect(page.getByTestId('auflagen')).toContainText('Registrierung im Verzeichnis');
 
     await page.getByRole('button', { name: 'Bewertung speichern' }).click();
     await expect(page.getByRole('heading', { name: 'Bewertungshistorie' })).toBeVisible();
@@ -152,7 +148,8 @@ test.describe('Phase 2 in der Oberflaeche', () => {
     await anmelden(page);
     await page.goto(`/de/prozesse/${id}/bewertung`);
 
-    await page.getByRole('button', { name: 'Schnell — endet beim ersten Tier-3-Treffer' }).click();
+    await page.getByRole('button', { name: 'Schnell' }).click();
+    await page.getByRole('button', { name: 'Bewertung durchführen' }).click();
     await antworte(page, 'Nein'); // 1a
     await antworte(page, 'Ja'); // 2a -> DS 3, Schluss
 
@@ -168,7 +165,8 @@ test.describe('Phase 2 in der Oberflaeche', () => {
     await anmelden(page);
     await page.goto(`/de/prozesse/${id}/bewertung`);
 
-    await page.getByRole('button', { name: 'Schnell — endet beim ersten Tier-3-Treffer' }).click();
+    await page.getByRole('button', { name: 'Schnell' }).click();
+    await page.getByRole('button', { name: 'Bewertung durchführen' }).click();
     await antworte(page, 'Ja'); // 1a: KI im Einsatz
     await page.getByRole('button', { name: 'Ja', exact: true }).click(); // 1b: verbotene Praxis
 

@@ -9,6 +9,7 @@ from sqlalchemy import select
 
 from app.api.deps import AktuellerNutzer, DbSession
 from app.core.permissions import verlange
+from app.models.enums import Rolle, ScopeTyp
 from app.models.organisation import Organisationseinheit, Rollenzuweisung, User
 from app.schemas.organisation import (
     RollenzuweisungAnlegen,
@@ -16,6 +17,12 @@ from app.schemas.organisation import (
     UserAnlegen,
     UserAus,
 )
+from app.schemas.verwaltung import (
+    RolleAus,
+    UserAendern,
+    WirkungAus,
+)
+from app.services import verwaltung as verwaltung_service
 from app.services.changelog import protokolliere_erstellung, protokolliere_loeschung
 
 router = APIRouter(prefix="/admin", tags=["Administration"])
@@ -102,3 +109,62 @@ def entziehe_rolle(zuweisung_id: uuid.UUID, principal: AktuellerNutzer, db: DbSe
     protokolliere_loeschung(db, zuweisung, akteur_user_id=principal.user_id)
     db.delete(zuweisung)
     db.flush()
+
+
+@router.patch("/users/{user_id}", response_model=UserAus)
+def aendere_user(
+    user_id: uuid.UUID, daten: UserAendern, principal: AktuellerNutzer, db: DbSession
+) -> User:
+    """Aktivstatus und Fuehrungskraft.
+
+    Die Fuehrungskraft ist keine Zierde: ab Eskalationsstufe 2 geht die Meldung
+    an sie (A.13.5). Ohne einen Weg, sie zu setzen, liefe die Eskalation an den
+    Betroffenen selbst zurueck.
+    """
+    user = db.get(User, user_id)
+    if user is None:
+        raise HTTPException(status_code=404, detail="Nutzer nicht gefunden")
+    gesetzt = daten.model_dump(exclude_unset=True)
+    return verwaltung_service.aendere_user(
+        db,
+        principal,
+        user,
+        ist_aktiv=daten.ist_aktiv,
+        fuehrungskraft_user_id=daten.fuehrungskraft_user_id,
+        fuehrungskraft_setzen="fuehrungskraft_user_id" in gesetzt,
+    )
+
+
+@router.get("/rollen", response_model=list[RolleAus])
+def rollen(principal: AktuellerNutzer) -> list[RolleAus]:
+    """Die acht Rollen mit ihrer Erklaerung aus A.15."""
+    del principal
+    return [RolleAus(**r) for r in verwaltung_service.alle_rollen()]
+
+
+@router.get("/rollenzuweisungen/wirkung", response_model=WirkungAus)
+def wirkung(
+    user_id: uuid.UUID,
+    rolle: Rolle,
+    scope_typ: ScopeTyp,
+    principal: AktuellerNutzer,
+    db: DbSession,
+    scope_id: uuid.UUID | None = None,
+) -> WirkungAus:
+    """„Diese Zuweisung gibt Zugriff auf N Prozessobjekte."
+
+    Vor der Entscheidung, nicht danach: „Prozess-Owner auf FIN-INT" sagt
+    niemandem, wie viel Zugriff das ist.
+    """
+    return WirkungAus(
+        **vars(
+            verwaltung_service.wirkung(
+                db,
+                principal,
+                user_id=user_id,
+                rolle=rolle,
+                scope_typ=scope_typ,
+                scope_id=scope_id,
+            )
+        )
+    )

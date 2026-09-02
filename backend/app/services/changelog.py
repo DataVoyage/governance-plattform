@@ -124,6 +124,34 @@ def protokolliere_aenderung(
     )
 
 
+def protokolliere_kante(
+    db: Session,
+    objekt: Any,
+    *,
+    vorher: dict[str, Any] | None,
+    nachher: dict[str, Any] | None,
+    akteur_user_id: uuid.UUID | None = None,
+    beschreibung: str = "",
+) -> ChangeLog:
+    """Protokolliert eine Kantenaenderung, nicht eine Spaltenaenderung.
+
+    ``protokolliere_aenderung`` vergleicht Spaltenwerte und schweigt, wenn sich
+    keiner geaendert hat. Eine neue Verknuepfung aendert aber keine Spalte des
+    Knotens, sondern schreibt in eine Verknuepfungstabelle — sie waere sonst
+    der einzige schreibende Vorgang ohne Nachweis (Architektur 10.4).
+    """
+    return protokolliere(
+        db,
+        entity_type=objekt.__tablename__,
+        entity_id=objekt.id,
+        aktion=ChangeAktion.GEAENDERT,
+        vorher=_json_safe(vorher) if vorher is not None else None,
+        nachher=_json_safe(nachher) if nachher is not None else None,
+        akteur_user_id=akteur_user_id,
+        akteur_beschreibung=beschreibung,
+    )
+
+
 def protokolliere_loeschung(
     db: Session, objekt: Any, *, akteur_user_id: uuid.UUID | None = None, beschreibung: str = ""
 ) -> ChangeLog:

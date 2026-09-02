@@ -42,6 +42,26 @@ def profil_von(ki=0, ds=0, mb=0, it=0, rg=0, ur=0) -> dict[str, int]:
     return {"ki": ki, "ds": ds, "mb": mb, "it": it, "rg": rg, "ur": ur}
 
 
+def nutzlast(profil: dict[str, int], modus: str = "vollstaendig") -> dict:
+    """Die Wizard-Nutzlast zu einem Zielprofil, mit Begruendungen zu jeder Frage.
+
+    Ein synthetisch gesetztes Zielprofil widerspricht der Datenlage des
+    Testprozesses fast immer. Die Ausfallfolge ist ein Pflichtfeld, und A.8.4
+    leitet die UR-Dimension vollstaendig daraus ab — ein Test, der `ur=0` will,
+    weicht damit zwangslaeufig ab. Deshalb liegt hier zu jeder Frage eine
+    Begruendung bei; der Server behaelt nur die, zu denen es tatsaechlich eine
+    Abweichung gibt.
+    """
+    antworten = antworten_fuer(profil)
+    return {
+        "modus": modus,
+        "antworten": antworten,
+        "begruendungen": dict.fromkeys(
+            antworten, "Fuer diesen Testfall bewusst abweichend gesetzt."
+        ),
+    }
+
+
 # --- Reihenfolge und Vollstaendigkeit des Baums ---------------------------
 
 
@@ -222,11 +242,23 @@ def wizard(client: TestClient, anmeldung, prozess_id: str, antworten: dict, modu
 
 
 def abschliessen(
-    client: TestClient, anmeldung, prozess_id: str, antworten: dict, modus="vollstaendig"
+    client: TestClient,
+    anmeldung,
+    prozess_id: str,
+    antworten: dict,
+    modus="vollstaendig",
+    begruendungen: dict | None = None,
 ):
+    """Schliesst einen Durchlauf ab; begruendet standardmaessig jede Abweichung.
+
+    Wer die Begruendungspflicht selbst pruefen will, uebergibt ``begruendungen``
+    ausdruecklich — auch als leeres Dictionary.
+    """
+    if begruendungen is None:
+        begruendungen = dict.fromkeys(antworten, "Fuer diesen Testfall bewusst abweichend gesetzt.")
     return client.post(
         f"/api/v1/prozesse/{prozess_id}/bewertungen",
-        json={"modus": modus, "antworten": antworten},
+        json={"modus": modus, "antworten": antworten, "begruendungen": begruendungen},
         headers=anmeldung.kopf,
     )
 
@@ -300,8 +332,9 @@ def test_bewertung_speichern_und_profil_lesen(client: TestClient, owner, prozess
     detail = client.get(f"/api/v1/prozesse/{prozess['id']}", headers=owner.kopf).json()
     assert detail["tier"] == 3
     assert "K4" in detail["ausgeloeste_k_klassen"]
-    # Die Mitbestimmungsstufe schlaegt auf das abgeleitete Flag durch.
-    assert detail["mitbestimmung_flag"] is True
+    # Ohne personenbezogenes Datenobjekt bleibt das Mitbestimmungsflag aus:
+    # A.5 verlangt Personenbezug **und** Wirkung, nicht eines von beidem.
+    assert detail["mitbestimmung_flag"] is False
 
 
 def test_tier_1_und_2_haben_keine_erneuerungsfrist(client: TestClient, owner, prozess) -> None:

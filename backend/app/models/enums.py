@@ -111,6 +111,85 @@ class Zugriffsart(StrEnum):
     LESEN_SCHREIBEN = "lesen_schreiben"
 
 
+class Lauftyp(StrEnum):
+    """Wie ein Tool angestossen wird (Leitdokument A.6).
+
+    Ausdruecklich **keine** eigene Tier-Achse: die Ausfuehrungsart steuert
+    technische Entscheidungen und wirkt in der Bewertung hoechstens als
+    Korrekturfaktor bei Grenzfaellen.
+    """
+
+    INTERAKTIV = "interaktiv"
+    GETRIGGERT = "getriggert"
+    GEPLANT = "geplant"
+
+
+class Wirkungsart(StrEnum):
+    """Die Triage aus Leitdokument A.6: veraendert das Tool oder gestaltet es?"""
+
+    VERAENDERND = "veraendernd"
+    GESTALTEND = "gestaltend"
+
+
+class Ausfuehrungsidentitaet(StrEnum):
+    """Unter welcher Identitaet ein Tool laeuft (Leitdokument A.13.2 Schicht 1).
+
+    ``geteiltes_konto`` ist kein zulaessiger Rahmenwert, sondern der erklaerte
+    Verstoss: A.13.2 Schicht 2 verbietet die umgangene Unternehmensidentitaet
+    organisationsweit. Der Wert steht trotzdem hier, weil er erfassbar sein
+    muss — was nicht erfasst werden kann, kann auch nicht gefunden werden.
+    """
+
+    PERSOENLICH = "persoenlich"
+    BENANNTER_DIENST = "benannter_dienst"
+    GETEILTES_KONTO = "geteiltes_konto"
+
+
+class Klassenbewertung(StrEnum):
+    """Wie eine Technologie eine Anforderungsklasse abdeckt (Leitdokument A.9.3).
+
+    A.9.3 macht daraus einen Entscheidungsschritt: ein ``nicht_erfuellbar`` bei
+    einer ausgeloesten Klasse ist ein Ausschlusskriterium, ein
+    ``kompensierbar`` verlangt eine dokumentierte Massnahme. ``erfuellt``
+    heisst: die Technologie traegt die Klasse ohne Zusatz.
+    """
+
+    ERFUELLT = "erfuellt"
+    KOMPENSIERBAR = "kompensierbar"
+    NICHT_ERFUELLBAR = "nicht_erfuellbar"
+
+
+class Befundart(StrEnum):
+    """Was der Abgleich Klasse gegen Technologie ergeben hat.
+
+    ``ungeprueft`` ist eine eigene Art und kein stiller Erfolg: eine Klasse
+    ohne Matrixeintrag ist nicht abgedeckt, sondern unbeantwortet.
+    """
+
+    ERFUELLT = "erfuellt"
+    KOMPENSIERT = "kompensiert"
+    KOMPENSATION_FEHLT = "kompensation_fehlt"
+    AUSSCHLUSS = "ausschluss"
+    UNGEPRUEFT = "ungeprueft"
+
+
+class Schicht2Verbot(StrEnum):
+    """Die sechs organisationsweiten Verbote aus Leitdokument A.13.2 Schicht 2.
+
+    Abschliessend wie die Gate-2-Ausloeser und aus demselben Grund: eine Liste,
+    die um einen freien Grund ergaenzt werden kann, ist keine Liste mehr. Diese
+    Verbote sind durch keine Prozessbewertung freischaltbar — deshalb faellt bei
+    ihrer Verletzung die erste Eskalationsstufe weg (A.13.5).
+    """
+
+    IDENTITAET_UMGANGEN = "identitaet_umgangen"
+    STATISCHE_ZUGANGSDATEN = "statische_zugangsdaten"
+    UNDEKLARIERTE_QUELLEN = "undeklarierte_quellen"
+    ENTSCHEIDUNG_OHNE_MENSCH = "entscheidung_ohne_mensch"
+    DATEN_INS_OFFENE_NETZ = "daten_ins_offene_netz"
+    PROTOKOLLIERUNG_UMGANGEN = "protokollierung_umgangen"
+
+
 class AlarmTyp(StrEnum):
     KI_VERBOTSTATBESTAND = "ki_verbotstatbestand"
 
@@ -150,15 +229,32 @@ class Ausfallfolge(StrEnum):
 
 
 class Datenkategorie(StrEnum):
-    """Kategorie eines Datenobjekts (Leitdokument A.7)."""
+    """Kategorie eines Datenobjekts — genau die fuenf aus Leitdokument A.7.
+
+    Eine sechste Kategorie „mitarbeiterbezogen" gab es hier zwischenzeitlich;
+    sie ist entfallen. A.7 schliesst sie ausdruecklich aus: „Mitbestimmungs-
+    relevanz ist keine Kategorie, sondern ein abgeleitetes Flag. Sie kann bei
+    jeder Datenkategorie auftreten, weil sie am Verwendungszweck haengt, nicht
+    an der Datenart." Siehe ``docs/entscheidungen.md``, E-19.
+    """
 
     OEFFENTLICH = "oeffentlich"
     INTERN = "intern"
     VERTRAULICH = "vertraulich"
     PERSONENBEZOGEN = "personenbezogen"
-    MITARBEITERBEZOGEN = "mitarbeiterbezogen"
     BESONDERE_KATEGORIE = "besondere_kategorie"
 
+
+#: Aufsteigende Schutzbeduerftigkeit der fuenf Kategorien aus A.7. Traegt die
+#: „Obergrenze der Datenkategorie" im Erlaubnisrahmen (A.13.2 Schicht 1): der
+#: Rahmen deckt alles bis zu dieser Stufe ab, nichts darueber.
+DATENKATEGORIE_ORDNUNG: dict[str, int] = {
+    Datenkategorie.OEFFENTLICH: 0,
+    Datenkategorie.INTERN: 1,
+    Datenkategorie.VERTRAULICH: 2,
+    Datenkategorie.PERSONENBEZOGEN: 3,
+    Datenkategorie.BESONDERE_KATEGORIE: 4,
+}
 
 #: Ordnungen fuer die Maximum-Vererbung (Leitdokument A.4.4).
 REICHWEITE_ORDNUNG: dict[str, int] = {
@@ -184,5 +280,22 @@ AUSFALLFOLGE_STUFE: dict[str, int] = {
     Ausfallfolge.KRITISCH: 3,
 }
 
-#: Datenkategorien, die die Mitbestimmung beruehren (Leitdokument A.8).
-MITBESTIMMUNGSRELEVANTE_KATEGORIEN: frozenset[str] = frozenset({Datenkategorie.MITARBEITERBEZOGEN})
+#: Kategorien mit Personenbezug (Leitdokument A.7, Stufen 4 und 5).
+PERSONENBEZOGENE_KATEGORIEN: frozenset[str] = frozenset(
+    {Datenkategorie.PERSONENBEZOGEN, Datenkategorie.BESONDERE_KATEGORIE}
+)
+
+#: Kategorie, die Leistungs- und Verhaltensdaten einschliesst — A.7 nennt in
+#: der besonderen Kategorie ausdruecklich Entgelt, Gesundheit und
+#: Leistungsbewertung.
+LEISTUNGSDATEN_KATEGORIEN: frozenset[str] = frozenset({Datenkategorie.BESONDERE_KATEGORIE})
+
+#: Ab dieser Stufe ist ein Ergebnis einzelnen Beschaeftigten zurechenbar
+#: (Leitdokument A.8.3, Dimension MB).
+MB_STUFE_ZURECHENBAR = 2
+
+#: Zugriffsarten, die den Prozessausgang direkt veraendern koennen
+#: (Leitdokument A.6, Signaltabelle „veraendert vs. gestaltet").
+SCHREIBENDE_ZUGRIFFSARTEN: frozenset[str] = frozenset(
+    {Zugriffsart.SCHREIBEN, Zugriffsart.LESEN_SCHREIBEN}
+)

@@ -1,37 +1,78 @@
 import { useEffect, useState, type FormEvent } from 'react';
+import { Link } from 'react-router-dom';
 
 import { ApiFehler, api } from '@/api/client';
-import type { DatenObjekt, Datenkategorie } from '@/api/typen';
+import type { DatenObjekt, Datenkategorie, Fachbereich, Nutzer } from '@/api/typen';
 import { useSprache } from '@/i18n/SprachKontext';
+import {
+  Abzeichen,
+  Auswahl,
+  Blatt,
+  Feld,
+  Gruppe,
+  Hinweis,
+  Knopf,
+  Ladeschimmer,
+  Leerzustand,
+  Seitenkopf,
+  Suchfeld,
+  ZeileVerweis,
+  type Ton,
+} from '@/ui';
 import { useSitzung } from '@/zustand/Sitzung';
 
-const KATEGORIEN: Datenkategorie[] = [
+/** Die fünf Kategorien aus Leitdokument A.7, nach Schutzbedarf sortiert. */
+export const KATEGORIEN: Datenkategorie[] = [
   'oeffentlich',
   'intern',
   'vertraulich',
   'personenbezogen',
-  'mitarbeiterbezogen',
   'besondere_kategorie',
 ];
 
+export const KATEGORIE_TON: Record<Datenkategorie, Ton> = {
+  oeffentlich: 'gruen',
+  intern: 'neutral',
+  vertraulich: 'gelb',
+  personenbezogen: 'gelb',
+  besondere_kategorie: 'rot',
+};
+
 /**
- * Datenobjekte mit ihrer Kategorie (Architektur 8.3).
+ * Datenobjekte (Architektur 8.3, Leitdokument A.7).
  *
- * Die Kategorie wird genau hier gepflegt und nirgends sonst: verknüpfte
- * Prozessobjekte lesen sie, statt sie erneut zu erfassen (Leitdokument P5).
+ * Reifegrad 1 verlangt Name, Kategorie, Owner und Quellsystem — mehr nicht,
+ * und das in rund dreißig Sekunden. Deshalb ein Blatt mit fünf Feldern statt
+ * eines eigenen Formularpfads.
  */
 export function DatenobjektListe() {
-  const { t } = useSprache();
+  const { t, pfad } = useSprache();
   const { token } = useSitzung();
   const [datenobjekte, setDatenobjekte] = useState<DatenObjekt[] | null>(null);
-  const [name, setName] = useState('');
+  const [nutzer, setNutzer] = useState<Nutzer[]>([]);
+  const [fachbereiche, setFachbereiche] = useState<Fachbereich[]>([]);
+  const [suche, setSuche] = useState('');
+  const [blattOffen, setBlattOffen] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
+
+  const [name, setName] = useState('');
+  const [kategorie, setKategorie] = useState('');
+  const [owner, setOwner] = useState('');
+  const [fachbereich, setFachbereich] = useState('');
+  const [quellsystem, setQuellsystem] = useState('');
 
   useEffect(() => {
     if (token === null) return;
-    api
-      .datenobjekte(token)
-      .then(setDatenobjekte)
+    Promise.all([
+      api.datenobjekte(token),
+      api.nutzer(token).catch(() => [] as Nutzer[]),
+      api.fachbereiche(token).catch(() => [] as Fachbereich[]),
+    ])
+      .then(([alle, personen, bereiche]) => {
+        setDatenobjekte(alle);
+        setNutzer(personen);
+        setFachbereiche(bereiche);
+      })
       .catch(() => setFehler(t('app.fehler')));
   }, [token, t]);
 
@@ -39,84 +80,141 @@ export function DatenobjektListe() {
     ereignis.preventDefault();
     if (token === null) return;
     try {
-      const angelegt = await api.datenobjektAnlegen(token, { name });
+      const angelegt = await api.datenobjektAnlegen(token, {
+        name,
+        kategorie: kategorie === '' ? null : (kategorie as Datenkategorie),
+        owner_user_id: owner === '' ? null : owner,
+        fachbereich_id: fachbereich === '' ? null : fachbereich,
+        quellsystem: quellsystem === '' ? null : quellsystem,
+      });
       setDatenobjekte((bisher) => [...(bisher ?? []), angelegt]);
       setName('');
+      setKategorie('');
+      setQuellsystem('');
+      setBlattOffen(false);
     } catch (ausnahme) {
       setFehler(ausnahme instanceof ApiFehler ? ausnahme.message : t('app.fehler'));
     }
   }
 
-  async function kategorisieren(id: string, kategorie: string) {
-    if (token === null) return;
-    try {
-      const aktualisiert = await api.datenobjektKategorisieren(
-        token,
-        id,
-        kategorie === '' ? null : (kategorie as Datenkategorie),
-      );
-      setDatenobjekte((bisher) =>
-        (bisher ?? []).map((d) => (d.id === aktualisiert.id ? aktualisiert : d)),
-      );
-    } catch (ausnahme) {
-      setFehler(ausnahme instanceof ApiFehler ? ausnahme.message : t('app.fehler'));
-    }
-  }
+  if (fehler !== null && datenobjekte === null) return <Hinweis art="fehler">{fehler}</Hinweis>;
+  if (datenobjekte === null) return <Ladeschimmer beschriftung={t('app.laden')} zeilen={4} />;
 
-  if (datenobjekte === null)
-    return fehler !== null ? <p role="alert">{fehler}</p> : <p>{t('app.laden')}</p>;
+  const begriff = suche.trim().toLowerCase();
+  const treffer = datenobjekte.filter(
+    (d) =>
+      d.name.toLowerCase().includes(begriff) ||
+      (d.quellsystem ?? '').toLowerCase().includes(begriff),
+  );
+
+  const anlegenKnopf = (
+    <Knopf art="gefuellt" onClick={() => setBlattOffen(true)}>
+      {t('asset.datenobjekte.neu')}
+    </Knopf>
+  );
 
   return (
-    <section>
-      <h1>{t('asset.datenobjekte.titel')}</h1>
+    <>
+      <Seitenkopf
+        titel={t('asset.datenobjekte.titel')}
+        untertitel={t('asset.datenobjekte.hinweis')}
+        aktionen={datenobjekte.length === 0 ? undefined : anlegenKnopf}
+      />
+
+      {fehler !== null && <Hinweis art="fehler">{fehler}</Hinweis>}
+
       {datenobjekte.length === 0 ? (
-        <p>{t('asset.datenobjekte.leer')}</p>
+        <Leerzustand
+          zeichen="◇"
+          titel={t('asset.datenobjekte.leer')}
+          text={t('asset.datenobjekte.hinweis')}
+          aktion={anlegenKnopf}
+        />
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>{t('asset.feld.name')}</th>
-              <th>{t('asset.feld.kategorie')}</th>
-              <th>{t('asset.feld.herkunft')}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {datenobjekte.map((datenobjekt) => (
-              <tr key={datenobjekt.id}>
-                <td>{datenobjekt.name}</td>
-                <td>
-                  <select
-                    aria-label={`${t('asset.feld.kategorie')} — ${datenobjekt.name}`}
-                    value={datenobjekt.kategorie ?? ''}
-                    onChange={(e) => kategorisieren(datenobjekt.id, e.target.value)}
-                  >
-                    <option value="">{t('asset.kategorie.keine')}</option>
-                    {KATEGORIEN.map((kategorie) => (
-                      <option key={kategorie} value={kategorie}>
-                        {kategorie}
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td>{t(`asset.herkunft.${datenobjekt.herkunft}` as never)}</td>
-              </tr>
+        <>
+          <div className="listenkopf">
+            <Suchfeld beschriftung={t('asset.feld.name')} wert={suche} aendern={setSuche} />
+          </div>
+          <Gruppe>
+            {treffer.map((datenobjekt) => (
+              <ZeileVerweis
+                key={datenobjekt.id}
+                ziel={pfad(`/datenobjekte/${datenobjekt.id}`)}
+                haupt={datenobjekt.name}
+                zweitzeile={datenobjekt.quellsystem ?? t('asset.quellsystem.leer')}
+                wert={
+                  datenobjekt.kategorie === null ? (
+                    <Abzeichen ton="gelb" zeichen="!">
+                      {t('asset.kategorie.keine')}
+                    </Abzeichen>
+                  ) : (
+                    <Abzeichen ton={KATEGORIE_TON[datenobjekt.kategorie]}>
+                      {t(`kategorie.${datenobjekt.kategorie}` as never)}
+                    </Abzeichen>
+                  )
+                }
+              />
             ))}
-          </tbody>
-        </table>
+          </Gruppe>
+        </>
       )}
 
-      <form className="formular" onSubmit={anlegen}>
-        <label htmlFor="datenobjekt-name">{t('asset.datenobjekte.neu')}</label>
-        <input
-          id="datenobjekt-name"
-          required
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <button type="submit">{t('asset.speichern')}</button>
-      </form>
+      {blattOffen && (
+        <Blatt
+          titel={t('asset.datenobjekte.neu')}
+          beischrift={t('asset.reifegrad1')}
+          schliessen={() => setBlattOffen(false)}
+        >
+          <form onSubmit={anlegen}>
+            <Feld beschriftung={t('asset.feld.name')} wert={name} aendern={setName} pflicht />
+            <Auswahl
+              beschriftung={t('asset.feld.kategorie')}
+              wert={kategorie}
+              aendern={setKategorie}
+              leertext={t('asset.kategorie.keine')}
+              optionen={KATEGORIEN.map((k) => ({
+                wert: k,
+                text: `${t(`kategorie.${k}` as never)} — ${t(`kategorie.anker.${k}` as never)}`,
+              }))}
+              hilfe={t('asset.kategorie.hilfe')}
+            />
+            <Auswahl
+              beschriftung={t('asset.feld.owner')}
+              wert={owner}
+              aendern={setOwner}
+              leertext="—"
+              optionen={nutzer.map((n) => ({ wert: n.id, text: n.name }))}
+              hilfe={t('asset.owner.hilfe')}
+            />
+            <Auswahl
+              beschriftung={t('asset.feld.fachbereich')}
+              wert={fachbereich}
+              aendern={setFachbereich}
+              leertext="—"
+              optionen={fachbereiche.map((f) => ({ wert: f.id, text: f.name }))}
+            />
+            <Feld
+              beschriftung={t('asset.feld.quellsystem')}
+              wert={quellsystem}
+              aendern={setQuellsystem}
+              hilfe={t('asset.quellsystem.hilfe')}
+              hoechstlaenge={255}
+            />
+            <div className="formularfuss">
+              <Knopf onClick={() => setBlattOffen(false)}>{t('prozess.abbrechen')}</Knopf>
+              <Knopf type="submit" art="gefuellt">
+                {t('asset.speichern')}
+              </Knopf>
+            </div>
+          </form>
+        </Blatt>
+      )}
 
-      {fehler !== null && <p role="alert">{fehler}</p>}
-    </section>
+      <p className="leerhinweis">
+        <Link to={pfad('/cockpit/datenobjekte_ohne_kategorie')}>
+          {t('asset.datenobjekte.ohneKategorie')}
+        </Link>
+      </p>
+    </>
   );
 }

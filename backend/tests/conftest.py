@@ -286,3 +286,30 @@ def prozess_daten(anmelden, organisation):
         return basis
 
     return _daten
+
+
+@pytest.fixture
+def attestieren(client: TestClient):
+    """Gibt die drei Erklaerungen nach Leitdokument A.6 ab.
+
+    Ohne sie ist ein Tool-Objekt nicht mit einem Prozess verknuepfbar. Die
+    Vorbelegung beschreibt den unauffaelligen Fall — ein Mensch steht zwischen
+    Output und Wirkung, es faellt keine Entscheidung ueber einzelne Personen,
+    und es werden keine undeklarierten Quellen verarbeitet. Wer eine dieser
+    Antworten braucht, uebergibt sie als Schluesselwort.
+    """
+
+    def _attestieren(kopf: dict[str, str], tool_id: str, **abweichungen) -> dict:
+        antworten = {
+            "attest_entscheidung_ueber_personen": False,
+            "attest_mensch_dazwischen": True,
+            "attest_undeklarierte_quellen": False,
+        }
+        antworten.update(abweichungen)
+        antwort = client.put(
+            f"/api/v1/tools/{tool_id}/attestierungen", json=antworten, headers=kopf
+        )
+        assert antwort.status_code == 200, antwort.text
+        return antwort.json()
+
+    return _attestieren

@@ -52,7 +52,7 @@ class Themenblock:
 BAUM: tuple[Themenblock, ...] = (
     Themenblock(
         Block.KI,
-        "Kuenstliche Intelligenz",
+        "Künstliche Intelligenz",
         (
             Frage(
                 "1a",
@@ -62,7 +62,7 @@ BAUM: tuple[Themenblock, ...] = (
             ),
             Frage(
                 "1b",
-                "Faellt der Einsatz unter eine nach EU AI Act verbotene Praxis "
+                "Fällt der Einsatz unter eine nach EU AI Act verbotene Praxis "
                 "(etwa Social Scoring, Emotionserkennung am Arbeitsplatz, "
                 "biometrische Kategorisierung)?",
                 stufe_bei_ja=KI_VERBOTEN,
@@ -71,14 +71,14 @@ BAUM: tuple[Themenblock, ...] = (
             Frage(
                 "1c",
                 "Handelt es sich um einen Hochrisiko-Anwendungsfall nach Anhang III "
-                "des EU AI Act (etwa Personalauswahl, Kreditwuerdigkeit, kritische "
+                "des EU AI Act (etwa Personalauswahl, Kreditwürdigkeit, kritische "
                 "Infrastruktur)?",
                 stufe_bei_ja=3,
             ),
             Frage(
                 "1d",
-                "Interagiert das System unmittelbar mit natuerlichen Personen oder "
-                "erzeugt es Inhalte, die als menschlich erscheinen koennen?",
+                "Interagiert das System unmittelbar mit natürlichen Personen oder "
+                "erzeugt es Inhalte, die als menschlich erscheinen können?",
                 stufe_bei_ja=2,
             ),
         ),
@@ -107,13 +107,13 @@ BAUM: tuple[Themenblock, ...] = (
         (
             Frage(
                 "3a",
-                "Ist eine Verhaltens- oder Leistungskontrolle von Beschaeftigten moeglich?",
+                "Ist eine Verhaltens- oder Leistungskontrolle von Beschäftigten möglich?",
                 stufe_bei_ja=3,
             ),
             Frage("3b", "Werden mitarbeiterbezogene Daten verarbeitet?", stufe_bei_ja=2),
             Frage(
                 "3c",
-                "Veraendert der Prozess den Arbeitsablauf von Beschaeftigten spuerbar?",
+                "Verändert der Prozess den Arbeitsablauf von Beschäftigten spürbar?",
                 stufe_bei_ja=1,
             ),
         ),
@@ -131,12 +131,12 @@ BAUM: tuple[Themenblock, ...] = (
             Frage(
                 "4b",
                 "Werden vertrauliche Daten verarbeitet oder besteht eine "
-                "Schnittstelle nach ausserhalb des Unternehmens?",
+                "Schnittstelle nach außerhalb des Unternehmens?",
                 stufe_bei_ja=2,
             ),
             Frage(
                 "4c",
-                "Werden ausschliesslich interne, nicht vertrauliche Daten verarbeitet?",
+                "Werden ausschließlich interne, nicht vertrauliche Daten verarbeitet?",
                 stufe_bei_ja=1,
             ),
         ),
@@ -157,7 +157,7 @@ BAUM: tuple[Themenblock, ...] = (
             ),
             Frage(
                 "5c",
-                "Besteht eine sonstige regulatorische Beruehrung?",
+                "Besteht eine sonstige regulatorische Berührung?",
                 stufe_bei_ja=1,
             ),
         ),
@@ -168,15 +168,15 @@ BAUM: tuple[Themenblock, ...] = (
         (
             Frage(
                 "6a",
-                "Gefaehrdet ein Ausfall den Geschaeftsbetrieb oder wesentliche Umsaetze?",
+                "Gefährdet ein Ausfall den Geschäftsbetrieb oder wesentliche Umsätze?",
                 stufe_bei_ja=3,
             ),
             Frage(
                 "6b",
-                "Fuehrt ein Ausfall zu einer spuerbaren Beeintraechtigung?",
+                "Führt ein Ausfall zu einer spürbaren Beeinträchtigung?",
                 stufe_bei_ja=2,
             ),
-            Frage("6c", "Fuehrt ein Ausfall zu einer geringen Beeintraechtigung?", stufe_bei_ja=1),
+            Frage("6c", "Führt ein Ausfall zu einer geringen Beeinträchtigung?", stufe_bei_ja=1),
         ),
     ),
 )

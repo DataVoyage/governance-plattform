@@ -62,9 +62,9 @@ def setze_konfiguration(
     Die Aenderung laeuft wie jede andere schreibende Aktion ueber den
     ``change_log`` und ist damit selbst nachvollziehbar (Architektur 3.2).
     """
-    verlange(principal.ist_governance, "Governance-Einstellungen aendert die Governance-Rolle")
+    verlange(principal.ist_governance, "Governance-Einstellungen ändert die Governance-Rolle")
     if schluessel not in konfig_service.STANDARDWERTE:
-        raise HTTPException(status_code=404, detail="Unbekannter Konfigurationsschluessel")
+        raise HTTPException(status_code=404, detail="Unbekannter Konfigurationsschlüssel")
     konfig_service.initialisiere(db)
     bestehend = db.execute(
         select(Konfiguration).where(Konfiguration.schluessel == schluessel)

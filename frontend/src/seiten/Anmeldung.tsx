@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 
-import { Kopfzeile } from '@/komponenten/Layout';
 import { useSprache } from '@/i18n/SprachKontext';
+import { Feld, Hinweis, Knopf } from '@/ui';
 import { useSitzung } from '@/zustand/Sitzung';
 
 /**
@@ -34,28 +34,25 @@ export function Anmeldung() {
   }
 
   return (
-    <div className="huelle">
-      <Kopfzeile />
-      <main>
+    <div className="anmeldeflaeche">
+      <form className="anmeldekarte" onSubmit={absenden}>
+        <span className="zeichen" aria-hidden="true">
+          G
+        </span>
         <h1>{t('anmeldung.titel')}</h1>
-        <p>{t('anmeldung.hinweis')}</p>
-        <form onSubmit={absenden} className="formular">
-          <fieldset>
-            <legend>{t('anmeldung.entwicklungsmodus')}</legend>
-            <label htmlFor="kennung">{t('anmeldung.kennung')}</label>
-            <input
-              id="kennung"
-              required
-              value={kennung}
-              onChange={(e) => setKennung(e.target.value)}
-            />
-            <label htmlFor="name">{t('anmeldung.name')}</label>
-            <input id="name" value={name} onChange={(e) => setName(e.target.value)} />
-            <button type="submit">{t('anmeldung.absenden')}</button>
-          </fieldset>
-        </form>
-        {fehler !== null && <p role="alert">{fehler}</p>}
-      </main>
+        <p className="untertitel">{t('anmeldung.hinweis')}</p>
+
+        <div className="entwicklungsmodus">
+          <span className="etikett">{t('anmeldung.entwicklungsmodus')}</span>
+          <Feld beschriftung={t('anmeldung.kennung')} wert={kennung} aendern={setKennung} pflicht />
+          <Feld beschriftung={t('anmeldung.name')} wert={name} aendern={setName} />
+          <Knopf type="submit" art="gefuellt" gross breit>
+            {t('anmeldung.absenden')}
+          </Knopf>
+        </div>
+
+        {fehler !== null && <Hinweis art="fehler">{fehler}</Hinweis>}
+      </form>
     </div>
   );
 }

@@ -3,7 +3,18 @@ import { MemoryRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 
 import { App } from '@/App';
-import type { Prozess, Rollenzuweisung } from '@/api/typen';
+import type {
+  Anforderungsklasse,
+  Geerbt,
+  Prozess,
+  Rahmen,
+  RahmenElement,
+  Rollenzuweisung,
+  Schicht2VerbotEintrag,
+  Technologie,
+  Toolbefund,
+  ToolObjekt,
+} from '@/api/typen';
 import { SitzungsAnbieter } from '@/zustand/Sitzung';
 
 export const PROFIL: {
@@ -25,6 +36,8 @@ export const PROFIL: {
     },
   ],
 };
+
+export const FACHBEREICHE = [{ id: 'fb-1', name: 'Finance', code: 'fin' }];
 
 export const EINHEITEN = [
   { id: 'org-int', fachbereich_id: 'fb-1', ebene: 'INT' as const, land_code: null },
@@ -48,15 +61,146 @@ export function prozess(ueberschreibungen: Partial<Prozess> = {}): Prozess {
     reichweite: 'bereich',
     kritikalitaet: 2,
     mitbestimmung_flag: false,
+    schritt_anzahl: 3,
+    schritte_zu_viele: false,
     input_datenobjekt_ids: [],
     output_datenobjekt_ids: [],
     vorgelagert_ids: [],
     nachgelagert_ids: [],
+    erlaubte_externe_ziele: [],
     umsetzungen: [],
     tool_objekt_ids: [],
     tier: null,
     ausgeloeste_k_klassen: [],
     bewertung_gueltig_bis: null,
+    ...ueberschreibungen,
+  };
+}
+
+export function geerbt(ueberschreibungen: Partial<Geerbt> = {}): Geerbt {
+  return {
+    kritikalitaet: 0,
+    reichweite: null,
+    tier: null,
+    mitbestimmung_flag: false,
+    k_klassen: [],
+    quelle_prozess_ids: [],
+    beitraege: [],
+    ...ueberschreibungen,
+  };
+}
+
+/**
+ * Ein attestiertes Tool-Objekt als Ausgangslage.
+ *
+ * Die Vorbelegung beschreibt den unauffaelligen Fall aus A.6 — ein Mensch
+ * steht zwischen Output und Wirkung. Tests, die den offenen Zustand brauchen,
+ * setzen die drei Felder ausdruecklich auf ``null``.
+ */
+export function tool(ueberschreibungen: Partial<ToolObjekt> = {}): ToolObjekt {
+  return {
+    id: 'tool-1',
+    name: 'Rechnungs-Skript',
+    beschreibung: '',
+    technologie: 'apps-script',
+    kategorie: null,
+    technischer_owner_user_id: null,
+    stellvertretung_user_id: null,
+    organisationseinheit_id: 'org-de',
+    lauftyp: null,
+    ausfuehrungsidentitaet: null,
+    statische_zugangsdaten: null,
+    externe_ziele: [],
+    herkunft: 'manuell',
+    quelle: null,
+    externe_id: null,
+    status: 'bestaetigt',
+    metadaten: {},
+    letzte_aktivitaet_am: null,
+    prozessobjekt_ids: [],
+    geerbt: geerbt(),
+    attest_entscheidung_ueber_personen: false,
+    attest_mensch_dazwischen: true,
+    attest_undeklarierte_quellen: false,
+    attestiert_am: '2026-08-01T10:00:00+00:00',
+    attestiert_von_user_id: 'user-1',
+    attestierung_vollstaendig: true,
+    wirkungsart: 'gestaltend',
+    wirkungsart_grund: 'nur_lesend',
+    schreibgeschuetzte_felder: [],
+    ...ueberschreibungen,
+  };
+}
+
+/** Ein Rahmenelement ohne Abweichung — der unauffällige Fall. */
+export function rahmenElement(
+  schluessel: string,
+  ueberschreibungen: Partial<RahmenElement> = {},
+): RahmenElement {
+  return {
+    schluessel,
+    erlaubt: [],
+    gemessen: [],
+    abweichung: [],
+    messbar: schluessel !== 'reichweite',
+    eingehalten: true,
+    ...ueberschreibungen,
+  };
+}
+
+/** Ein eingehaltener Erlaubnisrahmen mit allen sieben Elementen (A.13.2). */
+export function rahmen(ueberschreibungen: Partial<Rahmen> = {}): Rahmen {
+  return {
+    elemente: [
+      'datenobjekte',
+      'datenkategorie',
+      'reichweite',
+      'externe_ziele',
+      'zugriffsart',
+      'ausfuehrungsart',
+      'ausfuehrungsidentitaet',
+    ].map((schluessel) => rahmenElement(schluessel)),
+    tier: null,
+    quelle_prozess_ids: [],
+    eingehalten: true,
+    schicht2_befunde: [],
+    ...ueberschreibungen,
+  };
+}
+
+export const SCHICHT2_VERBOTE: Schicht2VerbotEintrag[] = [
+  { schluessel: 'identitaet_umgangen', automatisch_erkennbar: true },
+  { schluessel: 'statische_zugangsdaten', automatisch_erkennbar: true },
+  { schluessel: 'undeklarierte_quellen', automatisch_erkennbar: true },
+  { schluessel: 'entscheidung_ohne_mensch', automatisch_erkennbar: true },
+  { schluessel: 'daten_ins_offene_netz', automatisch_erkennbar: false },
+  { schluessel: 'protokollierung_umgangen', automatisch_erkennbar: false },
+];
+
+export const TECHNOLOGIEN: Technologie[] = [
+  { schluessel: 'apps-script', name: 'Apps Script' },
+  { schluessel: 'python-kubernetes', name: 'Python / Kubernetes' },
+  { schluessel: 'bigquery-gcs', name: 'BigQuery / Cloud Storage' },
+  { schluessel: 'appsheet', name: 'AppSheet' },
+];
+
+export const ANFORDERUNGSKLASSEN: Anforderungsklasse[] = Array.from({ length: 10 }, (_, i) => ({
+  schluessel: `K${i + 1}`,
+  name: `Anforderungsklasse ${i + 1}`,
+  zweck: `Was bei K${i + 1} zu tun ist, in einem Satz für die Ergebnisseite.`,
+  ausloeser: `Bedingung für K${i + 1}.`,
+}));
+
+/** Ein Tool ohne ausgelöste Klassen — der unauffällige Fall. */
+export function klassenbefund(ueberschreibungen: Partial<Toolbefund> = {}): Toolbefund {
+  return {
+    tool_id: 'tool-1',
+    tool_name: 'Rechnungs-Skript',
+    technologie: 'apps-script',
+    k_klassen: [],
+    befunde: [],
+    ausschluss: false,
+    offen: 0,
     ...ueberschreibungen,
   };
 }
@@ -69,8 +213,28 @@ export interface Route {
   koerper: unknown | ((aufrufNummer: number) => unknown);
 }
 
+/**
+ * Antworten, die fast jede Seite braucht und die kein Test einzeln setzen soll.
+ * Eine ausdrueckliche Route im Test gewinnt, weil sie zuerst geprueft wird.
+ */
+const STANDARDROUTEN: Route[] = [
+  { pfad: '/api/v1/fachbereiche', koerper: FACHBEREICHE },
+  { pfad: '/api/v1/organisationseinheiten', koerper: EINHEITEN },
+  { pfad: '/api/v1/datenobjekte', koerper: [] },
+  { pfad: '/api/v1/admin/users', koerper: [] },
+  { pfad: /\/erlaubnisrahmen$/, koerper: rahmen() },
+  // Der Prozessbefund ist eine Liste, der Toolbefund ein einzelner —
+  // deshalb zwei Muster und nicht eines.
+  { pfad: /\/prozesse\/[^/]+\/klassenbefund$/, koerper: [] },
+  { pfad: /\/klassenbefund$/, koerper: klassenbefund() },
+  { pfad: '/api/v1/anforderungsklassen', koerper: ANFORDERUNGSKLASSEN },
+  { pfad: '/api/v1/technologien', koerper: TECHNOLOGIEN },
+  { pfad: '/api/v1/schicht2-verbote', koerper: SCHICHT2_VERBOTE },
+];
+
 /** Ersetzt fetch durch eine Tabelle aus Pfadmustern und Antworten. */
-export function fetchAttrappe(routen: Route[]) {
+export function fetchAttrappe(eigene: Route[]) {
+  const routen = [...eigene, ...STANDARDROUTEN];
   const aufrufe: { url: string; methode: string; koerper: unknown }[] = [];
   const attrappe = vi.fn(async (eingabe: RequestInfo | URL, init?: RequestInit) => {
     const url = String(eingabe);

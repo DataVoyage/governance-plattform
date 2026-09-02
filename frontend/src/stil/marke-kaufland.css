@@ -1,0 +1,182 @@
+/*
+ * Markenschicht „Kaufland" (Vorschau).
+ *
+ * Sie uebersteuert ausschliesslich Token — kein Baustein wird angefasst. Genau
+ * dafuer ist die Token-Schicht da: eine Marke ist ein Satz Werte, keine zweite
+ * Komponentenbibliothek.
+ *
+ * Gesetzt sind bei Kaufland oeffentlich nur zwei Farben: Rot #E10915
+ * (Pantone 2035 C) und Weiss. Alles Weitere — Grauabstufungen, Statusfarben,
+ * Dunkelmodus — ist hier daraus abgeleitet und als Vorschlag zu lesen.
+ *
+ * Ein Punkt braucht eine bewusste Entscheidung: Das Markenrot ist zugleich die
+ * Farbe der Hauptaktion und die Farbe des Zustands „non-compliant". Beides in
+ * derselben Nuance waere fahrlaessig — deshalb bleibt das Markenrot der Aktion
+ * vorbehalten, waehrend der rote Zustand ein dunkleres Bordeaux traegt und wie
+ * ueberall zusaetzlich Symbol und Wort fuehrt.
+ */
+
+:root[data-marke='kaufland'] {
+  /* Marke */
+  --farbe-akzent: #e10915;
+  --farbe-akzent-gedaempft: #e109151f;
+
+  /* Zustandsfarben: bewusst neben dem Markenrot */
+  --farbe-gruen: #1a7f37;
+  --farbe-gruen-gedaempft: #1a7f371f;
+  --farbe-gelb: #9a6700;
+  --farbe-gelb-gedaempft: #d4a01e29;
+  --farbe-rot: #8f0b14;
+  --farbe-rot-gedaempft: #8f0b141f;
+  --farbe-lila: #5a3fa0;
+  --farbe-lila-gedaempft: #5a3fa01f;
+  --farbe-blau: #1a56b8;
+  --farbe-blau-gedaempft: #1a56b81f;
+  --farbe-grau: #5a5a5a;
+  --farbe-grau-gedaempft: #1a1a1a12;
+
+  /* Flaechen: weisse Karten auf warmem Grau, klare Kanten statt Weichzeichnung */
+  --text-primaer: #1a1a1a;
+  --text-sekundaer: #5a5a5a;
+  --text-tertiaer: #8c8c8c;
+  --text-auf-akzent: #ffffff;
+
+  --flaeche: #ffffff;
+  --flaeche-gruppiert: #f4f4f4;
+  --flaeche-erhoben: #ffffff;
+  --flaeche-material: #ffffff;
+  --flaeche-seitenleiste: #ececec;
+  --fuellung-steuerung: #1a1a1a0f;
+  --fuellung-steuerung-aktiv: #ffffff;
+
+  --trennlinie: #1a1a1a24;
+  --trennlinie-kraeftig: #1a1a1a52;
+
+  /* Schrift: die Hausschrift ist nicht frei lizenziert, deshalb eine sachliche
+     Grotesk als Ersatz — kein Nachladen, gleiche Anmutung. */
+  --schrift: 'Inter', 'Helvetica Neue', Helvetica, Arial, 'Segoe UI', sans-serif;
+
+  --gross-titel: 800 2.125rem / 2.4375rem var(--schrift);
+  --titel-1: 800 1.75rem / 2rem var(--schrift);
+  --titel-2: 700 1.375rem / 1.625rem var(--schrift);
+  --titel-3: 700 1.1875rem / 1.5rem var(--schrift);
+  --kopfzeile-schrift: 700 1rem / 1.375rem var(--schrift);
+  --flies: 400 1rem / 1.5rem var(--schrift);
+  --hinweis-schrift: 400 0.875rem / 1.25rem var(--schrift);
+  --fussnote: 400 0.8125rem / 1.125rem var(--schrift);
+  --etikett: 700 0.75rem / 1rem var(--schrift);
+
+  /* Form: kantiger, flacher, dichter als „Klar" */
+  --radius-steuerung: 0.25rem;
+  --radius-karte: 0.375rem;
+  --radius-blatt: 0.5rem;
+
+  --tiefe-karte: 0 0 0 1px #1a1a1a14;
+  --tiefe-erhoben: 0 2px 8px #1a1a1a1f;
+  --tiefe-blatt: 0 12px 40px #1a1a1a47;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root[data-marke='kaufland']:not([data-farbschema='hell']) {
+    --farbe-akzent: #ff3b47;
+    --farbe-akzent-gedaempft: #ff3b4733;
+    --farbe-gruen: #3fb950;
+    --farbe-gruen-gedaempft: #3fb95029;
+    --farbe-gelb: #d29922;
+    --farbe-gelb-gedaempft: #d2992229;
+    --farbe-rot: #ff7b72;
+    --farbe-rot-gedaempft: #ff7b7229;
+    --farbe-lila: #a371f7;
+    --farbe-lila-gedaempft: #a371f729;
+    --farbe-blau: #79b8ff;
+    --farbe-blau-gedaempft: #79b8ff29;
+    --farbe-grau: #9e9e9e;
+    --farbe-grau-gedaempft: #ffffff14;
+
+    --text-primaer: #f5f5f5;
+    --text-sekundaer: #b0b0b0;
+    --text-tertiaer: #7a7a7a;
+
+    --flaeche: #1f1f1f;
+    --flaeche-gruppiert: #141414;
+    --flaeche-erhoben: #2a2a2a;
+    --flaeche-material: #1f1f1f;
+    --flaeche-seitenleiste: #1a1a1a;
+    --fuellung-steuerung: #ffffff1a;
+    --fuellung-steuerung-aktiv: #3a3a3a;
+
+    --trennlinie: #ffffff1f;
+    --trennlinie-kraeftig: #ffffff47;
+
+    --tiefe-karte: 0 0 0 1px #ffffff14;
+    --tiefe-erhoben: 0 2px 8px #00000080;
+    --tiefe-blatt: 0 12px 40px #000000a6;
+  }
+}
+
+:root[data-marke='kaufland'][data-farbschema='dunkel'] {
+  --farbe-akzent: #ff3b47;
+  --farbe-akzent-gedaempft: #ff3b4733;
+  --farbe-gruen: #3fb950;
+  --farbe-gruen-gedaempft: #3fb95029;
+  --farbe-gelb: #d29922;
+  --farbe-gelb-gedaempft: #d2992229;
+  --farbe-rot: #ff7b72;
+  --farbe-rot-gedaempft: #ff7b7229;
+  --farbe-lila: #a371f7;
+  --farbe-lila-gedaempft: #a371f729;
+  --farbe-blau: #79b8ff;
+  --farbe-blau-gedaempft: #79b8ff29;
+  --farbe-grau: #9e9e9e;
+  --farbe-grau-gedaempft: #ffffff14;
+
+  --text-primaer: #f5f5f5;
+  --text-sekundaer: #b0b0b0;
+  --text-tertiaer: #7a7a7a;
+
+  --flaeche: #1f1f1f;
+  --flaeche-gruppiert: #141414;
+  --flaeche-erhoben: #2a2a2a;
+  --flaeche-material: #1f1f1f;
+  --flaeche-seitenleiste: #1a1a1a;
+  --fuellung-steuerung: #ffffff1a;
+  --fuellung-steuerung-aktiv: #3a3a3a;
+
+  --trennlinie: #ffffff1f;
+  --trennlinie-kraeftig: #ffffff47;
+
+  --tiefe-karte: 0 0 0 1px #ffffff14;
+  --tiefe-erhoben: 0 2px 8px #00000080;
+  --tiefe-blatt: 0 12px 40px #000000a6;
+}
+
+/* --- Wenige Formentscheidungen, die Token allein nicht tragen ------------ */
+
+/* Die Seitenleiste bleibt hellgrau und ruhig; das Markenrot traegt die
+   Markenkachel und der aktive Reiter — dort wirkt es, ohne den Blick
+   dauerhaft zu binden. */
+:root[data-marke='kaufland'] .seitenleiste {
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+:root[data-marke='kaufland'] .seitenleiste .marke .zeichen {
+  background: #e10915;
+  color: #ffffff;
+  border-radius: 0.25rem;
+  font-weight: 800;
+}
+
+/* Handelstypische Betonung: Hauptaktionen und Etiketten laufen kraeftiger. */
+:root[data-marke='kaufland'] .k-knopf {
+  font-weight: 700;
+}
+
+:root[data-marke='kaufland'] .k-abzeichen {
+  border-radius: 0.25rem;
+  padding-inline: 0.4rem;
+}
+
+:root[data-marke='kaufland'] .k-chip {
+  border-radius: 0.25rem;
+}

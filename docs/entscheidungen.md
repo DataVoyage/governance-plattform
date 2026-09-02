@@ -89,11 +89,13 @@ Migrationen trotzdem bei jedem Lauf einmal vollständig durch.
 
 ## E-6 — Datenkategorien
 
-Die Kategorien eines Datenobjekts (Leitdokument A.7) sind hier als
-`oeffentlich`, `intern`, `vertraulich`, `personenbezogen`, `mitarbeiterbezogen`
-und `besondere_kategorie` gesetzt. Sie sind bewusst nullable, damit die
-Cockpit-Ansicht „Datenobjekte ohne Kategorie" (Architektur 8.7) überhaupt
-etwas zu zeigen hat.
+Die Kategorien eines Datenobjekts sind die fünf aus Leitdokument A.7:
+`oeffentlich`, `intern`, `vertraulich`, `personenbezogen` und
+`besondere_kategorie`. Sie sind bewusst nullable, damit die Cockpit-Ansicht
+„Datenobjekte ohne Kategorie" (Architektur 8.7) überhaupt etwas zu zeigen hat.
+
+**Korrigiert am 2026-09-01, siehe E-19:** Zwischenzeitlich gab es eine sechste
+Kategorie `mitarbeiterbezogen`.
 
 ## E-7 — Fragen des Bewertungsbaums und Bedingungen der K-Klassen
 
@@ -147,6 +149,11 @@ optionalem Kommentar, nie ein Freitextfeld: nur so bleibt auswertbar, was
 Cockpit und Lenkung später auswerten müssen. Die Oberfläche baut ihre
 Checkliste aus dem Katalog-Endpunkt, damit Wortlaut und Reihenfolge an genau
 einer Stelle stehen.
+
+**Korrigiert am 2026-09-02, siehe E-32:** Der hier ausformulierte Katalog war
+frei erfunden und sagte etwas anderes als A.10.2 und A.10.3. Die Struktur —
+Wahrheitswerte mit Kommentar, Katalog-Endpunkt als einzige Quelle — hat sich
+gehalten; die Aussagen selbst sind ersetzt.
 
 ## E-11 — Definition zweier Cockpit-Zeilen
 
@@ -253,3 +260,914 @@ keine Entscheidung vorweg:
    und nicht als harter Fremdschlüssel aufgelöst.
 5. **Ausstellung der Service-Zugangsdaten** — die Query-API prüft Tokens aus
    `GP_QUERY_API_SERVICE_TOKENS`; wer sie ausstellt, ist Betriebsfrage.
+
+## E-19 — Mitbestimmung ist ein abgeleitetes Flag, keine Datenkategorie
+
+**Diese Entscheidung korrigiert E-2 und E-6.** Beide entstanden ohne Zugriff auf
+das Leitdokument; seit es vorliegt, ist die Abweichung nicht mehr haltbar.
+
+**Vorgabe:** A.7 sagt wörtlich: „Mitbestimmungsrelevanz ist keine Kategorie,
+sondern ein abgeleitetes Flag. Sie kann bei jeder Datenkategorie auftreten, weil
+sie am Verwendungszweck hängt, nicht an der Datenart. In die Kategorienliste
+gepresst erzeugt sie systematisch falsche Einordnungen." A.5 gibt die
+Ableitungsregel: Personenbezug **und** (Wirkung auf einzelne Person **oder**
+Leistungs-/Verhaltensdaten).
+
+**Vorher:** eine sechste Kategorie `mitarbeiterbezogen`, und das Flag war wahr,
+sobald ein Datenobjekt sie trug oder irgendeine Bewertung eine
+Mitbestimmungsstufe über null hatte — eine Disjunktion, wo die Vorgabe eine
+Konjunktion verlangt.
+
+**Jetzt:** Die Kategorie ist entfallen (Migration `a1c4e7b2f930`, Bestand wandert
+nach `personenbezogen`). Das Flag entsteht aus beiden Hälften:
+
+1. **Personenbezug** — mindestens ein referenziertes Datenobjekt trägt
+   `personenbezogen` oder `besondere_kategorie`.
+2. **Wirkung** — entweder die besondere Kategorie selbst (A.7 zählt dort
+   Entgelt, Gesundheit und Leistungsbewertung auf, also genau Leistungs- und
+   Verhaltensdaten) oder eine Bewertung mit MB-Stufe ≥ 2, ab der das Ergebnis
+   nach A.8.3 einzelnen Beschäftigten zurechenbar ist.
+
+**Folge, die man kennen muss:** Ein Prozess mit personenbezogenen Daten, aber
+ohne Bewertung und ohne besondere Kategorie trägt das Flag jetzt **nicht** mehr.
+Das ist gewollt — die zweite Hälfte der Regel ist aus den Stammdaten allein
+nicht bestimmbar. Mit den Attestierungen des technischen Owners (A.6, Fragen 1
+und 2) bekommt sie in AP-3 eine zweite Quelle.
+
+## E-20 — Quellsystem getrennt von der Sync-Quelle
+
+Reifegrad 1 in A.7 verlangt Name, Kategorie, Owner **und Quellsystem**. Das
+Datenobjekt trug bisher nur `quelle`, und das ist die Kennung des
+Import-Adapters (Architektur 7.2), nicht die fachliche Herkunft. Beides fällt
+oft zusammen, ist aber nicht dasselbe: ein manuell angelegtes Datenobjekt hat
+ein Quellsystem, aber keine Sync-Quelle. Deshalb ein eigenes Feld
+`quellsystem`.
+
+## E-21 — Die Wirkungsvorschau rechnet keine Tiers vor
+
+`GET /api/v1/datenobjekte/{id}/wirkung?kategorie=…` beantwortet die Frage aus
+A.4.7 („Was passiert, wenn Datenobjekt D höher eingestuft wird?") mit dem, was
+heute berechenbar ist: den referenzierenden Prozessobjekten samt künftigem
+Mitbestimmungsflag und den betroffenen Tool-Objekten.
+
+Ein künftiges Tier weist sie **nicht** aus. Das Tier entsteht heute aus den
+Antworten des Bewertungs-Wizards, nicht aus den Datenkategorien; eine
+vorgerechnete Zahl wäre erfunden. Sobald die Bewertung ihre DS-Dimension aus den
+Kategorien ableitet (Umsetzungsplan AP-4), liefert dieselbe Abfrage sie mit.
+
+Die Vorschau arbeitet auf einer Probe-Zuweisung, die im `finally` zurückgesetzt
+wird — sie ändert nichts und schreibt nichts in den `change_log`.
+
+## E-22 — Ohne Attestierung keine Prozessverknüpfung
+
+A.6 nennt drei Erklärungen, die Telemetrie nicht liefern kann, und markiert die
+dritte ausdrücklich als „die wichtigste — sie fängt genau die Lücke, die das
+Datenobjekt-Modell strukturell nicht schließen kann". Das Dokument sagt aber
+nicht, wann sie fällig sind.
+
+**Entschieden:** vor der ersten Prozesskante. `POST /tools/{id}/prozesse`
+weist die Verknüpfung mit 422 ab, solange eine der drei Antworten fehlt.
+
+Der Grund ist nicht Formalismus. Mit der Prozesskante erbt das Tool eine
+Klassifikation (A.4.4) und tritt in den Erlaubnisrahmen ein (A.13.2). Beides
+setzt die Triage „verändert oder gestaltet" voraus, und die trägt Attestierung 2.
+Ein Tool, das erbt, bevor jemand erklärt hat, ob ein Mensch zwischen Output und
+Wirkung steht, trägt eine Einstufung, die niemand verantwortet.
+
+**Die drei Antworten kommen zusammen oder gar nicht.** Ein Teil-Update wäre
+falsch: die Attestierung ist eine Erklärung zu einem Zeitpunkt, keine Sammlung
+unabhängiger Felder. Deshalb ein eigener Endpunkt
+`PUT /tools/{id}/attestierungen`, der alle drei verlangt und Zeitpunkt und
+Person **serverseitig** setzt — A.6 verlangt die Erklärung „mit Namen, nicht als
+Formularfeld", und ein mitgeschicktes Datum wäre kein Nachweis.
+
+`NULL` heißt unbeantwortet und ist von einem erklärten „Nein" zu unterscheiden.
+Bestandsdaten wurden deshalb nicht mit `false` vorbelegt: das wäre eine
+Erklärung, die niemand abgegeben hat. Die Oberfläche zeigt den offenen Zustand
+als leere segmentierte Steuerung, nicht als Schalter in Ruhestellung.
+
+## E-23 — Attestierung 1 ist die zweite Quelle der Mitbestimmung
+
+E-19 hielt fest, dass die zweite Hälfte der A.5-Regel — die Wirkung auf Einzelne
+— aus Stammdaten allein nicht bestimmbar ist, und kündigte für AP-3 eine zweite
+Quelle an. Das ist Attestierung 1: „Fließt das Ergebnis in eine Entscheidung
+über einzelne Personen?"
+
+Trägt ein verknüpftes Tool-Objekt hier ein erklärtes Ja, gilt die zweite Hälfte
+als erfüllt. Das Flag entsteht damit aus drei Quellen, in dieser Reihenfolge
+geprüft: besondere Datenkategorie (A.7 zählt dort Entgelt, Gesundheit und
+Leistungsbewertung auf), erklärte Entscheidung über Personen (A.6), oder
+MB-Stufe ≥ 2 aus der Bewertung (A.8.3).
+
+Attestierung 2 fließt **nicht** in die Mitbestimmung ein. Sie entscheidet, ob
+ein Tool verändert oder gestaltet — eine andere Frage. Ein Prozess, dessen
+Ergebnis über einzelne Personen entscheidet, ist mitbestimmungsrelevant, ob nun
+ein Mensch das Ergebnis prüft oder nicht.
+
+**Folge:** Attestieren und Verknüpfen ziehen die Ableitung nach. Beide Wege —
+`PUT /attestierungen` und `POST|DELETE /prozesse` — rufen
+`ableitung.aktualisiere_kette`, sonst wäre das Flag nach einer korrigierten
+Erklärung still veraltet.
+
+## E-24 — Die Wirkungsart bleibt offen, statt „gestaltend" zu behaupten
+
+A.6 stellt drei Signale nebeneinander: Schreibzugriff macht ein Tool immer
+verändernd; fehlt ein Mensch zwischen Output und Wirkung, ist es das auch bei
+reinem Lesen. Der Umkehrschluss steht dort nicht — und lässt sich auch nicht
+ziehen, solange Attestierung 2 unbeantwortet ist.
+
+`GET /tools/{id}` liefert deshalb `wirkungsart: null` mit dem Grund `offen`,
+wenn ein Tool nur liest und niemand erklärt hat, ob ein Mensch dazwischensteht.
+Erst mit der Erklärung wird daraus `gestaltend`. Die Alternative — Schweigen als
+„gestaltend" zu lesen — wäre genau der Fehler, vor dem die Warnung in A.6 steht.
+
+Mitgeliefert wird immer der Grund (`schreibzugriff`, `kein_mensch`,
+`nur_lesend`, `offen`) als Schlüssel, nicht als Satz: die Übersetzung gehört in
+die Oberfläche, die Regel ins Backend.
+
+## E-25 — Zweckbindung wird zweistufig geprüft
+
+A.4.6 formuliert die Abweichung als „ein Tool verwendet ein Datenobjekt, dessen
+Kategorie der zugeordnete Prozess nicht abdeckt". Wörtlich genommen prüft das
+die Kategorie; praktisch interessiert zuerst das Objekt selbst.
+
+`GET /tools/{id}/datenobjekte` liefert deshalb je Kante zwei Wahrheitswerte:
+
+* `im_prozessrahmen` — das Datenobjekt ist an mindestens einem verknüpften
+  Prozessobjekt als Input oder Output deklariert.
+* `kategorie_gedeckt` — der schwächere Test aus A.4.6: seine Kategorie kommt im
+  Rahmen wenigstens vor.
+
+Aus dem ersten folgt der zweite. Die Oberfläche unterscheidet beide Befunde
+sichtbar: „Außerhalb des Prozessrahmens" (rot) für die echte Abweichung nach
+A.4.6, „Nicht deklariert" (gelb) für den milderen Fall, in dem die Kategorie
+gedeckt ist, das Objekt selbst aber nicht erklärt wurde. Eine gemeinsame Warnung
+für beide würde die schwerwiegende in der häufigen ertränken.
+
+Ein Tool ohne Prozesskante hat gar keinen Rahmen; dann ist beides unerfüllt, und
+die Oberfläche sagt das statt zu warnen.
+
+## E-26 — Kantenänderungen brauchen einen eigenen Protokollpfad
+
+`protokolliere_aenderung` vergleicht Spaltenwerte und schweigt, wenn sich keiner
+geändert hat. Eine neue Verknüpfung ändert aber keine Spalte des Knotens,
+sondern schreibt in eine Verknüpfungstabelle — die Aufrufe an den
+Tool-Prozess-Kanten haben deshalb **nie** einen Eintrag erzeugt, obwohl der Code
+danach aussah.
+
+Neu ist `protokolliere_kante`: sie schreibt immer und trägt die Kante selbst als
+Vorher/Nachher-Paar ein. Verwendet wird sie für Tool↔Prozess und
+Tool↔Datenobjekt, einschließlich der geänderten Zugriffsart — die entscheidet
+nach A.6 über die Wirkungsart und ist damit selbst governance-relevant.
+
+## E-27 — Keine Sammelregel auf `button`
+
+Gemeldet aus dem Betrieb: im Referenz-Wähler stand nur beim hervorgehobenen
+Treffer der Name; bei allen übrigen war die Zeile leer. Der Name war da — weiß
+auf weiß.
+
+**Ursache** war nicht die Trefferliste, sondern eine Regel aus `src/stil.css`,
+dem Stylesheet aus der Zeit vor dem Design-System:
+
+```css
+button, .knopf { … background: var(--farbe-akzent); color: var(--text-auf-akzent); }
+```
+
+Sie färbte **jeden** `button` der Anwendung akzentblau mit weißer Schrift und
+stand wegen der Importreihenfolge nach `ui.css`. Bausteine mit eigener Fläche
+setzen ihre Schriftfarbe meist mit; die Trefferzeile setzte nur
+`background: none` und erbte damit die weiße Schrift auf die weiße Klappliste.
+Dass jemand vorher schon eine Ausnahmeliste für `margin-block-start`
+angelegt hatte — `.k-knopf, .k-zeile, .k-chip button, .k-segmente button,
+.k-referenz .treffer button` — zeigt, dass die Regel bereits als Störung
+empfunden, aber umgangen statt aufgehoben wurde.
+
+**Entschieden:** Die Sammelregel gilt nur noch für `.knopf`. Die noch nicht
+umgestellten Seiten (Bewertung, Gates, Selbstverpflichtung, Lenkung,
+Prozess-Governance) tragen die Klasse ausdrücklich, bis sie in AP-4 bis AP-9
+auf den Baustein `Knopf` wechseln. Kein Baustein hängt mehr an der
+Kaskadenreihenfolge.
+
+Zusätzlich setzen `.k-feld`-Eingaben, das Suchfeld und die Trefferzeile ihre
+Schriftfarbe jetzt selbst, statt sie zu erben. Das ist keine Dopplung, sondern
+dieselbe Regel wie bei Flächen: ein Baustein bringt seine Farben mit.
+
+**Nebenbefund, mit behoben:** `color-scheme` stand fest auf `light dark` und
+folgte damit dem Gerät, nicht der gewählten Darstellung. Wer auf einem dunklen
+Telefon „Hell" wählt, bekam vom Browser dunkel gemalte Eigenflächen —
+Bildlaufleisten, die Klappliste eines `select`, ausgefüllte Felder — in einer
+hell gemalten Anwendung. Jetzt folgt `color-scheme` dem Attribut
+`data-farbschema`.
+
+**Abgesichert** in `e2e/darstellung.spec.ts`: für alle sechs Kombinationen aus
+Darstellung und Geräteschema muss jede Trefferzeile im Wähler ihren Namen
+tragen und im Kontrast zu der Fläche stehen, auf der sie steht. Gegen den alten
+Stand schlägt der Test fehl — geprüft.
+
+## E-28 — Der Vorgangskatalog steht neben den Tests, nicht in ihnen
+
+Die technischen Tests beantworten „funktioniert es". Sie sagen nichts darüber,
+ob die Anwendung **vollständig** ist — ein Handgriff, den niemand vorgesehen
+hat, fehlt in beiden: im Code und im Test.
+
+Deshalb ein zweites Artefakt: `docs/vorgaenge.md` listet jeden Vorgang auf, den
+ein Anwender später ausführt, mit Rolle, erwartetem Ergebnis und dem
+Arbeitspaket, das ihn trägt. Der ausführbare Teil steht in `frontend/vorgaenge/`
+mit eigener Playwright-Konfiguration, eigener Datenbank
+(`governance_vorgaenge`) und eigenem Befehl `npm run vorgaenge`.
+
+**Getrennt gehalten**, weil beide Durchläufe verschiedene Fragen stellen und
+verschieden altern: die Abnahmetests je Phase hängen an Architektur 11, der
+Katalog an der Sicht des Bedieners. Eine gemeinsame Datei hätte beides vermischt.
+
+**Offene Vorgänge bleiben in der Liste**, als übersprungen mit ihrem
+Arbeitspaket als Grund. Eine Spezifikation, aus der Unfertiges verschwindet,
+verliert genau die Aussage, für die es sie gibt.
+
+**Der Katalog prüft sich selbst** (`vorgaenge/katalog.vorgang.ts`): jede
+Kennung braucht genau einen Durchlauf und umgekehrt, jedes genannte
+Arbeitspaket muss es geben, und ein Paket, dessen Punkte alle abgehakt sind,
+darf keinen offenen Vorgang mehr tragen. Ohne diese Klammer wäre das Dokument
+in zwei Wochen ein Wunschzettel.
+
+### Was der Katalog erbracht hat
+
+Die Liste wächst mit jedem Arbeitspaket. Sie steht hier und nicht im
+Umsetzungsplan, weil sie die Frage beantwortet, ob sich der Katalog lohnt.
+
+**Beim Aufsetzen** — beide behoben:
+
+* `lokale_abweichung` an der Prozessumsetzung konnte die API seit Phase 1, die
+  Oberfläche fragte sie nie ab (V-PRO-14). Derselbe Fehlertyp wie B5.
+* Auf der Datenobjekt-Detailseite überschrieb die Antwort einer nebenher
+  laufenden Änderung, was der Anwender inzwischen ins Quellsystem-Feld getippt
+  hatte (V-DAT-09). Freitext ist jetzt ein eigener Entwurfszustand.
+
+Ein dritter Befund blieb als Korrektur am Katalog: „Prozess wieder in Entwurf
+setzen" gab es als Übersetzungstext, aber weder als Vorgabe noch als Aktion.
+Der Vorgang heißt jetzt „wieder in Betrieb nehmen", der verwaiste Textbaustein
+ist entfernt.
+
+**In AP-4:** V-BEW-12 verlangt, dass jede Bewertungsversion „mit Datum und
+Profil nachvollziehbar" ist. Die Historie zeigte weder ein Datum noch, welche
+Version die maßgebliche war — bei einem versionierten Objekt, dessen ganzer
+Sinn die Nachvollziehbarkeit ist. Beides ergänzt.
+
+**In AP-5:** zwei Stellen, an denen der Katalog etwas verlangte, das die
+Umsetzung nicht leistete.
+
+* V-GAT-03 sagt: „Die Ablehnung verlangt eine Begründung." Die tat sie nicht —
+  eine Ablehnung mit leerem Kommentar ging durch. Wer abgelehnt wird, erfährt
+  dann nur, dass es nicht weitergeht, aber nicht, was zu ändern wäre. Jetzt
+  weist der Server sie ab und die Oberfläche sperrt den Knopf.
+* V-GAT-05 sagt: „Nur die fünf benannten Auslöser stehen zur Wahl." Sie standen
+  zur Wahl — aber mit ihrem technischen Schlüssel als Beschriftung
+  (`neues_externes_ziel`). Auf dem Bildschirm gehört der Name hin, nicht die
+  Kennung.
+
+**In AP-6:** drei Befunde, davon einer in einem Abnahmetest.
+
+* V-RAH-04 und V-RAH-09 lesen die Frist als **Zahl** ab. Damit fiel auf, dass
+  der Abnahmetest aus Phase 5 seinen „Tier-3-Tool" nie attestiert hatte: ohne
+  die drei Erklärungen aus A.6 gibt es keine Prozesskante, das Tool erbte
+  nichts, und die tier-abhängige Frist wurde gegen den Tier-1-Rückfall geprüft.
+  Der Test hatte drei Phasen lang bestanden, ohne zu prüfen, was sein Name sagt.
+* V-TOO-18 verknüpft ein Datenobjekt und sieht danach in den Rahmen. Die Karte
+  zeigte den alten Stand — sie lud einmal beim Aufbau und nie wieder. Also
+  genau dann nicht die Abweichung, wegen der jemand hinsieht.
+* V-RAH-03 wählt ein Schicht-2-Verbot aus. Die Auswahl war nicht eindeutig
+  ansprechbar, weil der Hilfetext eines Umschalters in dessen zugänglichem
+  Namen steckte und dieselbe Wortfolge enthielt. Ein Vorleseprogramm hätte den
+  ganzen Satz als Namen des Schalters gelesen; der Text hängt jetzt über
+  `aria-describedby` daran, wie bei Feld und Auswahl.
+
+**In AP-7 bis AP-9:** vier Befunde, die alle denselben Ursprung haben — ein
+Vorgang liest, was auf dem Bildschirm steht, und stolpert über das, was ein
+Test mit `getByTestId` nie bemerkt hätte.
+
+* V-KLA-02 liest die Matrix. Die Zeilenköpfe standen in **Versalien**, weil die
+  Übergangsstile für rohe Tabellen `text-transform: uppercase` global setzen —
+  auf Produktnamen angewandt ist das schlicht falsch geschrieben.
+* V-ADM-02 wählt einen Geltungsbereich. Zwei Felder hießen „Geltungsbereich"
+  und „Bereich"; für ein Vorleseprogramm ist das dasselbe Wort. Sie heißen
+  jetzt nach dem, was gewählt wird — „Fachbereich" oder „Organisationseinheit".
+* V-COC-08 prüft den Befund „Antwort widerspricht Datenlage". Beim Schreiben
+  fiel auf, dass eine **begründete** Abweichung gar kein Befund ist (E-30) —
+  der Vorgang muss die Datenlage nach der Bewertung ändern, sonst prüft er
+  nichts. Das ist keine Korrektur am Code, sondern eine am Verständnis.
+* Der Nachweis zeigte **UUIDs** als Feldwerte („eingereicht_von: —
+  → 5883a1a8-…"). Personenfelder werden jetzt zu Namen aufgelöst, reine
+  Beziehungsfelder ganz weggelassen und Zeitstempel auf die Minute gekürzt.
+
+## E-29 — Ein „ja" braucht einen Beleg, ein „nein" braucht Vollständigkeit
+
+Der Vorschlagsdienst nach A.8.4 (`services/vorschlag.py`) rechnet vor, was die
+vorhandenen Daten zu einer Bewertungsfrage hergeben. Die Versuchung ist, dabei
+möglichst viel zu beantworten — jede abgeleitete Dimension ist eine Frage
+weniger. Genau das wäre falsch, denn die **Abweichung vom Vorschlag ist
+begründungspflichtig**. Ein geratener Vorschlag kostet den Anwender einen Satz
+Rechtfertigung für etwas, das das System gar nicht wusste. Ein falscher
+Vorschlag ist damit schlechter als keiner.
+
+Deshalb zwei asymmetrische Regeln:
+
+* **Positiv** wird nur vorgeschlagen, was ein konkretes Objekt hergibt. Der
+  Vorschlag nennt es beim Namen: „Datenobjekt ‚Entgeltdaten' trägt die
+  Kategorie besondere Kategorie."
+* **Negativ** nur bei geschlossener Datenlage. Ein Datenobjekt ohne Kategorie
+  kann alles sein und verbietet jedes „nein"; ein Prozess ganz ohne
+  Datenobjekt erst recht.
+
+Was keine der beiden Regeln erfüllt, bleibt **offen** — frei beantwortbar, ohne
+Begründungspflicht. Das ist derselbe Gedanke wie E-24 zur Wirkungsart: kein
+Vorschlag ist ein gültiger Zustand.
+
+Konkrete Folgen dieser Regeln:
+
+* **Frage 2a** („besondere Kategorien **oder** Profilbildung") bekommt nur ein
+  „ja". Die erste Hälfte steht in den Daten, die zweite nicht — ein „nein"
+  würde behaupten, dass keine Profilbildung stattfindet, und das weiß nur der
+  Prozesseigner.
+* **Frage 2b** geht in beide Richtungen, weil die fünf Kategorien aus A.7
+  abschließend sind: „keine davon ist personenbezogen" ist eine Antwort und
+  kein Schweigen.
+* **Frage 2c** bekommt ein „nein" nur, wenn ausnahmslos alles öffentlich ist.
+  „intern" oder „vertraulich" kann sehr wohl personenbeziehbar sein.
+* **Der Kundenkreis** wirkt ausschließlich negativ: „extern" verhindert das
+  „nein" bei 2b, statt ein „ja" zu behaupten. Ein Prozess mit externem
+  Kundenkreis kann eine Preisliste veröffentlichen und dabei keine einzige
+  personenbezogene Angabe verarbeiten.
+* **KI, IT und RG** bekommen gar keinen Vorschlag. A.8.4 nennt KI und RG als
+  vollständig zu erklären; IT wäre aus Telemetrie abzuleiten, die diese
+  Plattform nicht hat.
+
+**UR ist die einzige vollständig ableitbare Dimension**, weil die Ausfallfolge
+ein Pflichtfeld ist und die Vererbung entlang der Kette gerechnet wird (A.4.2).
+Ihre drei Fragen bekommen deshalb einen Vorschlag in beide Richtungen, und der
+Beleg nennt den nachgelagerten Prozess, wenn die Stufe von dort stammt.
+
+Die Konjunktion aus A.5 wird für MB **nicht nachgebaut**, sondern aus
+`ableitung.mitbestimmung_aus_daten` aufgerufen. Diese Funktion kennt bewusst
+keine Bewertung: ein Vorschlag, der die letzte Antwort auf dieselbe Frage
+zitiert, wäre ein Zirkelschluss statt einer Ableitung.
+
+## E-30 — Der gespeicherte Vorschlag trennt Entscheidung von Verfall
+
+Die Bewertung hält ab AP-4 nicht nur fest, **was** geantwortet wurde, sondern
+auch, **was die Datenlage zum selben Zeitpunkt hergab** (`vorschlaege`) und, wo
+beides auseinanderfiel, **warum** (`abweichungen`). Der Mehraufwand einer
+zusätzlichen Spalte trägt eine Unterscheidung, die sonst unmöglich wäre.
+
+Die Cockpit-Zeile „Antwort widerspricht Datenlage" vergleicht die gespeicherten
+Antworten mit den **heutigen** Vorschlägen. Drei Fälle sehen gleich aus:
+
+1. **Bewusst abgewichen, begründet, Datenlage unverändert.** Kein Befund,
+   sondern eine dokumentierte Entscheidung — A.8.4 lässt die Abweichung
+   ausdrücklich zu, wenn sie erklärt wird.
+2. **Die Daten haben sich seither geändert.** Ein Datenobjekt wurde
+   umklassifiziert, ein Tool hat attestiert, ein Nachfolgeprozess ist kritischer
+   geworden. Die Antwort von damals steht neben einer neuen Wirklichkeit, und
+   eine Begründung von damals bezieht sich auf eine Lage, die es nicht mehr
+   gibt.
+3. **Damals war nichts abzuleiten, heute schon.** Kein Vorwurf: die Grundlage
+   für den Vorschlag entstand erst später. Bewertungen von vor AP-4 fallen
+   ebenfalls hierunter, weil zu ihnen überhaupt kein Vorschlag gerechnet wurde.
+
+Nur der erste Fall verschwindet aus der Zeile; die anderen beiden nennt der
+Hinweis beim Namen. Ohne den mitgespeicherten Vorschlag wären alle drei
+ununterscheidbar, und die Zeile wäre entweder blind für den Verfall oder ein
+Dauerärgernis für jede bewusst getroffene Entscheidung.
+
+Die Begründungspflicht sitzt **im Wizard-Schritt**, nicht erst beim Speichern.
+Wer erst am Ende erfährt, dass Frage 2b eine Begründung braucht, müsste sich an
+eine Entscheidung von vor fünf Bildschirmen erinnern. Eine Begründung zu einer
+Frage, die am Ende doch nicht abweicht, wird nicht mitgespeichert: sie würde
+eine Abweichung dokumentieren, die es nicht gibt.
+
+## E-31 — Die Auflagen je Tier stehen neben den K-Klassen, nicht in ihnen
+
+Die Ergebnisseite zeigt zwei Listen, und das ist Absicht. Die **K-Klassen** aus
+A.9.2 hängen am Profil und sagen, *was* dieser Prozess wegen seiner
+Eigenschaften braucht — K4 wegen DS 3, K7 wegen MB. Die **Auflagen** aus A.8.6
+hängen allein am erreichten Tier und sagen, *wie streng* er insgesamt geführt
+wird. Sie gelten kumulativ: Tier 3 trägt auch die Auflagen von Tier 2 und 1.
+
+Beides in eine Liste zu werfen hätte den Unterschied verwischt, an dem später
+die Rückfrage hängt: „warum gilt das für uns?" Bei einer K-Klasse ist die
+Antwort eine Profilstelle, bei einer Auflage das Tier.
+
+Jede K-Klasse steht mit **Namen und einem Erklärungssatz** da, nicht als
+Kürzel. Das Kürzel bleibt als Abzeichen davor, weil Query-API, Historie und
+Nachweis damit arbeiten. Eine Ergebnisseite, die nur „K4" anzeigt, verlagert
+die Übersetzungsarbeit auf den Leser — genau das soll sie nach Architektur 9.1
+nicht.
+
+Wie schon bei E-7 gilt: das Leitdokument liegt diesem Repository nicht bei. Die
+Auflagen sind in `services/bewertung.py` so ausformuliert, dass sie zu dem
+passen, was die Plattform tatsächlich tut — die Jahresfrist ab Tier 3 etwa
+entspricht der bereits vorhandenen `gueltig_bis`-Logik.
+
+## E-32 — Zustimmung zu Text A ist keine Zustimmung zu Text B
+
+Der Aussagenkatalog der Selbstverpflichtung war frei erfunden (E-10, weil das
+Leitdokument nicht beilag) und sagte nachweislich etwas anderes als A.10.2 und
+A.10.3. Vier der sechs Prozesseigner-Aussagen fehlten ganz — Zweck,
+Empfängerkreis, Absicht, Nachweispflicht —, und ausgerechnet das sind die, die
+A.10.1 als „nicht skalierend messbar" begründet. Der Baustein, der die
+Messlücke schließen sollte, schloss sie nicht.
+
+Beim Umstellen gab es zwei Wege. Man hätte die Texte hinter den vorhandenen
+Kennungen `P1`…`P6` austauschen können — dann hätte jede bestehende Erklärung
+plötzlich etwas bestätigt, das nie jemand gelesen hat. Das ist bei einer
+Erklärung, die persönlich abgegeben wird, nicht vertretbar.
+
+Deshalb: **neue Kennungen** (`PE1`…`PE6`, `TO1`…`TO6`), die sich von den alten
+unterscheiden, plus eine `katalog_version` an jeder Erklärung. Bestandsdaten
+werden nicht umgeschrieben. Sie bleiben in der Historie lesbar, zählen aber
+nicht mehr als Deckung, und der Grund steht wörtlich da: „nach einem früheren
+Aussagenkatalog abgegeben". Wer betroffen ist, sieht es im Cockpit.
+
+**A.10.4 schließt pauschale Formeln aus**: „spezifisch statt pauschal —
+konkrete Aussagen sind im Nachhinein prüfbar, allgemeine Zusagen nicht." Die
+alte Aussage „Die Bewertung wurde **nach bestem Wissen** durchgeführt" ist
+genau das, was damit gemeint ist: nicht widerlegbar und deshalb wertlos. Ein
+Test hält fest, dass die Formulierung im Katalog nicht vorkommt.
+
+**Die Schicht-2-Verbote sind aus A.10.3 entfernt.** Umgangene
+Unternehmensidentität und statische Zugangsdaten standen dort als Aussagen T2
+und T3. Sie gehören nicht in eine Erklärung: A.13.2 verbietet sie
+organisationsweit und „durch keine Prozessbewertung freischaltbar". Was
+ausnahmslos gilt, wird durchgesetzt und nicht erklärt — die Umsetzung steht in
+AP-6.
+
+## E-33 — Die Erklärung verfällt mit dem Profil, nicht mit dem Kalender
+
+Bis AP-5 hing die Gültigkeit einer Selbstverpflichtung allein an `gueltig_bis`.
+A.10.4 verlangt etwas anderes: „an die Profilversion gebunden — ändert sich das
+Profil, verfällt die Erklärung automatisch."
+
+Das ist der eigentliche Zweck des Bausteins. Wer erklärt „das Ergebnis wird
+nicht zur Kontrolle einzelner Beschäftigter verwendet", erklärt das über einen
+bestimmten Prozess in einem bestimmten Zustand. Wird derselbe Prozess neu
+bewertet, weil er jetzt Personaldaten verarbeitet, bezieht sich die Erklärung
+auf einen Sachverhalt, den es nicht mehr gibt. Eine Erklärung, die eine
+Neubewertung überlebt, ist schlimmer als keine: sie sieht aus wie Deckung.
+
+Umgesetzt über `bewertung_id` an der Erklärung. **Tool-Objekte bekommen keine
+solche Bindung**, weil ihr Tier geerbt ist und aus mehreren Prozessen stammen
+kann — eine einzelne Bewertungs-ID wäre dort willkürlich. Bei ihnen trägt
+`tier_bei_abgabe` dieselbe Aufgabe: steigt das geerbte Tier, deckt die
+Erklärung weniger ab, als jetzt verlangt wird.
+
+Statt eines Wahrheitswerts liefert der Server ein **Deckungsurteil mit Grund**:
+`keine`, `unvollstaendig`, `alter_katalog`, `profil_veraltet`,
+`tier_gestiegen`, `frist_abgelaufen`. Der Unterschied ist für den Owner
+handlungsleitend — bei abgelaufener Frist genügt ein Klick, bei verfallenem
+Profil ist die Erklärung neu abzugeben. Die Oberfläche zeigt diesen Satz
+wortgleich an und baut die Regel nicht nach.
+
+**Die Kurzform aus A.10.5** steckt als `ab_tier` in den Aussagen selbst, nicht
+in einer Verzweigung: bei Tier 1 werden nur die Aussagen mit `ab_tier == 1`
+verlangt. Welche das sind, ist nicht willkürlich, sondern folgt den Dimensionen
+— Empfängerkreis, Verwendung gegenüber Beschäftigten und Aufbewahrungspflicht
+sind genau die Punkte, die ein Tier-1-Objekt gar nicht auslösen kann. Vollständig
+heißt deshalb „jede **verlangte** Aussage bestätigt", nicht „alle sechs".
+
+## E-34 — Bildschirmtext ist Deutsch, Quelltext ist ASCII
+
+Bis AP-4 waren alle serverseitigen Zeichenketten umlautfrei: der Bewertungsbaum
+fragte nach „Kuenstliche Intelligenz", die Maßnahmenklasse hieß
+„Datenschutz-Folgenabschaetzung". Das fiel nicht auf, solange diese Texte in
+Tests und Protokollen standen. Mit AP-4 rücken sie in die Mitte des
+Bildschirms: der Vorschlag zu einer Frage soll gelesen und geglaubt werden, und
+„Datenobjekt ‚Entgeltdaten' **traegt** die Kategorie" liest sich wie ein
+Übertragungsfehler.
+
+Die Regel lautet deshalb:
+
+* **Was ein Mensch auf dem Bildschirm liest, ist richtiges Deutsch** — mit
+  Umlauten und ß. Das gilt für Fragetexte, Belege, Klassennamen, Auflagen,
+  Aussagen der Selbstverpflichtung, Cockpit-Hinweise und **Fehlermeldungen**;
+  eine Fehlermeldung ist Bildschirmtext, auch wenn sie aus dem Server kommt.
+* **Was nur im Quelltext steht, bleibt ASCII** — Docstrings, Kommentare,
+  Bezeichner, Aufzählungswerte, Datenbankschlüssel.
+
+Die Trennlinie verläuft also nicht zwischen Backend und Frontend, sondern
+zwischen Text für Menschen und Text für Entwickler. Enum-Werte wie
+`besondere_kategorie` bleiben ASCII, weil sie Schlüssel sind; ihre Beschriftung
+lebt in der Übersetzungsdatei.
+
+**Stand der Umstellung.** Umgestellt sind die Flächen, die AP-4 bis AP-9
+angefasst haben: `bewertungsbaum.py` (Fragen und Blocktitel), `vorschlag.py`
+(Belege), `bewertung.py` (Klassennamen, Erklärungen, Auflagen,
+Begründungspflicht), `selbstverpflichtung.py` (die zwölf Aussagen und die
+Deckungsgründe), mit AP-6 `lenkung.py`, `gate.py`, `query.py`, `prozess.py`
+und die Beschreibungen der Konfigurationsschlüssel, mit AP-8 **alle**
+Cockpit-Titel, -Beschreibungen und -Hinweise. `rahmen.py`, `klassen.py` und
+`verwaltung.py` sind von Anfang an in richtigem Deutsch geschrieben. Die Tests,
+die auf den alten Wortlaut zeigten, sind jeweils mitgezogen.
+
+**Nicht umgestellt** sind zwölf Zeichenketten in `asset.py` (5),
+`erinnerung.py` (2), `api/deps.py` (3) sowie den Routern `admin.py` und
+`auth.py` (je 1) — die Module, die seit AP-3 kein Arbeitspaket mehr berührt
+hat. Sie sind als offener
+Punkt in der Definition of Done geführt und werden mit dem jeweiligen
+Arbeitspaket mitgezogen, statt in einem großen Durchlauf: eine Sammeländerung
+brächte Testbruch ohne fachlichen Bezug und wäre schlecht zu prüfen.
+
+## E-35 — Die Anwendervorgänge kennen keine Schleichwege
+
+Der Vorgangskatalog prüft, was ein Anwender tun kann. Ein Testendpunkt, der
+einen Zustand herstellt, den es über die Oberfläche nicht gibt, würde genau
+diese Aussage aufheben — und stünde als Produktionscode in der API.
+
+V-SEL-07 („Die Jahresbestätigung ab Tier 3 abgeben") brauchte eine abgelaufene
+Erklärung. Naheliegend wäre `POST /testhilfe/frist-vorziehen` gewesen. Statt
+dessen setzt der Vorgang die Gültigkeitsdauer über die **vorhandene
+Konfiguration** auf null Tage — das ist eine echte Handlung der
+Governance-Rolle (Architektur 6.6, Vorgang V-RAH-10), keine Hintertür. Die
+Erklärung ist damit mit ihrer Abgabe fällig, und der Vorgang zeigt genau den
+Bildschirm, den ein Owner nach einem Jahr sieht.
+
+Zwei Regeln folgen daraus:
+
+* **Vorbedingungen über die API sind erlaubt**, wo sie eine Rolle herstellen,
+  die der Geprüfte selbst nicht vergeben darf — das steht als Kommentar am Ort.
+  Der geprüfte Vorgang selbst läuft über die Oberfläche.
+* **Global wirksame Einstellungen werden zurückgestellt**, und zwar sofort nach
+  der Beobachtung, nicht am Ende des Durchlaufs. Ein Vorgang, der auf halbem
+  Weg scheitert, darf den folgenden keine Nullfrist hinterlassen.
+
+## E-36 — Klassennamen des Design-Systems tragen `k-`
+
+Die Bausteine heißen `k-karte`, `k-zeile`, `k-abzeichen`. Innerhalb eines
+Bausteins dürfen verschachtelte Namen schlicht sein — `.k-karte > header`,
+`.k-seitenkopf .titelblock` —, weil der Elternselektor sie einschließt.
+
+Diese Freiheit hat eine Grenze, die AP-5 auf die harte Tour gezeigt hat: das
+Anwendungslayout benutzt einige **unpräfixierte** Klassen global, darunter
+`.inhalt` für den Seiteninhaltsbereich mit einem Innenabstand von 32 px. Ein
+neuer Baustein mit einem `<div className="inhalt">` erbte diesen Abstand
+lautlos und riss achtzig Pixel Leerraum in jeden Aussagenblock der
+Selbstverpflichtung.
+
+Die Regel ist deshalb schärfer als „Präfix an der Wurzel": **ein
+verschachtelter Name darf nicht so heißen wie eine der wenigen unpräfixierten
+Klassen der Anwendungshülle**. Das sind, Stand heute, `huelle`,
+`seitenleiste`, `seitenleiste-fuss`, `nutzerzeile`, `inhalt`, `anmeldeflaeche`
+und `anmeldekarte` in `src/stil/basis.css` — sie beschreiben das Gerüst, nicht
+die Bausteine, und tragen deshalb kein `k-`. Im Zweifel ein Wort wählen, das
+den Inhalt benennt: der Block heißt jetzt `.satz`, weil dort ein Satz steht.
+
+## E-37 — Schicht 2 ist eine Liste von sechs Sätzen, keine offene Meldung
+
+A.13.2 nennt sechs organisationsweite Verbote, „durch keine Prozessbewertung
+freischaltbar". Das Leitdokument liegt diesem Repository nicht bei (wie schon
+bei E-7 und E-31), aber zwei der sechs sind über E-32 wörtlich bekannt: die
+umgangene Unternehmensidentität und statisch hinterlegte Zugangsdaten. Sie
+standen bis AP-5 fälschlich im Aussagenkatalog der Selbstverpflichtung.
+
+Die sechs sind hier als `Schicht2Verbot` ausformuliert — abschließend wie die
+fünf Gate-2-Auslöser und aus demselben Grund: eine Liste, die sich um einen
+freien siebten Grund ergänzen lässt, ist keine Liste mehr. Wo der Wortlaut aus
+dem Dokument nicht vorlag, ist er so gewählt, dass er zu dem passt, was die
+Plattform tatsächlich erfassen kann.
+
+**Vier der sechs erkennt die Anwendung selbst**, aus Daten, die sie ohnehin
+hat: das geteilte Konto aus der Ausführungsidentität, die statischen
+Zugangsdaten aus ihrem Feld, die undeklarierten Quellen aus Attestierung 3 und
+die automatisierte Entscheidung über Personen aus Attestierung 1 zusammen mit
+Attestierung 2. Die übrigen beiden — Datenabfluss aus der freigegebenen
+Infrastruktur und umgangene Protokollierung — betreffen Vorgänge in der
+Zielplattform, von denen die Governance-Plattform nichts sieht; sie sind zu
+melden. Beides steht in der Antwort der API (`automatisch_erkennbar`), damit
+niemand die eine Hälfte für die ganze Wahrheit hält.
+
+Die Folge eines Schicht-2-Verstoßes ist nicht Verhandlung, sondern Abstellen:
+A.13.5 streicht bei ihnen die erste Eskalationsstufe. Der Lenkungsvorgang
+beginnt deshalb in Stufe 2, mit der kurzen Nachfrist und der sofortigen
+Meldung an die Führungskraft. Eine Meldung mit Verbot **und** gelber Farbe wird
+abgewiesen: was keine Bewertung freischaltet, ist keine Beobachtung.
+
+Ein laufender Stufe-1-Vorgang wird durch eine spätere Schicht-2-Meldung
+angehoben, statt daneben einen zweiten zu eröffnen. Sonst hätte die Reihenfolge
+der Meldungen über die Schwere entschieden.
+
+## E-38 — Der Rahmen zeigt neben jedem erlaubten Wert den gemessenen
+
+A.13.2 Schicht 1 listet sieben Rahmenelemente; umgesetzt waren drei. Die vier
+fehlenden brauchten nicht nur eine Ableitung, sondern je ein **Gegenstück am
+Tool**, gegen das sie sich prüfen lässt. Ein Rahmen ohne Messung ist eine
+Behauptung; erst der Vergleich macht eine Abweichung sichtbar.
+
+| Element | Erlaubt aus | Gemessen an |
+|---|---|---|
+| Datenobjekte | Input und Output der Prozesskanten | den Tool-Datenobjekt-Kanten |
+| Obergrenze der Datenkategorie | höchster Kategorie im Rahmen | höchster Kategorie der genutzten Objekte |
+| Reichweite | Maximum-Vererbung (A.4.4) | **nichts** |
+| Externe Ziele | `erlaubte_externe_ziele` der Prozesse | `externe_ziele` des Tools |
+| Zugriffsart | der Output-Kante (A.4.1) | der Zugriffsart je Kante |
+| Ausführungsart | Attestierung 2 | dem Lauftyp |
+| Ausführungsidentität | der Ausführungsart | `ausfuehrungsidentitaet` |
+
+Die Reichweite ist der einzige Fall ohne Messung: sie ist nach A.4.4 geerbt und
+nach P1 nie eingegeben, es gibt am Tool nichts, wogegen sie zu prüfen wäre. Das
+steht als Satz auf dem Bildschirm — „Nicht gemessen — abgeleitet" —, statt eine
+leere Spalte zu zeigen, die wie eine Messung ohne Befund aussähe.
+
+**Die Zugriffsart kommt aus dem Prozess, nicht aus der Wirkungsart.** Der
+naheliegende Weg wäre gewesen, „darf schreiben" aus der Triage `verändernd` zu
+folgern. Das wäre ein Zirkel: `bestimme_wirkungsart` leitet `verändernd`
+gerade daraus ab, dass ein Tool Schreibzugriff hat. Jede Schreibkante hätte
+sich damit selbst genehmigt. Stattdessen gilt A.4.1: die Output-Kante des
+SIPOC ist die Schreibkante. Ein Tool darf nur dort schreiben, wo der Prozess
+das Datenobjekt als Ergebnis führt — und die Abweichung nennt dann das
+Datenobjekt, nicht die Zugriffsart, weil damit jemand etwas anfangen kann.
+
+**Die Ausführungsart hängt an Attestierung 2** (so führt A.13.2 sie zurück).
+Steht ein Mensch zwischen Output und Wirkung, ist jede Ausführungsart gedeckt;
+steht keiner dazwischen, bleibt nur die interaktive, denn ein Lauf ohne
+Anwesenden wäre ein Tool, das allein handelt. Ohne Attestierung ist **nichts**
+gedeckt — nicht alles: was nicht erklärt ist, ist nicht erlaubt.
+
+Die Ausführungsidentität folgt daraus: interaktiv heißt, ein Mensch bedient,
+also läuft es unter dessen Identität; getriggert oder geplant heißt, niemand
+ist da, der eine Identität leihen könnte, und dann ist eine benannte
+Dienstidentität die einzige, die sich später noch zuordnen lässt.
+
+Die **Query-API bekommt nur die erlaubte Seite**. Eine andockende Anwendung
+fragt, was erlaubt ist; was am Tool gemessen wurde, ist ihre eigene Sache. Die
+gemessene Spalte steht dort, wo jemand sitzt, der die Abweichung abstellen
+kann — am Tool-Objekt.
+
+## E-39 — Fristen laufen in Arbeitstagen, und die zweite Stufe verkürzt
+
+Die Lenkungsfristen standen auf 90/30/14 **Kalendertagen**; A.13.5 verlangt
+30/15/5 **Arbeitstage**. Ein Tier-1-Fall lief damit ein halbes Jahr statt sechs
+Wochen. Schwerer wog der zweite Fehler: die Eskalation setzte für Stufe 2
+erneut die volle Tier-Frist an, statt der Nachfrist von 15/10/5. Die Eskalation
+soll den Druck erhöhen; sie drehte die Uhr zurück.
+
+Beides ist berichtigt, mit eigenen Konfigurationsschlüsseln je Stufe. Ab Stufe
+3 gibt es **keine** Frist mehr: dort steht die technische Maßnahme an, es ist
+nichts mehr abzuwarten. Die Frist bleibt deshalb stehen, wie sie war —
+abgelaufen.
+
+**Feiertage bleiben außen vor.** Ein Feiertagskalender ist landesabhängig, die
+Anwendung läuft in mehreren Ländern, und eine halbe Lösung wäre hier schlechter
+als eine erklärte Vereinfachung: ein Vorgang gewinnt dadurch höchstens einen
+Tag, und die Fristen sind nicht auf den Tag genau gedacht, sondern als
+Eskalationsdruck.
+
+Die Arbeitstagrechnung steht **zweimal** — im Server (`lenkung.py`) und in der
+Oberfläche (`nutzen/fristen.ts`). Das ist bewusst: der Server *setzt* die
+Frist, die Oberfläche *liest* sie und zählt herunter. Eine Zahl vom Server
+wäre beim Neuladen veraltet, und ein Countdown, der eine andere Zahl nennt als
+die Eskalation verwendet, wäre schlimmer als keiner. Ein Test hält beide auf
+derselben Zählweise fest.
+
+Der Countdown unterscheidet **abgelaufen** von **null verbleibenden Tagen** an
+der Uhrzeit, nicht am Vorzeichen: eine Frist, die heute um 14 Uhr endete, ist
+um 15 Uhr abgelaufen, obwohl zwischen beiden kein Arbeitstag liegt. Null hat
+kein Vorzeichen — deshalb liefert die Rechnung ein Wertepaar aus Tagen und
+einem Kennzeichen, keine vorzeichenbehaftete Zahl.
+
+## E-40 — Ein neu erklärtes externes Ziel reicht Gate 2 selbst ein
+
+A.11 nennt „neues externes Ziel" als einen der fünf Gate-2-Auslöser. Bis AP-6
+musste der Prozess-Owner das Ziel eintragen **und** anschließend selbst ein
+Gate einreichen — also die Regel kennen und anwenden, die die Anwendung kennt.
+
+Wer ein Ziel ergänzt, meldet damit den Auslöser. Der Gate-2-Vorgang entsteht
+deshalb beim Speichern von selbst, mit dem Ziel in der Begründung. Drei
+Einschränkungen halten das eng:
+
+* **Nur an einem aktiven Prozessobjekt.** Ein Entwurf hat noch keinen Rahmen,
+  den er verlassen könnte; seine Erstfreigabe läuft über Gate 1.
+* **Nur bei einem wirklich neuen Ziel.** Verglichen wird vor dem Setzen; ein
+  erneutes Speichern derselben Liste löst nichts aus.
+* **Kein zweiter Vorgang**, solange einer offen ist. Der Vorgang ist schon da,
+  und die neue Erklärung steht in der Historie des Prozessobjekts.
+
+Die Folge steht am Feld, bevor jemand speichert. Eine Automatik, die erst nach
+dem Klick erkennbar wird, ist eine Überraschung, keine Hilfe.
+
+## E-41 — Die Auflösung „Rahmen erweitern" wählt eine Bewertung, keine Kennung
+
+Die Lenkungsseite verlangte für „Rahmen erweitern" die **UUID** der neuen
+Bewertung in einem Textfeld. Das verstößt gegen den dritten Grundsatz des
+Design-Systems („Nie ein technischer Schlüssel im Sichtfeld") und ist
+praktisch nicht bedienbar: niemand hat eine UUID zur Hand.
+
+Jetzt lädt das Blatt die Bewertungen der betroffenen Prozessobjekte und zeigt
+davon genau die, die **nach** der Eröffnung des Vorgangs entstanden sind — mit
+Tier und Datum. Ältere bildet der erweiterte Rahmen nicht ab; der Server weist
+sie ab, und was er abweist, bietet die Oberfläche gar nicht erst an. Gibt es
+keine, steht der Satz da, was zuerst zu tun ist, statt eines Knopfes, der in
+eine Ablehnung liefe.
+
+Die drei Wege aus A.13.6 stehen als drei gleich aussehende Knöpfe nebeneinander
+statt als Auswahlliste. Eine Auswahlliste hat einen Vorgabewert, ein Vorgabewert
+ist eine Empfehlung — und das Leitdokument gibt keine.
+
+## E-42 — Die Technologiematrix ist gepflegt, nicht einprogrammiert
+
+A.9.1 beschreibt zwei Übersetzungsstufen: vom Profil zu den
+Anforderungsklassen und von den Klassen zu einer Entscheidung über die
+eingesetzte Technologie. Die erste war da, die zweite nicht — die Anwendung
+sagte, welche Klassen ausgelöst sind, aber nicht, ob die gewählte Technologie
+sie tragen kann. Damit fehlte genau die Entscheidung, auf die das
+Bewertungsmodell zuläuft.
+
+**Die Matrix liegt in der Datenbank, nicht im Code.** Sie ist eine
+Entscheidungsgrundlage; eine, die nur mit einer Auslieferung änderbar wäre,
+veraltet zwischen zwei Releases. Die Standardbelegung steht in
+`services/klassen.py` und wird beim ersten Zugriff angelegt — ein fehlendes
+Feld wird ergänzt, ein vorhandenes nie überschrieben. **Jedes Feld trägt eine
+Pflichtbegründung**, auch die Standardbelegung: eine Farbe ohne Satz ist keine
+Entscheidungsgrundlage, und wer ein Feld ändert, schuldet den Grund.
+
+**Sieben der zehn Klassen stehen überall auf „erfüllt"**, und das ist kein
+Versehen. Dokumentation, Selbstverpflichtung, benannter Owner,
+Folgenabschätzung, KI-Transparenz, Mitbestimmung und Gate 2 sind
+organisatorische Anforderungen — keine Plattform hindert jemanden daran, den
+Betriebsrat zu beteiligen. Eine Matrix, die so täte, wäre falsch. Es
+unterscheiden sich die drei technischen Klassen: das Zugriffs- und
+Rechtekonzept (K5), die revisionssichere Aufbewahrung (K8) und das
+Wiederanlaufkonzept (K9). Dort entscheidet das Werkzeug, überall sonst die
+Organisation.
+
+Wie schon bei E-7 und E-31 gilt: Teil C.1 liegt diesem Repository nicht bei.
+Die Belegung ist so gewählt, dass sie zu dem passt, was die Plattform
+tatsächlich erfassen kann, und jedes abweichende Feld begründet sich selbst.
+
+**„Ungeprüft" ist eine eigene Befundart** und kein stiller Erfolg. Steht am
+Tool keine Technologie, gibt es nichts abzugleichen — und eine fehlende Angabe
+ist kein Nachweis. Sie erscheint deshalb als offener Befund im Cockpit, neben
+dem Ausschluss und der fehlenden Kompensation: alle drei verlangen denselben
+nächsten Schritt, nämlich eine Entscheidung.
+
+**Ein Ausschluss lässt sich nicht wegkompensieren.** Der Server weist den
+Versuch ab, und die Oberfläche bietet ihn gar nicht erst an. „Nicht erfüllbar"
+ist nach A.9.3 ein Ausschlusskriterium; eine Kompensation darauf wäre die
+Umgehung des Kriteriums, nicht seine Erfüllung. Umgekehrt braucht eine
+erfüllte Klasse keine Maßnahme — auch das wird abgewiesen, damit die Liste der
+Kompensationen aussagekräftig bleibt.
+
+**Die Auslöserbedingung ist Text und hängt trotzdem an der Rechnung.** A.9.2
+verlangt zu jeder Klasse Name, Zweck **und** die Bedingung, unter der sie
+ausgelöst wird. Name und Zweck standen schon in `services/bewertung.py`; die
+Bedingung ist neu und als Satz formuliert. Ein Satz kann von der Rechnung
+abdriften — deshalb hält ein Test je Klasse ein auslösendes und ein nicht
+auslösendes Profil gegen `leite_k_klassen_ab`.
+
+**Die Technologieliste kommt vom Server.** Sie stand als Konstante in der
+Oberfläche und hätte, sobald die Matrix dieselben Schlüssel benutzt,
+auseinanderlaufen können: die eine Ansicht zeigte einen Namen, die andere
+einen Schlüssel. Tool-Auswahl, Tool-Liste, Prozessdetail und Matrix lesen sie
+jetzt aus derselben Quelle.
+
+## E-43 — Eine Alt-Anwendung ist eine, die niemand angemeldet hat
+
+A.16 beschreibt den Weg für Anwendungen, die es vor dem Rahmenwerk schon gab:
+sie sind zu melden, und wer die Frist verstreichen lässt, landet im
+Blockierungspfad. Die Cockpit-Zeile dazu fehlte.
+
+**Woran erkennt die Anwendung eine Alt-Anwendung?** Ein Startdatum des
+Rahmenwerks gibt es hier nicht, und ein solches Datum wäre auch das falsche
+Kriterium — es gibt keinen Tag, an dem alle Anwendungen gleichzeitig bekannt
+wurden. Das tragende Merkmal ist ein anderes: `herkunft = importiert`. Diese
+Tool-Objekte hat der Sync **vorgefunden**; niemand hat sie angemeldet. Wer sein
+Werkzeug selbst einträgt, ist den Weg gegangen und steht nicht auf dem Weg.
+
+**Melde- und Blockierungspfad sind derselbe Fall zu verschiedenen Zeiten.** Die
+offene Aufgabe ist in beiden dieselbe — bestätigen, zuordnen, den Prozess
+bewerten. Was sie unterscheidet, ist die Frist: bis dahin Meldepfad, danach
+Blockierungspfad. Deshalb eine Zeile mit zwei Zuständen und nicht zwei Zeilen;
+der Hinweis nennt Pfad, Aufgabe und die Zahl der Tage.
+
+Die Frist steht in der Konfiguration (`altanwendung_meldefrist_tage`,
+Vorgabe 90) und ist damit dort, wo die anderen Governance-Fristen auch stehen —
+sie ist Inhalt, kein Betriebsparameter.
+
+**Wer den Weg hinter sich hat, verschwindet aus der Zeile.** Eine bestätigte,
+einem bewerteten Prozess zugeordnete Alt-Anwendung ist keine Alt-Anwendung
+mehr, sondern ein geführtes Tool-Objekt. Eine Zeile, die sie weiter mitführte,
+würde die Zahl bedeutungslos machen.
+
+## E-44 — Das Cockpit zeigt Kacheln, keine Tabelle
+
+A.14 nennt die Abweichung den „eigentlichen Steuerungshebel". Die erste Fassung
+zeigte die vierzehn Zeilen als Tabelle mit einer Spalte „Ansehen" — technisch
+vollständig und als Steuerungsmittel unbrauchbar: eine Tabelle lädt zum
+Überfliegen ein, und beim Überfliegen bleibt eine Zahl hängen, kein Auftrag.
+
+Jede Zeile ist jetzt eine Kachel mit drei Dingen: dem **Zustandszeichen**, der
+**Zahl** und dem **Satz**, was zu tun ist. Die ganze Kachel ist der Verweis —
+kein „Ansehen"-Link in einer eigenen Spalte, den man erst suchen muss.
+
+Zwei kleinere Dinge fielen dabei auf und sind mit erledigt:
+
+* Die Detailliste zeigte das Zielmodul als **technischen Schlüssel**
+  (`datenobjekte`). Jetzt steht dort sein Name. Das ist derselbe Fehler wie bei
+  den Gate-Auslösern in AP-5 — der dritte Grundsatz des Design-Systems.
+* Die Titel und Beschreibungen der älteren Cockpit-Zeilen waren noch in
+  ASCII-Umschrift („Kritikalitaetsketten", „Attestierungen aelter als die
+  Frist"). Sie stehen groß auf dem Bildschirm und sind mit diesem Paket
+  mitgezogen worden (E-34).
+
+**Das Diagramm.** Die Tier-Verteilung war eine Definitionsliste mit Text wie
+„apps-script: Tier 3 × 2". Sie ist jetzt ein Balkendiagramm, und drei Vorgaben
+tragen es:
+
+* **Farbrolle:** die Farbe steht für die Einstufung, nicht für die Reihe —
+  dieselben Töne wie überall sonst. Eine Legende, die für jedes Diagramm neue
+  Farben vergibt, zwingt zum Nachschlagen.
+* **Achsen:** die Kategorie steht links am Balken und ist lesbar, ohne den Kopf
+  zu drehen; die Menge steht als **Zahl am Segment**. Eine Skala, die man auf
+  ein Lineal beziehen muss, beantwortet die Frage „wie viele" nicht.
+* **Zugänglichkeit:** Farbe ist nie der einzige Bedeutungsträger. Jedes Segment
+  nennt seine Zahl, die Legende ihre Stufe, und dieselben Werte stehen als
+  Tabelle für Vorleseprogramme darunter.
+
+Der im Plan genannte `dataviz`-Leitfaden liegt diesem Repository nicht bei;
+angewandt sind die drei Punkte, die der Plan aus ihm benennt.
+
+## E-45 — Die Wirkungsvorschau zählt, was hinzukommt
+
+„Diese Zuweisung gibt Zugriff auf N Prozessobjekte" (V-ADM-03) lässt sich auf
+zwei Arten rechnen: was der Nutzer **danach insgesamt** sieht, oder was die
+Zuweisung **hinzufügt**. Der Satz meint das zweite, und nur das zweite hilft
+bei der Entscheidung.
+
+Der Unterschied ist nicht theoretisch. Die Sichtbarkeitsregel aus
+Architektur 4.3 zeigt einem Nutzer jedes Prozessobjekt, das er selbst
+verantwortet oder vertritt — ohne jede Rolle. Rechnete die Vorschau die
+Gesamtsicht, stünde bei einem Prozess-Owner mit zwölf eigenen Objekten „gibt
+Zugriff auf 12 Prozessobjekte", auch wenn die Zuweisung auf einen fremden
+Fachbereich zeigt und nichts eröffnet.
+
+Gerechnet wird deshalb zweimal auf einem **gedachten** Principal — dem
+betroffenen Nutzer mit genau dieser einen Zuweisung, und demselben Nutzer ganz
+ohne — und die Differenz gebildet. Beide Seiten laufen über dieselben
+Sichtbarkeitsfunktionen, die später auch greifen; eine zweite, näherungsweise
+Rechnung wäre eine Vorschau auf etwas anderes als das Ergebnis.
+
+## E-46 — Abgenommen wird über den Vorgang, belegt über den Test
+
+Befund B15 nennt die Wurzel der übrigen Befunde: die Abnahmekriterien sind als
+Aussagen über eine Rolle formuliert — „ein Prozess-Owner **kann** ein
+Prozessobjekt anlegen" —, wurden aber als Aussagen über die API gelesen und mit
+API-Tests belegt. So konnten sieben Phasen als abgeschlossen gelten, während
+der Nutzerweg für die zentrale Fähigkeit nie existierte.
+
+Seit AP-10 steht in `docs/phasen.md` je Kriterium eine eigene Spalte
+**„Vorgang über die Oberfläche"**. Sie kommt vor dem technischen Nachweis, weil
+sie das Kriterium beantwortet; die Tests daneben belegen die Fachlogik
+dahinter und bleiben als zweites Netz stehen. Wo keine Rolle handelt — der Bau
+der Images —, steht ausdrücklich „kein Nutzerweg", statt die Spalte leer zu
+lassen.
+
+**Die Zuordnung prüft sich selbst.** Zwei Läufe in `katalog.vorgang.ts` halten
+`phasen.md` gegen den Katalog: jede zitierte Kennung muss existieren **und**
+erfüllt sein, und jedes Kriterium braucht eine Vorgangsspalte. Eine Tabelle in
+einer Markdown-Datei rottet sonst still vor sich hin — und diese hier ist die
+Abnahmegrundlage.
+
+`pruefen.sh` benennt den Durchlauf jetzt so: „Abnahme: die Anwendervorgänge aus
+docs/vorgaenge.md". Der Name ist keine Kosmetik. Wer den Namen liest, weiß, was
+gilt.
+
+## E-47 — Fachbereich ist das Was, Organisationseinheit das Wo
+
+Beide Begriffe stehen seit Phase 1 im Modell, ihre Aufgabenteilung stand
+nirgends — sie lebte in zwei Prüfungen in `services/prozess.py`. Nachgetragen:
+
+Ein **Fachbereich** ist die fachliche Domäne: Finance, HR, Logistik. Er trägt
+einen Namen und einen Code, sonst nichts — keine Ebene, kein Land.
+
+Eine **Organisationseinheit** ist eine Ausprägung innerhalb eines Fachbereichs,
+gekennzeichnet durch `ebene` (INT oder LAND) und bei LAND durch `land_code`.
+Ihr eindeutiger Schlüssel ist `(Fachbereich, Ebene, Land)`; einen eigenen Namen
+hat sie bewusst nicht und wird als „Finance · INT" zusammengesetzt. Sie ist
+kein eigenständiges Gebilde, sondern eine Facette ihres Fachbereichs.
+
+Die Trennung trägt zwei Dinge, die sonst verloren gingen:
+
+* **Die Ebene trägt das Prozessgeber-Umsetzer-Modell.** Ein Prozessobjekt wird
+  immer von einer **INT**-Einheit gegeben und von **LAND**-Einheiten umgesetzt;
+  beides weist der Server ab, wenn es anders versucht wird. Ein Prozess wird
+  international einmal definiert und in mehreren Ländern umgesetzt — die lokale
+  Abweichung hängt an der Umsetzung, nicht am Prozess. Aus der Zahl der
+  Umsetzungen folgt außerdem die Reichweite (A.4.4).
+* **Der Fachbereich trägt den Geltungsbereich einer Rolle.** Ein Scope auf
+  einen Fachbereich löst sich in *alle* seine Einheiten auf, ein Scope auf eine
+  Einheit nur in diese. Das ist der Unterschied zwischen „Prozess-Owner für
+  Finance" und „Prozess-Owner für Finance Deutschland".
+
+**Die Grenze des Modells:** je Fachbereich und Land ist genau **eine** Einheit
+möglich. Hat die Organisation zwei Finance-Einheiten in Deutschland, bildet das
+Modell sie nicht ab — dann bräuchte die Organisationseinheit einen eigenen
+Namen, und die Eindeutigkeit über `(Fachbereich, Ebene, Land)` müsste fallen.
+Das ist kein Versehen, sondern die Annahme, auf der die Ableitung der
+Reichweite und die Scope-Auflösung heute stehen.

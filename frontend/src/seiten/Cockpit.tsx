@@ -1,9 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 
 import { api } from '@/api/client';
 import type { CockpitEintrag, CockpitZeile, CockpitZeilenkopf, Fachbereich } from '@/api/typen';
 import { useSprache } from '@/i18n/SprachKontext';
+import { Verteilung } from '@/komponenten/Verteilung';
+import {
+  Abzeichen,
+  Auswahl,
+  Gruppe,
+  Hinweis,
+  Karte,
+  Ladeschimmer,
+  Leerzustand,
+  Seitenkopf,
+  ZeileVerweis,
+} from '@/ui';
 import { useSitzung } from '@/zustand/Sitzung';
 
 /** Baut aus Zielmodul und Filter den Deep-Link ins passende Modul (Architektur 9.3). */
@@ -29,19 +41,44 @@ function useFachbereiche(): Fachbereich[] {
   return fachbereiche;
 }
 
+/** Der Fachbereichsfilter, in Übersicht und Detailansicht derselbe. */
+function Fachbereichsfilter({
+  wert,
+  aendern,
+}: {
+  wert: string;
+  aendern: (wert: string) => void;
+}) {
+  const { t } = useSprache();
+  const fachbereiche = useFachbereiche();
+  return (
+    <Auswahl
+      beschriftung={t('cockpit.fachbereich')}
+      wert={wert}
+      aendern={aendern}
+      leertext={t('cockpit.alleFachbereiche')}
+      optionen={fachbereiche.map((f) => ({ wert: f.id, text: f.name }))}
+      hilfe={t('cockpit.filterHinweis')}
+    />
+  );
+}
+
 /**
- * Cockpit-Übersicht (Architektur 8.7).
+ * Cockpit-Übersicht (Architektur 8.7, Leitdokument A.14).
  *
- * Kein überladenes Dashboard, sondern eine Liste gezielt aufrufbarer Zeilen.
+ * Kein überladenes Dashboard, sondern ein Raster gezielt aufrufbarer Karten:
+ * je Zeile die Zahl, ein Zustandszeichen und der Satz, was zu tun ist. A.14
+ * nennt die Abweichung den „eigentlichen Steuerungshebel" — eine Zeile ohne
+ * Handlungssatz wäre eine Kennzahl, und Kennzahlen steuern nichts.
+ *
  * Der Fachbereichsfilter steht in der URL, damit eine gefilterte Ansicht
  * teilbar ist (Architektur 9.3) — er verleiht dabei keine Rechte: was ein
- * Nutzer sieht, entscheidet weiterhin allein der Server.
+ * Nutzer sieht, entscheidet weiterhin allein der Server (Architektur 4.3).
  */
 export function Cockpit() {
   const { t, pfad } = useSprache();
   const { token } = useSitzung();
   const [suche, setSuche] = useSearchParams();
-  const fachbereiche = useFachbereiche();
   const [zeilen, setZeilen] = useState<CockpitZeilenkopf[] | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
 
@@ -55,76 +92,80 @@ export function Cockpit() {
       .catch(() => setFehler(t('app.fehler')));
   }, [token, fachbereich, t]);
 
-  if (fehler !== null) return <p role="alert">{fehler}</p>;
-  if (zeilen === null) return <p>{t('app.laden')}</p>;
+  if (fehler !== null) return <Hinweis art="fehler">{fehler}</Hinweis>;
+  if (zeilen === null) return <Ladeschimmer beschriftung={t('app.laden')} zeilen={6} />;
+
+  const offen = zeilen.reduce((summe, zeile) => summe + zeile.anzahl, 0);
 
   return (
-    <section>
-      <h1>{t('cockpit.titel')}</h1>
-      <p>{t('cockpit.hinweis')}</p>
-
-      <label htmlFor="cockpit-fachbereich">{t('cockpit.fachbereich')}</label>
-      <select
-        id="cockpit-fachbereich"
-        value={fachbereich}
-        onChange={(e) =>
-          setSuche(e.target.value === '' ? {} : { fachbereich: e.target.value })
+    <>
+      <Seitenkopf
+        titel={t('cockpit.titel')}
+        untertitel={t('cockpit.hinweis')}
+        aktionen={
+          <Abzeichen ton={offen === 0 ? 'gruen' : 'gelb'} zeichen={offen === 0 ? '✓' : '!'}>
+            {offen === 0
+              ? t('cockpit.allesErledigt')
+              : t('cockpit.gesamt').replace('{anzahl}', String(offen))}
+          </Abzeichen>
         }
-      >
-        <option value="">{t('cockpit.alleFachbereiche')}</option>
-        {fachbereiche.map((f) => (
-          <option key={f.id} value={f.id}>
-            {f.name}
-          </option>
-        ))}
-      </select>
+      />
 
-      <table>
-        <thead>
-          <tr>
-            <th>{t('cockpit.titel')}</th>
-            <th>{t('cockpit.anzahl')}</th>
-            <th>{t('cockpit.oeffnen')}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {zeilen.map((zeile) => (
-            <tr key={zeile.schluessel}>
-              <td>
-                {zeile.titel}
-                <br />
-                <small>{zeile.beschreibung}</small>
-              </td>
-              <td data-testid={`anzahl-${zeile.schluessel}`}>{zeile.anzahl}</td>
-              <td>
-                <Link
-                  to={pfad(
-                    `/cockpit/${zeile.schluessel}${fachbereich ? `?fachbereich=${fachbereich}` : ''}`,
-                  )}
-                >
-                  {t('cockpit.oeffnen')}
-                </Link>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </section>
+      <Karte>
+        <Fachbereichsfilter
+          wert={fachbereich}
+          aendern={(wert) => setSuche(wert === '' ? {} : { fachbereich: wert })}
+        />
+      </Karte>
+
+      <div className="k-raster">
+        {zeilen.map((zeile) => (
+          <Link
+            key={zeile.schluessel}
+            className="k-kachel"
+            data-testid={`kachel-${zeile.schluessel}`}
+            data-zustand={zeile.anzahl === 0 ? 'ruhig' : 'offen'}
+            to={pfad(
+              `/cockpit/${zeile.schluessel}${fachbereich ? `?fachbereich=${fachbereich}` : ''}`,
+            )}
+          >
+            <span className="kopf">
+              <span className="punkt" aria-hidden="true">
+                {zeile.anzahl === 0 ? '✓' : '!'}
+              </span>
+              <span className="titel">{zeile.titel}</span>
+            </span>
+            <span className="zahl" data-testid={`anzahl-${zeile.schluessel}`}>
+              {zeile.anzahl}
+            </span>
+            <span className="satz">{zeile.beschreibung}</span>
+            <span className="k-nur-vorlesen">
+              {zeile.anzahl === 0 ? t('cockpit.nichtsOffen') : t('cockpit.anzahl')}
+            </span>
+          </Link>
+        ))}
+      </div>
+    </>
   );
 }
 
-/** Eine einzelne Cockpit-Zeile mit ihren Einträgen und deren Zielen. */
+/**
+ * Eine einzelne Cockpit-Zeile mit ihren Einträgen und deren Zielen.
+ *
+ * Jeder Eintrag führt vorgefiltert dorthin, wo er abgearbeitet wird — mit dem
+ * **Namen** des Zielmoduls, nicht mit seinem Schlüssel.
+ */
 export function CockpitZeileAnsicht() {
   const { schluessel } = useParams();
   const { t, pfad } = useSprache();
   const { token } = useSitzung();
-  const [suche] = useSearchParams();
+  const [suche, setSuche] = useSearchParams();
   const [zeile, setZeile] = useState<CockpitZeile | null>(null);
   const [fehler, setFehler] = useState<string | null>(null);
 
   const fachbereich = suche.get('fachbereich') ?? '';
 
-  useEffect(() => {
+  const laden = useCallback(() => {
     if (token === null || schluessel === undefined) return;
     api
       .cockpitZeile(token, schluessel, fachbereich ? `?fachbereich_id=${fachbereich}` : '')
@@ -132,60 +173,51 @@ export function CockpitZeileAnsicht() {
       .catch(() => setFehler(t('app.fehler')));
   }, [token, schluessel, fachbereich, t]);
 
-  if (fehler !== null) return <p role="alert">{fehler}</p>;
-  if (zeile === null) return <p>{t('app.laden')}</p>;
+  useEffect(laden, [laden]);
+
+  if (fehler !== null) return <Hinweis art="fehler">{fehler}</Hinweis>;
+  if (zeile === null) return <Ladeschimmer beschriftung={t('app.laden')} zeilen={5} />;
 
   return (
-    <section>
-      <h1>{zeile.titel}</h1>
-      <p>{zeile.beschreibung}</p>
-      <Link to={pfad('/cockpit')}>{t('cockpit.zurueck')}</Link>
+    <>
+      <Seitenkopf
+        titel={zeile.titel}
+        untertitel={zeile.beschreibung}
+        rueckweg={{ ziel: pfad('/cockpit'), text: t('cockpit.zurueck') }}
+        aktionen={
+          <Abzeichen ton={zeile.anzahl === 0 ? 'gruen' : 'gelb'}>{String(zeile.anzahl)}</Abzeichen>
+        }
+      />
 
-      {zeile.aggregat !== null && (
-        <dl className="felder" data-testid="aggregat">
-          {Object.entries(zeile.aggregat).map(([gruppe, werte]) => (
-            <div key={gruppe}>
-              <dt>{gruppe}</dt>
-              <dd>
-                {Object.entries(werte)
-                  .map(([schlüssel, verteilung]) =>
-                    typeof verteilung === 'object'
-                      ? `${schlüssel}: ${Object.entries(verteilung)
-                          .map(([tier, anzahl]) => `Tier ${tier} × ${anzahl}`)
-                          .join(', ')}`
-                      : `${schlüssel}: ${String(verteilung)}`,
-                  )
-                  .join(' · ') || '—'}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      )}
+      <Karte>
+        <Fachbereichsfilter
+          wert={fachbereich}
+          aendern={(wert) => setSuche(wert === '' ? {} : { fachbereich: wert })}
+        />
+      </Karte>
+
+      {zeile.aggregat !== null && <Verteilung aggregat={zeile.aggregat} />}
 
       {zeile.eintraege.length === 0 ? (
-        <p>{t('cockpit.leer')}</p>
+        zeile.aggregat === null && (
+          <Leerzustand zeichen="✓" titel={t('cockpit.leer')} text={t('cockpit.leerHinweis')} />
+        )
       ) : (
-        <table>
-          <thead>
-            <tr>
-              <th>{t('cockpit.eintrag')}</th>
-              <th>{t('cockpit.hinweisSpalte')}</th>
-              <th>{t('cockpit.ziel')}</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Karte titel={t('cockpit.eintraege')}>
+          <Gruppe>
             {zeile.eintraege.map((eintrag) => (
-              <tr key={eintrag.id}>
-                <td>{eintrag.titel}</td>
-                <td>{eintrag.hinweis}</td>
-                <td>
-                  <Link to={zielPfad(eintrag, pfad)}>{eintrag.ziel_modul}</Link>
-                </td>
-              </tr>
+              <ZeileVerweis
+                key={`${eintrag.id}-${eintrag.hinweis}`}
+                pruefkennung={`eintrag-${eintrag.id}`}
+                ziel={zielPfad(eintrag, pfad)}
+                haupt={eintrag.titel}
+                zweitzeile={eintrag.hinweis}
+                wert={<Abzeichen>{t(`cockpit.modul.${eintrag.ziel_modul}` as never)}</Abzeichen>}
+              />
             ))}
-          </tbody>
-        </table>
+          </Gruppe>
+        </Karte>
       )}
-    </section>
+    </>
   );
 }

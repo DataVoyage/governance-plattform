@@ -7,7 +7,8 @@ from datetime import UTC, datetime, timedelta
 import pytest
 from fastapi.testclient import TestClient
 
-from tests.test_bewertung import antworten_fuer, profil_von
+from app.services.lenkung import arbeitstage_addieren
+from tests.test_bewertung import nutzlast, profil_von
 
 
 @pytest.fixture
@@ -48,7 +49,7 @@ def prozess(client: TestClient, owner, vertretung, prozess_daten):
 def bewerte(client: TestClient, anmeldung, prozess_id: str, **profil):
     antwort = client.post(
         f"/api/v1/prozesse/{prozess_id}/bewertungen",
-        json={"modus": "vollstaendig", "antworten": antworten_fuer(profil_von(**profil))},
+        json=nutzlast(profil_von(**profil)),
         headers=anmeldung.kopf,
     )
     assert antwort.status_code == 201, antwort.text
@@ -56,7 +57,7 @@ def bewerte(client: TestClient, anmeldung, prozess_id: str, **profil):
 
 
 @pytest.fixture
-def tool(client: TestClient, governance, techniker, organisation, prozess, owner):
+def tool(client: TestClient, governance, techniker, organisation, prozess, owner, attestieren):
     """Ein Tier-3-Tool mit technischem Owner, an einem bewerteten Prozess."""
     bewerte(client, owner, prozess["id"], ds=3)
     angelegt = client.post(
@@ -68,6 +69,7 @@ def tool(client: TestClient, governance, techniker, organisation, prozess, owner
         },
         headers=governance.kopf,
     ).json()
+    attestieren(governance.kopf, angelegt["id"])
     client.post(
         f"/api/v1/tools/{angelegt['id']}/prozesse",
         json={"prozessobjekt_id": prozess["id"]},
@@ -128,10 +130,10 @@ def test_rahmenueberschreitung_erzeugt_stufe_1_mit_tier_frist(
     assert vorgang["status"] == "offen"
     assert vorgang["zugewiesen_an"] == techniker.user_id
 
-    # Tier 3 -> 14 Tage (Standardwert der Konfiguration).
+    # Tier 3 -> 5 Arbeitstage (Leitdokument A.13.5), Wochenenden uebersprungen.
     frist = datetime.fromisoformat(vorgang["frist"])
     erstellt = datetime.fromisoformat(vorgang["erstellt_am"])
-    assert 13 <= (frist - erstellt).days <= 14
+    assert abs(frist - arbeitstage_addieren(erstellt, 5)) < timedelta(seconds=5)
 
     # Der betroffene Owner wird benachrichtigt.
     nachrichten = client.get("/api/v1/benachrichtigungen", headers=techniker.kopf).json()
@@ -140,7 +142,7 @@ def test_rahmenueberschreitung_erzeugt_stufe_1_mit_tier_frist(
 
 
 def test_frist_haengt_am_tier(
-    client: TestClient, governance, owner, vertretung, prozess_daten, organisation
+    client: TestClient, governance, owner, vertretung, prozess_daten, organisation, attestieren
 ) -> None:
     niedrig = client.post(
         "/api/v1/prozesse",
@@ -153,6 +155,7 @@ def test_frist_haengt_am_tier(
         json={"name": "Tier-1-Tool", "organisationseinheit_id": organisation["fin_de"]},
         headers=governance.kopf,
     ).json()
+    attestieren(governance.kopf, tool["id"])
     client.post(
         f"/api/v1/tools/{tool['id']}/prozesse",
         json={"prozessobjekt_id": niedrig["id"]},
@@ -161,7 +164,9 @@ def test_frist_haengt_am_tier(
     vorgang = melde(client, governance, tool["id"], "rot").json()["lenkungsvorgang"]
     frist = datetime.fromisoformat(vorgang["frist"])
     erstellt = datetime.fromisoformat(vorgang["erstellt_am"])
-    assert 89 <= (frist - erstellt).days <= 90
+    # Tier 1 -> 30 Arbeitstage statt der 5 aus Tier 3 (Leitdokument A.13.5).
+    assert abs(frist - arbeitstage_addieren(erstellt, 30)) < timedelta(seconds=5)
+    assert (frist - erstellt).days >= 40
 
 
 def test_zweite_meldung_verdoppelt_den_vorgang_nicht(client: TestClient, governance, tool) -> None:
@@ -176,6 +181,28 @@ def test_vorgang_ohne_owner_bleibt_unzugewiesen(client: TestClient, governance) 
     tool = client.post("/api/v1/tools", json={"name": "Ohne Owner"}, headers=governance.kopf).json()
     vorgang = melde(client, governance, tool["id"], "rot").json()["lenkungsvorgang"]
     assert vorgang["zugewiesen_an"] is None
+
+
+# --- Arbeitstage statt Kalendertage (Leitdokument A.13.5) ----------------
+
+
+def test_arbeitstage_ueberspringen_das_wochenende() -> None:
+    """Fuenf Arbeitstage ab Donnerstag enden am Donnerstag darauf."""
+    donnerstag = datetime(2026, 9, 3, 9, 0, tzinfo=UTC)
+    assert donnerstag.weekday() == 3
+    assert arbeitstage_addieren(donnerstag, 5) == datetime(2026, 9, 10, 9, 0, tzinfo=UTC)
+    # Ein einzelner Arbeitstag ab Freitag ist der Montag, nicht der Samstag.
+    freitag = datetime(2026, 9, 4, 9, 0, tzinfo=UTC)
+    assert arbeitstage_addieren(freitag, 1) == datetime(2026, 9, 7, 9, 0, tzinfo=UTC)
+    # Null Tage und negative Angaben bewegen nichts.
+    assert arbeitstage_addieren(freitag, 0) == freitag
+    assert arbeitstage_addieren(freitag, -3) == freitag
+
+
+def test_frist_faellt_nie_auf_ein_wochenende() -> None:
+    for tag in range(1, 15):
+        start = datetime(2026, 9, tag, 9, 0, tzinfo=UTC)
+        assert arbeitstage_addieren(start, 3).weekday() < 5
 
 
 # --- Eskalation (Abnahmekriterium 5.2) -----------------------------------
@@ -213,6 +240,49 @@ def test_fristablauf_rueckt_in_stufe_2_und_informiert_die_fuehrungskraft(
         .one()
     )
     assert str(nachricht.empfaenger_user_id) == fuehrungskraft.user_id
+
+
+def test_stufe_2_bekommt_die_kurze_nachfrist(client: TestClient, governance, tool, db) -> None:
+    """A.13.5: Stufe 2 gibt *zusaetzlich* 15/10/5 Tage, nicht noch einmal alles.
+
+    Vorher setzte die Eskalation dieselbe Tier-Frist erneut an — der Vorgang
+    bekam damit in der zweiten Stufe genauso lange wie in der ersten, obwohl
+    die Eskalation gerade den Druck erhoehen soll.
+    """
+    from app.models.governance import Lenkungsvorgang
+    from app.services import lenkung
+
+    melde(client, governance, tool["id"], "rot")
+    db.expire_all()
+    vorgang = db.query(Lenkungsvorgang).one()
+
+    faellig = vorgang.frist + timedelta(days=1)
+    lenkung.eskaliere_faellige(db, faellig)
+    db.commit()
+    db.refresh(vorgang)
+
+    assert vorgang.eskalationsstufe == 2
+    # Tier 3: Stufe 1 sind 5 Arbeitstage, Stufe 2 noch einmal 5 — beide aus der
+    # Konfiguration, aber aus verschiedenen Schluesseln.
+    assert vorgang.frist == arbeitstage_addieren(faellig, 5)
+
+
+def test_stufe_3_bekommt_keine_neue_frist(client: TestClient, governance, tool, db) -> None:
+    """In Stufe 3 steht die technische Massnahme an — es gibt nichts abzuwarten."""
+    from app.models.governance import Lenkungsvorgang
+    from app.services import lenkung
+
+    melde(client, governance, tool["id"], "rot")
+    db.expire_all()
+    vorgang = db.query(Lenkungsvorgang).one()
+    lenkung.eskaliere_faellige(db, vorgang.frist + timedelta(days=1))
+    db.refresh(vorgang)
+    frist_in_stufe_2 = vorgang.frist
+
+    lenkung.eskaliere_faellige(db, vorgang.frist + timedelta(days=1))
+    db.refresh(vorgang)
+    assert vorgang.eskalationsstufe == 3
+    assert vorgang.frist == frist_in_stufe_2
 
 
 def test_eskalation_endet_bei_stufe_3(client: TestClient, governance, tool, db) -> None:
@@ -260,6 +330,87 @@ def test_eskalationsjob_laeuft(client: TestClient, governance, tool, db) -> None
     assert jobs.main(["eskalationen"]) == 0
 
 
+# --- Schicht 2 (Leitdokument A.13.2, A.13.5) -----------------------------
+
+
+def test_schicht2_verstoss_beginnt_in_stufe_2(
+    client: TestClient, governance, techniker, tool
+) -> None:
+    """A.13.5: „Bei Verletzung von Schicht 2 entfaellt Stufe 1."""
+    antwort = melde(
+        client,
+        governance,
+        tool["id"],
+        "rot",
+        begruendung="Laeuft unter einem geteilten Konto",
+        schicht2_verbot="identitaet_umgangen",
+    )
+    assert antwort.status_code == 201
+    vorgang = antwort.json()["lenkungsvorgang"]
+    assert vorgang["eskalationsstufe"] == 2
+    assert vorgang["schicht2_verbot"] == "identitaet_umgangen"
+    assert antwort.json()["zustand"]["schicht2_verbot"] == "identitaet_umgangen"
+
+    # Die Frist ist die kurze Nachfrist der zweiten Stufe, nicht die erste.
+    frist = datetime.fromisoformat(vorgang["frist"])
+    erstellt = datetime.fromisoformat(vorgang["erstellt_am"])
+    assert abs(frist - arbeitstage_addieren(erstellt, 5)) < timedelta(seconds=5)
+
+    # Stufe 2 heisst: die Fuehrungskraft ist informiert — sofort, nicht erst
+    # beim naechsten Fristablauf.
+    anlaesse = [
+        n["anlass"] for n in client.get("/api/v1/benachrichtigungen", headers=techniker.kopf).json()
+    ]
+    assert "lenkungsvorgang_eskaliert" in anlaesse
+
+
+def test_schicht2_hebt_einen_laufenden_vorgang_an(client: TestClient, governance, tool, db) -> None:
+    """Die Reihenfolge der Meldungen darf nicht ueber die Schwere entscheiden."""
+    erst = melde(client, governance, tool["id"], "rot").json()["lenkungsvorgang"]
+    assert erst["eskalationsstufe"] == 1
+
+    danach = melde(
+        client, governance, tool["id"], "rot", schicht2_verbot="statische_zugangsdaten"
+    ).json()["lenkungsvorgang"]
+    assert danach["id"] == erst["id"]
+    assert danach["eskalationsstufe"] == 2
+    assert danach["schicht2_verbot"] == "statische_zugangsdaten"
+    del db
+
+
+def test_schicht2_kennt_nur_die_sechs_verbote(client: TestClient, governance, tool) -> None:
+    antwort = melde(client, governance, tool["id"], "rot", schicht2_verbot="irgendwas_anderes")
+    assert antwort.status_code == 422
+
+
+def test_schicht2_ist_nie_gelb(client: TestClient, governance, tool) -> None:
+    """Was keine Bewertung freischaltet, ist keine Beobachtung."""
+    antwort = melde(client, governance, tool["id"], "gelb", schicht2_verbot="identitaet_umgangen")
+    assert antwort.status_code == 422
+    assert "rot" in antwort.json()["detail"]
+
+
+def test_verbotsliste_ist_abschliessend_und_benennt_die_erkennbaren(
+    client: TestClient, governance
+) -> None:
+    liste = client.get("/api/v1/schicht2-verbote", headers=governance.kopf).json()
+    assert [e["schluessel"] for e in liste] == [
+        "identitaet_umgangen",
+        "statische_zugangsdaten",
+        "undeklarierte_quellen",
+        "entscheidung_ohne_mensch",
+        "daten_ins_offene_netz",
+        "protokollierung_umgangen",
+    ]
+    erkennbar = {e["schluessel"] for e in liste if e["automatisch_erkennbar"]}
+    assert erkennbar == {
+        "identitaet_umgangen",
+        "statische_zugangsdaten",
+        "undeklarierte_quellen",
+        "entscheidung_ohne_mensch",
+    }
+
+
 # --- Aufloesung (Abnahmekriterium 5.3) -----------------------------------
 
 
@@ -301,7 +452,7 @@ def test_rahmen_erweitern_verlangt_eine_neue_bewertung(
         client, governance, vorgang["id"], "rahmen_erweitern", bewertung_id=alte_bewertung["id"]
     )
     assert zu_alt.status_code == 422
-    assert "vor der Eroeffnung" in zu_alt.json()["detail"]
+    assert "vor der Eröffnung" in zu_alt.json()["detail"]
 
     neue = bewerte(client, owner, prozess["id"], ds=3, it=2)
     antwort = loese_auf(
