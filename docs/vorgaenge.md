@@ -233,3 +233,20 @@ ihn zu hinterlegen, bekommt einen roten Test — und umgekehrt.
 | V-INT-04 | Ohne Service-Token abfragen | Plattform | Die Auskunft wird verweigert | AP-3 | erfüllt |
 | V-INT-05 | Änderungen über den Cursor abholen | Plattform | Derselbe Cursor liefert keine Dopplungen | AP-3 | erfüllt |
 | V-INT-06 | Eine schreibende Aktion im Nachweis wiederfinden | Auditor | Jede Änderung steht mit Zeitpunkt, Person und Vorher/Nachher im Änderungsprotokoll | AP-9 | erfüllt |
+
+## V-RCH — Rechte im Blick
+
+Spezifiziert in [`docs/rechte-und-rollen.md`](rechte-und-rollen.md). Diese Vorgänge belegen,
+was das Rechtemodell heute nur im Backend zeigt: dass Rolle und Bereich zusammen entscheiden
+und dass eine Sperre erklärt wird, statt erst beim Speichern aufzutreten.
+
+| Kennung | Vorgang | Rolle | Erwartetes Ergebnis | AP | Stand |
+|---|---|---|---|---|---|
+| V-RCH-01 | Als Auditor ein Tool-Objekt öffnen | Auditor | Alle Felder sind sichtbar, aber gesperrt; die Sperre nennt den Grund am Feld | AP-11 | offen |
+| V-RCH-02 | Als Auditor eine Änderung versuchen | Auditor | Es gibt keinen bedienbaren Weg dorthin — kein Fehler nach dem Absenden | AP-11 | offen |
+| V-RCH-03 | Ein fremdes Tool im eigenen Bereich öffnen | Prozess-Owner | Lesbar, Bearbeitung gesperrt mit Verweis auf den technischen Owner | AP-11 | offen |
+| V-RCH-04 | Das eigene Tool bearbeiten | technischer Owner | Alle Felder sind bedienbar, keine Sperre und kein Hinweis | AP-11 | offen |
+| V-RCH-05 | Ein Gate ohne Governance-Rolle entscheiden wollen | Prozess-Owner | Der Entscheidungsbereich fehlt; der Vorgang bleibt einsehbar | AP-11 | offen |
+| V-RCH-06 | Ein importiertes Feld am eigenen Tool bearbeiten wollen | technischer Owner | Die Sperre unterscheidet Herkunft von fehlendem Recht und sagt, welche von beiden gilt | AP-11 | offen |
+| V-RCH-07 | Mit zwei Rollen in verschiedenen Bereichen arbeiten | Prozess-Owner | Im zugewiesenen Bereich bedienbar, im anderen nur lesbar — in derselben Sitzung | AP-11 | offen |
+| V-RCH-08 | Nach Entzug der Rolle die Seite neu laden | Prozess-Owner | Die zuvor bedienbaren Felder sind gesperrt, ohne dass eine Abmeldung nötig war | AP-11 | offen |

@@ -461,6 +461,33 @@ Playwright-Bericht zeigt 132 Läufe: die 124 Vorgänge und die acht Selbstprüfu
       Kennung gegen den Katalog und jedes Kriterium gegen seine Vorgangsspalte
 - [x] Phasen 1 bis 7 auf dieser Grundlage erneut abgenommen
 
+### AP-11 — Rechte bis ins Frontend
+
+**Anwendervorgänge:** V-RCH-01 bis V-RCH-08. Spezifikation in
+[`docs/rechte-und-rollen.md`](rechte-und-rollen.md).
+
+Das Rechtemodell ist tragfähig und wird nicht angefasst: Rolle × Bereich, sechs objektbezogene
+`darf_*`-Funktionen, Scope-Filterung im Lesepfad, 40 Testfälle. Es endet nur an der API. Wo
+jemand lesen, aber nicht schreiben darf, zeigt die Oberfläche heute Eingabefelder und quittiert
+erst das Speichern mit einem generischen Fehler. Dieses Paket reicht die Auskunft durch —
+**ohne die Durchsetzung zu verlagern.**
+
+- [ ] `RechtAus` (Erlaubnis plus Grund) und je Objekt ein benanntes Rechtebündel, berechnet aus
+      den vorhandenen `darf_*`-Funktionen — keine zweite Rechtequelle (E-48, E-49)
+- [ ] Zuordnungstabelle `Route → Objektrecht` für jede schreibende Route, und der Test, der
+      beide Seiten gegeneinander hält: verweigertes Recht ⟹ 403, erteiltes Recht ⟹ kein 403.
+      Eine Route ohne Eintrag lässt den Test fehlschlagen
+- [ ] `hatRolle` bekommt den Bereich zurück — dieselbe Auflösung wie `Principal.hat_rolle`;
+      ohne Bereichsangabe bleibt das heutige Verhalten (`Sitzung.tsx:97`)
+- [ ] Der vorhandene `gesperrt`-Pfad (`ToolDetail.tsx:223`) bekommt einen zweiten Sperrgrund;
+      Herkunftssperre und Rechtesperre sind im Text unterscheidbar (E-52)
+- [ ] Gesperrte Felder bleiben sichtbar und nennen den Grund am Feld; Aktionsknöpfe hängen am
+      Objektrecht statt an der Rolle (E-51)
+- [ ] Fehlt die Rechteangabe, gilt „bedienbar" — die Oberfläche wirkt nie strenger als der
+      Server entscheidet (E-50)
+- [ ] V-RCH-01 bis V-RCH-08 scharfgeschaltet, insbesondere V-RCH-07: zwei Rollen in
+      verschiedenen Bereichen in derselben Sitzung
+
 ---
 
 ## 3. Reihenfolge und Meilensteine
