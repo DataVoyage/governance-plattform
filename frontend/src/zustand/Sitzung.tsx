@@ -24,6 +24,16 @@ export interface SitzungsWert {
   token: string | null;
   profil: Profil | null;
   laedt: boolean;
+  /**
+   * Wahr, seit sich in diesem Browserfenster jemand aktiv abgemeldet hat.
+   *
+   * Der Unterschied zaehlt an genau einer Stelle: wer ohne Anmeldung eine
+   * Adresse aufruft, soll nach dem Anmelden dort ankommen. Wer sich abmeldet,
+   * hinterlaesst dem Naechsten kein Ziel — eine Abmeldung ist ein
+   * Schlussstrich, und der Naechste gehoert nicht auf die letzte Seite seines
+   * Vorgaengers.
+   */
+  abgemeldet: boolean;
   anmelden: (subject: string, name: string) => Promise<void>;
   abmelden: () => void;
   hatRolle: (rolle: string) => boolean;
@@ -52,6 +62,7 @@ export function SitzungsAnbieter({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(() => leseToken());
   const [profil, setProfil] = useState<Profil | null>(null);
   const [laedt, setLaedt] = useState<boolean>(token !== null);
+  const [abgemeldet, setAbgemeldet] = useState(false);
 
   useEffect(() => {
     let abgebrochen = false;
@@ -85,12 +96,14 @@ export function SitzungsAnbieter({ children }: { children: ReactNode }) {
     const antwort = await api.devToken(subject, `${subject}@beispiel-ag.de`, name);
     schreibeToken(antwort.access_token);
     setToken(antwort.access_token);
+    setAbgemeldet(false);
   }, []);
 
   const abmelden = useCallback(() => {
     schreibeToken(null);
     setToken(null);
     setProfil(null);
+    setAbgemeldet(true);
   }, []);
 
   const hatRolle = useCallback(
@@ -99,8 +112,8 @@ export function SitzungsAnbieter({ children }: { children: ReactNode }) {
   );
 
   const wert = useMemo<SitzungsWert>(
-    () => ({ token, profil, laedt, anmelden, abmelden, hatRolle }),
-    [token, profil, laedt, anmelden, abmelden, hatRolle],
+    () => ({ token, profil, laedt, abgemeldet, anmelden, abmelden, hatRolle }),
+    [token, profil, laedt, abgemeldet, anmelden, abmelden, hatRolle],
   );
 
   return <SitzungsKontext.Provider value={wert}>{children}</SitzungsKontext.Provider>;

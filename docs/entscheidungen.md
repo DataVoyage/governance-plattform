@@ -1246,3 +1246,118 @@ Verweise der Form „Architektur 4.3", „Architektur 7.3", „Architektur 10.2"
 zeigen auf ein zweites Dokument, das nicht beiliegt. Was aus ihm stammt —
 Sichtbarkeitsregel, Query-API-Vertrag, Rollenmatrix 5.3 — ist nach wie vor
 ungeprüft.
+
+## E-49 — Der Beispielbestand entsteht über die Fachlogik, nicht neben ihr
+
+**Anlass.** Die Anwendung ließ sich mit drei Prozessobjekten bedienen, aber
+nicht beurteilen: leere Cockpit-Zeilen, eine Tier-Verteilung aus einem
+einzigen Balken, ein Nachweis mit acht Einträgen aus derselben Minute. Für
+Abnahme, Schulung und jede Gestaltungsfrage fehlte ein Bestand, der aussieht
+wie ein Unternehmen im Betrieb.
+
+**Entscheidung.** `app/bestand` baut einen vollständigen Datenbestand einer
+Einzelhandelsgruppe auf — zehn Fachbereiche, einunddreißig
+Landesgesellschaften, siebzig Menschen, dreiundneunzig Datenobjekte,
+fünfundfünfzig Prozessobjekte, zweiundsiebzig Tool-Objekte samt allen
+Vorgängen daran. Drei Regeln tragen ihn:
+
+1. **Kein Schreibpfad an den Diensten vorbei.** Jede Zeile entsteht über
+   dieselbe Geschäftslogik wie im Betrieb, unter der Kennung des Menschen, der
+   sie täte. Damit läuft der Aufbau durch jede Berechtigungsprüfung, jeden
+   Torwächter und jeden Vorschlagsabgleich — und ist selbst der schärfste
+   Integrationstest dieser Suite (`tests/test_bestand.py`).
+2. **Keine Testsignaturen.** Kein Name, kein Datenobjekt, kein Prozess weist
+   sich als erfunden aus. Was auf dem Bildschirm steht, liest sich als
+   Handelsgruppe bei der Arbeit.
+3. **Eine echte Zeitachse.** Jeder Vorgang trägt sein Datum; der Aufbau
+   datiert nach jedem Schritt zurück.
+
+**Drei Stellen, an denen der Aufbau eingreift, und warum.**
+
+*Selbstverpflichtung, Gate 1 und Inbetriebnahme stehen in einem Vorgang.*
+A.10.5 macht die vollständige Erklärung und die Gate-1-Freigabe zur Bedingung
+der Aktivierung, und `pruefe_aktivierung` prüft das gegen die **laufende** Uhr.
+Eine Erklärung, die schon zurückdatiert ist, ist beim Aktivieren abgelaufen.
+Die drei Schritte laufen deshalb zusammen und werden gemeinsam datiert. Der
+Alternativweg wäre gewesen, den Torwächter zu umgehen — und ein Bestand, der
+die eigene Regel umgeht, sagt über sie nichts aus.
+
+*Der Protokoll-Cursor wird am Ende nach der Zeit umnummeriert.* Im Betrieb
+steigt er mit der Zeit, weil dort in der Zeit gearbeitet wird. Dieser Aufbau
+legt ein zwei Jahre altes Prozessobjekt vor einem halbjahralten an, aber beides
+in derselben Minute. Ohne die Umnummerierung stünden die Einträge im Nachweis
+in einer Reihenfolge, die keiner Uhr folgt. Geändert wird nur der Cursor,
+nichts am Inhalt.
+
+*Datenobjekte werden nicht gepflegt, sondern gerechnet.* Ihr Anlagedatum
+ergibt sich aus dem ältesten Verweis auf sie — ein Datenobjekt gibt es, bevor
+der erste Prozess es referenziert. Das hält den Bestand stimmig, ohne dass
+jemand dreiundneunzig Daten von Hand nachziehen muss.
+
+**Was der Aufbau gefunden hat.** Er ist an vier Stellen laut gescheitert, und
+jede war ein echter Befund: eine Bewertungsantwort, die dem Vorschlag aus A.8.4
+widersprach, ohne begründet zu sein; eine Aktivierung ohne tragende Erklärung;
+eine Compliance-Meldung durch die Plattform-Rolle, die auf Tool-Objekten nicht
+schreiben darf; und die Übernahme einer vorgefundenen Anwendung durch einen
+technischen Owner, der auf ein Objekt ohne Zuordnung noch gar nicht zugreifen
+kann. Alle vier sind im Bestand jetzt so abgebildet, wie die Anwendung sie
+erzwingt.
+
+## E-50 — Ein geteilter Link behält sein Ziel über die Anmeldung hinweg
+
+**Befund.** Die Anwendung verspricht teilbare Adressen: der Fachbereichsfilter
+des Cockpits steht in der URL, „diese Ansicht lässt sich so weitergeben"
+(Architektur 9.3). Wer eine solche Adresse öffnet, ohne angemeldet zu sein,
+landete nach der Anmeldung auf der Prozessliste. Das Ziel ging verloren — und
+zwar genau in dem Moment, in dem es zählt: beim ersten Öffnen durch den
+Empfänger. Aufgefallen ist es an der schlichtesten Stelle: `…/de/cockpit`
+aufrufen und danach das Cockpit nicht sehen.
+
+**Entscheidung.** Die Umleitung zur Anmeldemaske nimmt die verlangte Adresse
+mit, und die Anmeldemaske kehrt nach dem Anmelden dorthin zurück. Fehlt eine
+Angabe, bleibt es bei der Prozessliste.
+
+**Die Ausnahme, und warum sie eine eigene Zustandsvariable braucht.** Eine
+**Abmeldung** darf kein Ziel hinterlassen: wer sich danach an diesem Browser
+anmeldet, gehört nicht auf die letzte Seite seines Vorgängers — schon gar
+nicht, wenn er sie nicht sehen darf. Der erste Versuch, das im Abmeldeknopf zu
+lösen (abmelden, dann zur Anmeldemaske navigieren), scheiterte reproduzierbar:
+die Umleitung des Layouts gewinnt gegen die Navigation im Klick, weil sie im
+selben Rendervorgang entsteht. Deshalb liegt die Unterscheidung jetzt dort, wo
+beide Zustände zusammenliegen — in der Sitzung selbst. `abgemeldet` wird im
+gleichen Zug mit dem Token gesetzt und ist beim Rendern der Umleitung bereits
+gültig.
+
+Der Vorgangskatalog trägt den Fall als **V-ANM-07**; ein Einheitentest hält
+zusätzlich fest, dass eine Abmeldung dem Nächsten kein Ziel anhängt.
+
+## E-51 — Umbruchpunkte stehen als `max-width`, nicht als `max-inline-size`
+
+**Befund.** Auf einem schmalen Gerät zeigte die Tier-Verteilung farbige Zahlen
+in Spalten statt Balken — aus dem Diagramm war eine Tabelle geworden. Auf einem
+breiten Bildschirm war davon nichts zu sehen.
+
+**Ursache.** Zwei Medienabfragen im Stylesheet lauteten
+`@media (max-inline-size: 40rem)`. Das logische Pendant zu `width` gibt es nur
+in **Container**-Abfragen; in einer Medienabfrage ist `inline-size` kein
+gültiges Merkmal, und die gesamte Regel verfällt stillschweigend — ohne Fehler,
+ohne Warnung, ohne Spur im Bau. Betroffen waren die Tier-Verteilung und die
+Gegenüberstellung „erlaubt / gemessen" im Erlaubnisrahmen; beide sollten auf
+schmalen Geräten einspaltig werden und taten es nie.
+
+Bei der Verteilung fiel das besonders auf, weil der Balken neben einer
+zwölf Zeichen breiten Beschriftung so wenig Platz behielt, dass alle Segmente
+auf ihre Mindestbreite fielen. Damit waren alle Reihen gleich lang — und die
+Länge ist bei einem Balkendiagramm die ganze Aussage.
+
+**Entscheidung.** Beide Abfragen stehen jetzt als `max-width`, wie die übrigen
+Umbruchpunkte des Stylesheets auch. Bei der Verteilung rückt die Beschriftung
+zusätzlich über den Balken, damit er die volle Breite bekommt.
+
+**Warum das eine Prüfung braucht.** Ein Fehler dieser Art ist auf dem
+Bildschirm des Entwicklers unsichtbar. `e2e/darstellung.spec.ts` verstellt
+deshalb die Fensterbreite und prüft, dass die Balken unterschiedlich lang
+bleiben und der längste einen nennenswerten Teil der Breite einnimmt. Ohne die
+Korrektur scheitert genau der schmale Fall. Dafür steht das Diagramm jetzt auch
+in der Stilprobe: dort hat es festen Bestand, und die Prüfung legt keine Daten
+an, die einer Abnahme im Weg stünden.

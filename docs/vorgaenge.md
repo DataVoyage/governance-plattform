@@ -60,6 +60,7 @@ ihn zu hinterlegen, bekommt einen roten Test — und umgekehrt.
 | V-ANM-04 | Auf Französisch umschalten | alle | Dieselbe Seite mit übersetzten Beschriftungen, die Adresse trägt `/fr/`, die Daten bleiben unverändert | AP-0 | erfüllt |
 | V-ANM-05 | Darstellung auf „Dunkel" stellen | alle | Die Anwendung wird dunkel und bleibt es nach dem Neuladen | AP-0 | erfüllt |
 | V-ANM-06 | Auf einem dunkel gestellten Gerät „Hell" wählen | alle | Alle Texte bleiben lesbar — auch die vom Browser gemalten Flächen | AP-0 | erfüllt |
+| V-ANM-07 | Einen geteilten Link öffnen, ohne angemeldet zu sein | alle | Nach der Anmeldung erscheint die verlangte Ansicht samt ihrem Filter — nicht die Prozessliste | AP-0 | erfüllt |
 
 ## V-PRO — Prozessobjekt
 

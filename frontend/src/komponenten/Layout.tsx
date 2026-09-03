@@ -156,9 +156,21 @@ export function Kopfzeile() {
 
 export function Layout() {
   const { t, pfad } = useSprache();
-  const { token, laedt } = useSitzung();
+  const { token, laedt, abgemeldet } = useSitzung();
+  const ort = useLocation();
 
-  if (token === null) return <Navigate to={pfad('/anmeldung')} replace />;
+  // Wohin jemand wollte, bevor die Anmeldung dazwischenkam. Ohne diese Angabe
+  // landet jeder geteilte Link nach dem Anmelden auf der Prozessliste — und
+  // damit wären die Adressen, die diese Anwendung ausdrücklich teilbar hält
+  // (Architektur 9.3: der Filter steht in der Adresse), genau in dem Moment
+  // wertlos, in dem der Empfänger sie zum ersten Mal öffnet.
+  //
+  // Nach einer aktiven Abmeldung ausdrücklich nicht: dort ist die Adresse die
+  // des Vorgängers, nicht die Absicht des Nächsten.
+  if (token === null) {
+    const weiter = abgemeldet ? undefined : { weiter: ort.pathname + ort.search };
+    return <Navigate to={pfad('/anmeldung')} state={weiter} replace />;
+  }
   return (
     <div className="huelle">
       <Kopfzeile />

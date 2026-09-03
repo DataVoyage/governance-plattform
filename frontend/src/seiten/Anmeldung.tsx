@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 
 import { useSprache } from '@/i18n/SprachKontext';
 import { Feld, Hinweis, Knopf } from '@/ui';
@@ -16,18 +16,23 @@ export function Anmeldung() {
   const { t, pfad } = useSprache();
   const { token, anmelden } = useSitzung();
   const navigiere = useNavigate();
+  const ort = useLocation();
   const [kennung, setKennung] = useState('');
   const [name, setName] = useState('');
   const [fehler, setFehler] = useState<string | null>(null);
 
-  if (token !== null) return <Navigate to={pfad('/prozesse')} replace />;
+  // Die Adresse, die der Anmeldung vorausging — das Layout legt sie hier ab.
+  // Ohne sie verliert jeder geteilte Link beim ersten Öffnen sein Ziel.
+  const weiter = (ort.state as { weiter?: string } | null)?.weiter ?? pfad('/prozesse');
+
+  if (token !== null) return <Navigate to={weiter} replace />;
 
   async function absenden(ereignis: FormEvent) {
     ereignis.preventDefault();
     setFehler(null);
     try {
       await anmelden(kennung, name || kennung);
-      navigiere(pfad('/prozesse'));
+      navigiere(weiter, { replace: true });
     } catch {
       setFehler(t('app.fehler'));
     }

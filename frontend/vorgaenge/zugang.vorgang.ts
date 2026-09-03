@@ -26,6 +26,23 @@ vorgang('V-ANM-02', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Prozessobjekte' })).toHaveCount(0);
 });
 
+vorgang('V-ANM-07', async ({ page }) => {
+  // Der Fall, den jeder geteilte Link ausloest: die Adresse traegt Ansicht und
+  // Filter, der Empfaenger ist noch nicht angemeldet. Landete er danach auf der
+  // Prozessliste, waere die Zusage aus Architektur 9.3 gebrochen, genau in dem
+  // Moment, in dem sie zaehlt.
+  await page.context().clearCookies();
+  await page.goto('/de/cockpit/datenobjekte_ohne_kategorie');
+  await expect(page).toHaveURL(/\/de\/anmeldung/);
+
+  await page.getByLabel('Kennung').fill(ADMIN);
+  await page.getByLabel('Name').fill('Vorgangs-Administrator');
+  await page.getByRole('button', { name: 'Anmelden' }).click();
+
+  await expect(page).toHaveURL(/\/de\/cockpit\/datenobjekte_ohne_kategorie/);
+  await expect(page.getByRole('heading', { name: 'Datenobjekte ohne Kategorie' })).toBeVisible();
+});
+
 vorgang('V-ANM-03', async ({ page }) => {
   await anmelden(page);
   await page.getByRole('button', { name: 'Abmelden' }).click();

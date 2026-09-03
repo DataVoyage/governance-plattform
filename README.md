@@ -25,8 +25,11 @@ Systeme docken über die Adapter- und Integrationsschicht an (Architektur 7).
 |---|---|
 | `backend/` | FastAPI-API, Geschäftslogik, Datenmodell, Alembic-Migrationen, Sync-Worker |
 | `frontend/` | React-Single-Page-Application (TypeScript, Vite), Sprachpfad-Routing |
-| `docs/` | Phasenstand und Entwurfsentscheidungen (die Architekturvorgabe selbst liegt intern) |
+| `docs/` | Phasenstand, Entwurfsentscheidungen und die Vorstellung des Konzepts (die Architekturvorgabe selbst liegt intern) |
 | `beispieldaten/` | Beispielexport im Import-Vertragsformat (Architektur 7.2) |
+
+`backend/app/bestand/` baut einen vollständigen Datenbestand einer
+Einzelhandelsgruppe auf — siehe [Beispielbestand](#beispielbestand).
 
 Drei getrennte Images, wie in Architektur 6.2 festgelegt: Backend, Frontend,
 Sync-Worker. Das Registry-Ziel ist über `GP_IMAGE_REGISTRY` konfigurierbar und
@@ -54,6 +57,57 @@ docker compose run --rm sync-worker \
   --api http://backend:8000 --token "<Token der Plattform-Rolle>" \
   --datei /daten/zentrale-entwicklungsplattform.json
 ```
+
+## Konzeptvorstellung
+
+[`docs/praesentation.md`](docs/praesentation.md) stellt das Konzept und die
+Anwendung für Fachbereiche, Betriebsrat, zentrale IT und Prozess-Owner vor —
+mit Bildschirmfotos aus dem Beispielbestand und einer Entscheidungsvorlage. Die
+Datei ist zweierlei: ein lesbares Dokument und ein projizierbarer Foliensatz.
+
+```bash
+npx @marp-team/marp-cli@latest docs/praesentation.md -o praesentation.pdf
+```
+
+Alle Zahlen darin stammen aus dem Beispielbestand und sind in der laufenden
+Anwendung nachzählbar.
+
+## Beispielbestand
+
+Die Anwendung lässt sich mit drei Prozessobjekten bedienen, aber nicht
+beurteilen. `app.bestand` füllt sie mit dem, wofür sie gebaut ist: zehn
+Fachbereiche einer Einzelhandelsgruppe mit ihren Landesgesellschaften, den
+Menschen darin, ihren Datenobjekten, Prozessen und Werkzeugen — und den
+Vorgängen daran.
+
+```bash
+docker compose exec backend python -m app.bestand --leeren
+```
+
+`--leeren` verwirft den vorhandenen Inhalt; ohne die Option läuft der Aufbau
+nur auf einer leeren Datenbank. Er dauert wenige Sekunden.
+
+| Was | Anzahl |
+|---|---|
+| Fachbereiche, Organisationseinheiten, Teams | 10 · 41 · 17 |
+| Menschen und Rollenzuweisungen | 70 · 72 |
+| Datenobjekte (alle fünf Kategorien aus A.7, dazu die ohne) | 93 |
+| Prozessobjekte (Entwurf, aktiv, stillgelegt; Tier 1 bis 3) | 55 |
+| Tool-Objekte (vier Technologien, dazu eine ohne) | 72 |
+| Bewertungen, Selbstverpflichtungen, Gate-Vorgänge | 76 · 120 · 34 |
+| Compliance-Zustände, Lenkungsvorgänge, Kompensationen | 28 · 10 · 30 |
+| Protokolleinträge über gut zwei Jahre | ~1100 |
+
+Jeder Datensatz entsteht über dieselbe Geschäftslogik wie im Betrieb, unter der
+Kennung des Menschen, der die Handlung täte — mit Berechtigungsprüfung,
+Torwächtern und Vorschlagsabgleich. Der Bestand enthält absichtlich jeden
+Zustand, den die Anwendung kennt: jede Cockpit-Zeile hat Inhalt, jedes
+Rahmenelement wird irgendwo verletzt, alle sechs Verbote aus A.13.2 Schicht 2
+kommen vor, und alle drei Eskalationsstufen sind belegt. `tests/test_bestand.py`
+hält das fest.
+
+Die Begründung der Entwurfsentscheidungen steht in
+[`docs/entscheidungen.md`](docs/entscheidungen.md), E-49.
 
 ## Entwicklung ohne Container
 

@@ -110,4 +110,41 @@ test.describe('Darstellung', () => {
       await kontext.close();
     });
   }
+
+  /**
+   * Umbruchpunkte müssen greifen, sonst greift gar nichts.
+   *
+   * Anlass war ein zweiter Befund aus dem Betrieb: auf einem schmalen Gerät
+   * zeigte die Tier-Verteilung farbige Zahlen in Spalten statt Balken. Die
+   * Ursache war eine Medienabfrage mit `max-inline-size` — das logische
+   * Pendant zu `width` gibt es nur in Container-Abfragen; in einer
+   * Medienabfrage ist es kein gültiges Merkmal, und die ganze Regel verfällt
+   * stillschweigend. Ein solcher Fehler ist auf einem breiten Bildschirm
+   * unsichtbar; er braucht eine Prüfung, die die Breite verstellt.
+   */
+  for (const [geraet, breite] of [
+    ['schmal', 390],
+    ['breit', 1440],
+  ] as const) {
+    test(`Die Tier-Verteilung bleibt ein Diagramm auf ${geraet}em Geraet`, async ({ browser }) => {
+      const kontext = await browser.newContext({ viewport: { width: breite, height: 900 } });
+      const seite = await kontext.newPage();
+      await anmelden(seite);
+      await seite.goto('/de/stilprobe');
+
+      const balken = seite.locator('.k-verteilung .balken');
+      await expect(balken.first()).toBeVisible();
+
+      // Die Länge ist die Aussage. Sind alle Balken gleich lang, sind sie an
+      // ihrer Mindestbreite angekommen und das Diagramm sagt nichts mehr.
+      const breiten = await balken.evaluateAll((liste) =>
+        liste.map((e) => Math.round(e.getBoundingClientRect().width)),
+      );
+      expect(breiten.length).toBeGreaterThan(1);
+      expect(Math.max(...breiten)).toBeGreaterThan(breite * 0.3);
+      expect(new Set(breiten).size).toBeGreaterThan(1);
+
+      await kontext.close();
+    });
+  }
 });

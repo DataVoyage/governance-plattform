@@ -35,6 +35,22 @@ describe('Anmeldung', () => {
     expect(window.localStorage.getItem('governance.token')).toBe('tok');
   });
 
+  it('kehrt nach der Anmeldung auf die urspruenglich aufgerufene Adresse zurueck', async () => {
+    // Ein geteilter Link auf das Cockpit: wer ihn oeffnet, ist noch nicht
+    // angemeldet. Landete er danach auf der Prozessliste, waere jede teilbare
+    // Adresse dieser Anwendung genau beim ersten Oeffnen wertlos.
+    fetchAttrappe([
+      { pfad: '/api/v1/auth/dev-token', methode: 'POST', koerper: { access_token: 'tok' } },
+      { pfad: '/api/v1/auth/me', koerper: PROFIL },
+      { pfad: '/api/v1/cockpit', koerper: [] },
+      { pfad: '/api/v1/fachbereiche', koerper: [] },
+    ]);
+    zeichne('/de/cockpit', false);
+    await userEvent.type(await screen.findByLabelText('Kennung'), 'sub-1');
+    await userEvent.click(screen.getByRole('button', { name: 'Anmelden' }));
+    expect(await screen.findByRole('heading', { name: 'Cockpit' })).toBeInTheDocument();
+  });
+
   it('meldet eine fehlgeschlagene Anmeldung', async () => {
     fetchAttrappe([
       { pfad: '/api/v1/auth/dev-token', methode: 'POST', status: 404, koerper: {} },
@@ -65,6 +81,29 @@ describe('Anmeldung', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Abmelden' }));
     expect(await screen.findByRole('heading', { name: 'Anmeldung' })).toBeInTheDocument();
     expect(window.localStorage.getItem('governance.token')).toBeNull();
+  });
+
+  it('haengt dem naechsten Anmelder kein Ziel des Vorgaengers an', async () => {
+    // Eine Abmeldung ist ein Schlussstrich. Wer sich danach an diesem Browser
+    // anmeldet, gehoert nicht auf die letzte Seite seines Vorgaengers — schon
+    // gar nicht, wenn er sie gar nicht sehen darf.
+    fetchAttrappe([
+      { pfad: '/api/v1/auth/me', koerper: PROFIL },
+      { pfad: '/api/v1/auth/dev-token', methode: 'POST', koerper: { access_token: 'tok' } },
+      { pfad: '/api/v1/prozesse', koerper: [] },
+      { pfad: '/api/v1/organisationseinheiten', koerper: EINHEITEN },
+      { pfad: '/api/v1/admin/users', koerper: [] },
+      { pfad: '/api/v1/admin/rollen', koerper: [] },
+      { pfad: '/api/v1/admin/rollenzuweisungen', koerper: [] },
+      { pfad: '/api/v1/fachbereiche', koerper: [] },
+    ]);
+    zeichne('/de/verwaltung');
+    await userEvent.click(await screen.findByRole('button', { name: 'Abmelden' }));
+    await screen.findByRole('heading', { name: 'Anmeldung' });
+
+    await userEvent.type(screen.getByLabelText('Kennung'), 'sub-2');
+    await userEvent.click(screen.getByRole('button', { name: 'Anmelden' }));
+    expect(await screen.findByRole('heading', { name: 'Prozessobjekte' })).toBeInTheDocument();
   });
 
   it('verwirft ein Token, das der Server nicht mehr akzeptiert', async () => {

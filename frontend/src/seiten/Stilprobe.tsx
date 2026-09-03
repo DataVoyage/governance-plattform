@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 
 import { useSprache } from '@/i18n/SprachKontext';
+import { Verteilung } from '@/komponenten/Verteilung';
 import {
   Abzeichen,
   Auswahl,
@@ -212,6 +213,21 @@ export function Stilprobe() {
           ]}
         />
       </Karte>
+
+      {/* Das Diagramm gehört in die Stilprobe, weil es ein Baustein des
+          Design-Systems ist und weil sein Verhalten von der Bildschirmbreite
+          abhängt — hier steht es mit festem Bestand und lässt sich messen,
+          ohne dass ein Test dafür Daten anlegen müsste. */}
+      <Verteilung
+        aggregat={{
+          je_technologie: {
+            'apps-script': { '1': 3, '2': 7, '3': 7 },
+            appsheet: { '1': 3, '2': 5, '3': 5 },
+            'bigquery-gcs': { '1': 1, '2': 2, '3': 10 },
+            'python-kubernetes': { '1': 1, '2': 2, '3': 15 },
+          },
+        }}
+      />
 
       <Karte titel={t('stilprobe.zustaende')}>
         <Hinweis art="information">Der Rahmen dieses Prozesses gilt für alle verknüpften Tools.</Hinweis>
