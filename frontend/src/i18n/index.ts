@@ -93,7 +93,8 @@ const de = {
     'Wer konsumiert. Aus dieser Kante berechnet sich die Kritikalität dieses Prozesses.',
   'prozess.hilfe.supplier': 'Nur für Zulieferer außerhalb des Prozessregisters.',
   'prozess.hilfe.schritte': '5 bis 7 Schritte, Stichworte — eine Zeile je Schritt.',
-  'prozess.hilfe.output': 'Das Ergebnis in Worten; als Referenz gehört es in die Output-Datenobjekte.',
+  'prozess.hilfe.output':
+    'Das Ergebnis in Worten; als Referenz gehört es in die Output-Datenobjekte.',
   'prozess.schritte.zaehler': 'Schritte',
   'prozess.schritte.warnung':
     'Mehr als sieben Schritte deuten auf die falsche Flughöhe. Verlinken Sie besser einen weiteren Prozess.',
@@ -117,7 +118,8 @@ const de = {
   'prozess.wirkung.leer': 'Keine Kante erfasst.',
   'prozess.datenobjekte.leer': 'Noch kein Datenobjekt referenziert.',
   'prozess.herkunft.reichweite': 'Aus dem Kundenkreis',
-  'prozess.herkunft.reichweiteUmsetzung': 'Aus dem Kundenkreis, angehoben durch mehrere Umsetzungen',
+  'prozess.herkunft.reichweiteUmsetzung':
+    'Aus dem Kundenkreis, angehoben durch mehrere Umsetzungen',
   'prozess.herkunft.kritikalitaetEigen': 'Aus der eigenen Ausfallfolge',
   'prozess.herkunft.kritikalitaetKette': 'Aus der Prozesskette geerbt',
   'prozess.herkunft.mitbestimmung': 'Aus Datenkategorie und Bewertung',
@@ -260,20 +262,29 @@ const de = {
   'asset.tools.amProzessLeer': 'An diesem Prozess hängt noch kein Tool-Objekt.',
   'asset.speichern': 'Speichern',
   'asset.kategorie.keine': 'Ohne Kategorie',
-  'asset.feld.owner': 'Owner',
   'asset.feld.fachbereich': 'Fachbereich',
   'asset.feld.quellsystem': 'Quellsystem',
   'asset.quellsystem.leer': 'Kein Quellsystem angegeben',
   'asset.quellsystem.hilfe': 'Das System, in dem diese Daten entstehen — etwa „SAP HCM".',
-  'asset.owner.hilfe': 'Die datenhaltende Stelle: einmal je Quelle benannt, danach stabil.',
-  'asset.reifegrad1': 'Reifegrad 1 — Name, Kategorie, Owner, Quellsystem',
+  'asset.reifegrad1': 'Reifegrad 1 — Name, Kategorie, Fachbereich, Quellsystem',
+  'asset.feld.gebenderProzess': 'Gebender Prozess',
+  'asset.gebenderProzess.hilfe':
+    'Der Prozess, der diese Daten erzeugt. Sein Fachbereich wird zur datenhaltenden Stelle — er wird nicht gewählt, er ergibt sich.',
+  'asset.gebenderProzess.keiner': 'Kein Prozess erzeugt diese Quelle — sie wird nur genutzt.',
+  'asset.fachbereich.hilfe':
+    'Die datenhaltende Stelle. Sie bestimmt, wer die Quelle klassifiziert; wechseln kann sie nur die Governance.',
+  'asset.anlegen.weg':
+    'Eine Quelle bekommt ihren Fachbereich auf einem von zwei Wegen: vom gebenden Prozess oder von Ihnen als Datenobjekt-Owner.',
+  'asset.anlegen.keinWeg':
+    'Zum Anlegen einer Quelle braucht es einen Prozess, den Sie tragen, oder die Rolle Datenobjekt-Owner in einem Fachbereich.',
   'asset.reifegrad1.hinweis':
     'Mehr verlangt die Compliance-Funktion nicht. Schema und Kontrakt sind ein Upgrade, keine Eintrittshürde.',
   'asset.datenobjekte.hinweis':
     'Nicht Tools werden klassifiziert, sondern Quellen — Tools erben. Das macht die Arbeit endlich.',
   'asset.datenobjekte.ohneKategorie': 'Datenobjekte ohne Kategorie im Cockpit ansehen',
   'asset.kategorie.hilfe': 'Für die Frage „ist das personenbezogen" genügt die Kategorie.',
-  'asset.kategorie.wirkungHinweis': 'Vor dem Übernehmen zeigt die Anwendung, wen die Änderung trifft.',
+  'asset.kategorie.wirkungHinweis':
+    'Vor dem Übernehmen zeigt die Anwendung, wen die Änderung trifft.',
   'kategorie.anker.oeffentlich': 'frei zugänglich',
   'kategorie.anker.intern': 'kein Personenbezug',
   'kategorie.anker.vertraulich': 'Geschäftsgeheimnis, Finanzen',
@@ -298,7 +309,8 @@ const de = {
   'asset.wirkung.prozesse': 'Betroffene Prozessobjekte',
   'asset.wirkung.tools': 'Betroffene Tool-Objekte',
   'asset.wirkung.mitbestimmung': 'Neu mitbestimmungsrelevant',
-  'asset.wirkung.mitbestimmungHinweis': 'Prozessobjekte, die das Flag durch diese Änderung bekommen',
+  'asset.wirkung.mitbestimmungHinweis':
+    'Prozessobjekte, die das Flag durch diese Änderung bekommen',
   'asset.wirkung.warnung':
     'Diese Änderung macht Prozesse mitbestimmungsrelevant. Die Bewertung ist dort zu erneuern.',
   'asset.wirkung.uebernehmen': 'Kategorie übernehmen',
@@ -323,7 +335,8 @@ const de = {
   'tool.attest.hinweis':
     'Drei Erklärungen, die Telemetrie nicht liefern kann. Sie werden mit Namen abgegeben, nicht als Formularfeld.',
   'tool.attest.frage1': 'Fließt das Ergebnis in eine Entscheidung über einzelne Personen?',
-  'tool.attest.frage1.zusatz': 'Auch mittelbar — etwa als Vorschlag, dem in der Regel gefolgt wird.',
+  'tool.attest.frage1.zusatz':
+    'Auch mittelbar — etwa als Vorschlag, dem in der Regel gefolgt wird.',
   'tool.attest.frage2': 'Steht zwischen Output und Wirkung ein Mensch?',
   'tool.attest.frage2.zusatz':
     'Prüft jemand das Ergebnis, bevor es wirkt? Ohne Mensch dazwischen ist das Tool verändernd — auch bei reinem Lesen.',
@@ -347,8 +360,7 @@ const de = {
   'tool.wirkungsart.grund.schreibzugriff': 'Schreibt auf ein Datenobjekt — immer prüfpflichtig.',
   'tool.wirkungsart.grund.kein_mensch':
     'Kein Mensch zwischen Output und Wirkung — verändernd auch bei reinem Lesen.',
-  'tool.wirkungsart.grund.nur_lesend':
-    'Nur lesende Zugriffe, und ein Mensch prüft das Ergebnis.',
+  'tool.wirkungsart.grund.nur_lesend': 'Nur lesende Zugriffe, und ein Mensch prüft das Ergebnis.',
   'tool.wirkungsart.grund.offen': 'Erst nach der zweiten Attestierung bestimmbar.',
 
   'tool.daten.titel': 'Genutzte Datenobjekte',
@@ -357,7 +369,8 @@ const de = {
   'tool.daten.leer': 'Dieses Tool-Objekt greift auf kein Datenobjekt zu.',
   'tool.daten.hinzufuegen': 'Datenobjekt verknüpfen',
   'tool.daten.zugriffsart': 'Zugriffsart',
-  'tool.daten.zugriffsartHilfe': 'Gilt für die nächste Verknüpfung. Schreibzugriff macht das Tool verändernd.',
+  'tool.daten.zugriffsartHilfe':
+    'Gilt für die nächste Verknüpfung. Schreibzugriff macht das Tool verändernd.',
   'tool.daten.entfernen': 'Verknüpfung entfernen',
   'tool.daten.ausserhalb': 'Außerhalb des Prozessrahmens',
   'tool.daten.ausserhalbHinweis':
@@ -382,8 +395,7 @@ const de = {
   'sv.titel': 'Selbstverpflichtung',
   'sv.untertitel.prozess':
     'Sechs konkrete Aussagen nach A.10.2 — jede einzeln zu bestätigen, jede im Nachhinein prüfbar.',
-  'sv.untertitel.tool':
-    'Sechs konkrete Aussagen nach A.10.3 zum Betrieb dieses Tool-Objekts.',
+  'sv.untertitel.tool': 'Sechs konkrete Aussagen nach A.10.3 zum Betrieb dieses Tool-Objekts.',
   'sv.stand': 'Stand der Erklärung',
   'sv.aussagen': 'Aussagen',
   'sv.kurzform': 'Kurzform: bei Tier 1 wird nur der Kern verlangt (A.10.5).',
@@ -528,18 +540,15 @@ const de = {
   'rahmen.abweichung.externe_ziele': 'Nicht erklärtes Ziel: {werte}',
   'rahmen.abweichung.zugriffsart':
     'Schreibzugriff auf ein Datenobjekt, das kein Prozessergebnis ist: {werte}',
-  'rahmen.abweichung.ausfuehrungsart':
-    'Diese Ausführungsart deckt die Attestierung nicht: {werte}',
+  'rahmen.abweichung.ausfuehrungsart': 'Diese Ausführungsart deckt die Attestierung nicht: {werte}',
   'rahmen.abweichung.ausfuehrungsidentitaet':
     'Diese Identität passt nicht zur Ausführungsart: {werte}',
   'rahmen.identitaet.persoenlich': 'Persönliche Identität',
   'rahmen.identitaet.benannter_dienst': 'Benannte Dienstidentität',
   'rahmen.identitaet.geteiltes_konto': 'Geteiltes Konto',
 
-  'schicht2.identitaet_umgangen':
-    'Ausführung unter umgangener Unternehmensidentität',
-  'schicht2.statische_zugangsdaten':
-    'Dauerhaft gültige Zugangsdaten im Tool hinterlegt',
+  'schicht2.identitaet_umgangen': 'Ausführung unter umgangener Unternehmensidentität',
+  'schicht2.statische_zugangsdaten': 'Dauerhaft gültige Zugangsdaten im Tool hinterlegt',
   'schicht2.undeklarierte_quellen': 'Verarbeitung von Daten aus nicht deklarierten Quellen',
   'schicht2.entscheidung_ohne_mensch':
     'Automatisierte Entscheidung über einzelne Personen ohne Menschen dazwischen',
@@ -630,9 +639,12 @@ const de = {
   'rechte.tool.nurLesen':
     'Sie sehen dieses Tool-Objekt, dürfen es aber nicht ändern. Schreiben darf sein technischer Owner, der Prozess-Owner einer verknüpften Kante oder die Governance-Rolle.',
   'rechte.datenobjekt.nurLesen':
-    'Sie sehen dieses Datenobjekt, dürfen es aber nicht ändern. Schreiben darf sein Owner, der Datenobjekt-Owner des Fachbereichs oder die Governance-Rolle.',
-  'rechte.lenkung.nurLesen':
-    'Diesen Vorgang schließt der Betroffene oder die Governance-Rolle.',
+    'Sie sehen dieses Datenobjekt, dürfen es aber nicht ändern. Stammdaten pflegt der Datenobjekt-Owner des Fachbereichs oder der Owner des gebenden Prozesses; die Kategorie setzt nur der Datenobjekt-Owner.',
+  'rechte.datenobjekt.nurStammdaten':
+    'Als Owner des gebenden Prozesses pflegen Sie Name, Beschreibung und Quellsystem. Die Kategorie setzt der Datenobjekt-Owner des Fachbereichs — sie wirkt in jeden Prozess, der diese Quelle nutzt.',
+  'rechte.datenobjekt.ankerFest':
+    'Der Fachbereich wandert nicht — ändern kann ihn nur die Governance.',
+  'rechte.lenkung.nurLesen': 'Diesen Vorgang schließt der Betroffene oder die Governance-Rolle.',
   'rechte.liste.leer':
     'In Ihrem Geltungsbereich liegt nichts. Eine Rolle wirkt nie allein, sondern immer zusammen mit einem Bereich — beides vergibt der App-Administrator.',
 
@@ -714,8 +726,7 @@ const de = {
   'klassen.matrix': 'Technologiematrix',
   'klassen.matrixHinweis':
     'Welche Technologie welche Klasse tragen kann. Ein Ausschluss ist keine Warnung, sondern ein Kriterium; ein kompensierbarer Fall verlangt eine dokumentierte Maßnahme (A.9.3).',
-  'klassen.nurLesen':
-    'Ansicht ohne Änderungsrecht: die Matrix pflegt die Governance-Rolle.',
+  'klassen.nurLesen': 'Ansicht ohne Änderungsrecht: die Matrix pflegt die Governance-Rolle.',
   'klassen.spalte.klasse': 'Anforderungsklasse',
   'klassen.bewertung.erfuellt': 'Erfüllt',
   'klassen.bewertung.kompensierbar': 'Kompensierbar',
@@ -743,8 +754,7 @@ const de = {
   'klassen.art.ausschluss': 'Ausschluss',
   'klassen.art.ungeprueft': 'Ungeprüft',
   'klassen.schritt.erfuellt': 'Nichts zu tun — die Technologie trägt diese Klasse.',
-  'klassen.schritt.kompensiert':
-    'Erledigt: die kompensierende Maßnahme ist dokumentiert.',
+  'klassen.schritt.kompensiert': 'Erledigt: die kompensierende Maßnahme ist dokumentiert.',
   'klassen.schritt.kompensation_fehlt':
     'Zu tun: die kompensierende Maßnahme beschreiben, sonst bleibt der Befund offen.',
   'klassen.schritt.ausschluss':
@@ -803,8 +813,8 @@ const de = {
   'technologie.appsheet': 'AppSheet',
   'technologie.unbekannt': 'Ohne Technologie',
 
-  'ja': 'Ja',
-  'nein': 'Nein',
+  ja: 'Ja',
+  nein: 'Nein',
 } as const;
 
 export type Schluessel = keyof typeof de;
@@ -839,8 +849,7 @@ const fr: Record<Schluessel, string> = {
   'stilprobe.keineTreffer': 'Aucune entrée trouvée',
 
   'anmeldung.titel': 'Connexion',
-  'anmeldung.hinweis':
-    "La connexion passe exclusivement par l'identité centrale de l'entreprise.",
+  'anmeldung.hinweis': "La connexion passe exclusivement par l'identité centrale de l'entreprise.",
   'anmeldung.entwicklungsmodus': 'Mode développement : connexion locale',
   'anmeldung.kennung': 'Identifiant',
   'anmeldung.name': 'Nom',
@@ -1045,7 +1054,7 @@ const fr: Record<Schluessel, string> = {
     "Cet enregistrement provient d'un import. Le nom et les métadonnées techniques se modifient dans le système source ; les champs de gouvernance se gèrent ici.",
   'asset.geerbt.titel': 'Classification héritée — maximum de toutes les arêtes de processus',
   'asset.geerbt.hinweis':
-    "Un outil relié à plusieurs processus porte la classification la plus élevée de toutes ses arêtes ; le lien le plus faible serait sinon un contournement silencieux.",
+    'Un outil relié à plusieurs processus porte la classification la plus élevée de toutes ses arêtes ; le lien le plus faible serait sinon un contournement silencieux.',
   'asset.geerbt.kritikalitaet': 'Criticité',
   'asset.geerbt.reichweite': 'Portée',
   'asset.geerbt.tier': 'Niveau',
@@ -1058,13 +1067,22 @@ const fr: Record<Schluessel, string> = {
   'asset.tools.amProzessLeer': "Aucun objet outil n'est encore rattaché à ce processus.",
   'asset.speichern': 'Enregistrer',
   'asset.kategorie.keine': 'Sans catégorie',
-  'asset.feld.owner': 'Responsable',
   'asset.feld.fachbereich': 'Domaine',
   'asset.feld.quellsystem': 'Système source',
   'asset.quellsystem.leer': 'Aucun système source indiqué',
   'asset.quellsystem.hilfe': 'Le système où naissent ces données — par exemple « SAP HCM ».',
-  'asset.owner.hilfe': 'Le service détenteur : nommé une fois par source, stable ensuite.',
-  'asset.reifegrad1': 'Niveau 1 — nom, catégorie, responsable, système source',
+  'asset.reifegrad1': 'Niveau 1 — nom, catégorie, domaine, système source',
+  'asset.feld.gebenderProzess': 'Processus source',
+  'asset.gebenderProzess.hilfe':
+    'Le processus qui produit ces données. Son domaine devient le service détenteur — il ne se choisit pas, il découle.',
+  'asset.gebenderProzess.keiner':
+    "Aucun processus ne produit cette source — elle n'est qu'utilisée.",
+  'asset.fachbereich.hilfe':
+    'Le service détenteur. Il détermine qui classe la source ; seule la gouvernance peut le changer.',
+  'asset.anlegen.weg':
+    'Une source obtient son domaine de deux façons : par le processus source ou par vous, en tant que responsable des objets de données.',
+  'asset.anlegen.keinWeg':
+    'Pour créer une source, il faut un processus que vous portez ou le rôle de responsable des objets de données dans un domaine.',
   'asset.reifegrad1.hinweis':
     'La fonction de conformité n’exige rien de plus. Schéma et contrat sont une évolution, pas un préalable.',
   'asset.datenobjekte.hinweis':
@@ -1160,7 +1178,8 @@ const fr: Record<Schluessel, string> = {
   'tool.daten.leer': 'Cet objet outil n’accède à aucun objet de données.',
   'tool.daten.hinzufuegen': 'Rattacher un objet de données',
   'tool.daten.zugriffsart': 'Type d’accès',
-  'tool.daten.zugriffsartHilfe': 'Vaut pour le prochain rattachement. Un accès en écriture rend l’outil transformateur.',
+  'tool.daten.zugriffsartHilfe':
+    'Vaut pour le prochain rattachement. Un accès en écriture rend l’outil transformateur.',
   'tool.daten.entfernen': 'Retirer le rattachement',
   'tool.daten.ausserhalb': 'Hors du cadre du processus',
   'tool.daten.ausserhalbHinweis':
@@ -1184,10 +1203,10 @@ const fr: Record<Schluessel, string> = {
 
   'sv.titel': 'Engagement volontaire',
   'sv.untertitel.prozess':
-    "Six affirmations concrètes selon A.10.2 — chacune à confirmer séparément, chacune vérifiable après coup.",
+    'Six affirmations concrètes selon A.10.2 — chacune à confirmer séparément, chacune vérifiable après coup.',
   'sv.untertitel.tool':
     "Six affirmations concrètes selon A.10.3 sur l'exploitation de cet objet outil.",
-  'sv.stand': "État de la déclaration",
+  'sv.stand': 'État de la déclaration',
   'sv.aussagen': 'Affirmations',
   'sv.kurzform': 'Forme courte : au niveau 1, seul le noyau est exigé (A.10.5).',
   'sv.vollform': 'À partir du niveau 2, toutes les affirmations sont à confirmer.',
@@ -1218,7 +1237,8 @@ const fr: Record<Schluessel, string> = {
   'gate.titel': 'Procédures de porte',
   'gate.hinweis':
     "Le gate 1 est la première autorisation à partir du niveau 3. Le gate 2 exige l'un des cinq déclencheurs limitativement énumérés en A.11.",
-  'gate.begruendungHilfe': "Qu'est-ce qui a changé, et pourquoi l'autorisation est-elle nécessaire ?",
+  'gate.begruendungHilfe':
+    "Qu'est-ce qui a changé, et pourquoi l'autorisation est-elle nécessaire ?",
   'gate.ausloeser.neue_datenkategorie': 'Nouvelle catégorie de données',
   'gate.ausloeser.reichweitenerweiterung': 'Extension de la portée',
   'gate.ausloeser.neues_externes_ziel': 'Nouvelle destination externe',
@@ -1245,7 +1265,7 @@ const fr: Record<Schluessel, string> = {
   'gate.kommentar': 'Commentaire de décision',
   'gate.arbeitsvorrat': 'Procédures de porte ouvertes',
   'gate.arbeitsvorratLeer': 'Aucune procédure de porte ouverte.',
-  'gate.arbeitsvorratHinweis': "Ce qui attend une décision de la gouvernance.",
+  'gate.arbeitsvorratHinweis': 'Ce qui attend une décision de la gouvernance.',
   'gate.prozess': 'Objet de processus',
 
   'nav.lenkung': 'Pilotage',
@@ -1286,8 +1306,7 @@ const fr: Record<Schluessel, string> = {
     "La procédure ne se clôt qu'une fois la nouvelle évaluation terminée.",
   'lenkung.kommentar': 'Commentaire',
   'lenkung.stufe3':
-    "Le niveau 3 signale la procédure pour une mesure technique. Le retrait des accès a lieu en dehors de cette application.",
-
+    'Le niveau 3 signale la procédure pour une mesure technique. Le retrait des accès a lieu en dehors de cette application.',
 
   'lenkung.hinweis':
     'Chaque dépassement du cadre reçoit un délai en jours ouvrés et exactement trois issues (A.13.6).',
@@ -1310,7 +1329,7 @@ const fr: Record<Schluessel, string> = {
 
   'rahmen.titel': "Cadre d'autorisation",
   'rahmen.hinweis':
-    "Ce que cet outil a le droit de faire, déduit des objets processus et des attestations — et à côté, ce qui est réellement enregistré (A.13.2).",
+    'Ce que cet outil a le droit de faire, déduit des objets processus et des attestations — et à côté, ce qui est réellement enregistré (A.13.2).',
   'rahmen.eingehalten': 'Dans le cadre',
   'rahmen.abweichungen': '{anzahl} écarts',
   'rahmen.abweichungen.eine': 'Un écart',
@@ -1333,8 +1352,7 @@ const fr: Record<Schluessel, string> = {
   'rahmen.abweichung.externe_ziele': 'Cible non déclarée : {werte}',
   'rahmen.abweichung.zugriffsart':
     "Accès en écriture à un objet de données qui n'est pas un résultat de processus : {werte}",
-  'rahmen.abweichung.ausfuehrungsart':
-    "L'attestation ne couvre pas ce mode d'exécution : {werte}",
+  'rahmen.abweichung.ausfuehrungsart': "L'attestation ne couvre pas ce mode d'exécution : {werte}",
   'rahmen.abweichung.ausfuehrungsidentitaet':
     "Cette identité ne correspond pas au mode d'exécution : {werte}",
   'rahmen.identitaet.persoenlich': 'Identité personnelle',
@@ -1342,21 +1360,21 @@ const fr: Record<Schluessel, string> = {
   'rahmen.identitaet.geteiltes_konto': 'Compte partagé',
 
   'schicht2.identitaet_umgangen': "Exécution sous une identité d'entreprise contournée",
-  'schicht2.statische_zugangsdaten':
-    "Identifiants à validité permanente enregistrés dans l'outil",
+  'schicht2.statische_zugangsdaten': "Identifiants à validité permanente enregistrés dans l'outil",
   'schicht2.undeklarierte_quellen': 'Traitement de données issues de sources non déclarées',
   'schicht2.entscheidung_ohne_mensch':
     'Décision automatisée sur des personnes sans intervention humaine',
   'schicht2.daten_ins_offene_netz':
     "Transmission de données d'entreprise hors de l'infrastructure autorisée",
-  'schicht2.protokollierung_umgangen': 'Exploitation sans journalisation ou avec journalisation désactivée',
+  'schicht2.protokollierung_umgangen':
+    'Exploitation sans journalisation ou avec journalisation désactivée',
 
   'compliance.schicht2': 'Violation de la couche 2',
   'compliance.schicht2.keiner': 'Aucune — dépassement du cadre selon la couche 1',
   'compliance.schicht2Hilfe':
     "Exactement l'une des six interdictions valables pour toute l'organisation (A.13.2). Aucun septième motif libre n'est proposé.",
   'compliance.schicht2Folge':
-    "Ce dossier commence directement au niveau 2 : le responsable hiérarchique est informé immédiatement, et aucune évaluation ne débloque le cas.",
+    'Ce dossier commence directement au niveau 2 : le responsable hiérarchique est informé immédiatement, et aucune évaluation ne débloque le cas.',
 
   'konfiguration.titel': 'Paramètres',
   'konfiguration.hinweis':
@@ -1379,7 +1397,7 @@ const fr: Record<Schluessel, string> = {
   'konfiguration.selbstverpflichtung_gueltigkeit_tage': "Validité d'un engagement",
   'konfiguration.selbstverpflichtung_erinnerung_vorlauf_tage': 'Préavis du rappel',
   'konfiguration.bewertung_gueltigkeit_tage_tier3': "Validité d'une évaluation à partir de Tier 3",
-  'konfiguration.asset_inaktiv_tage': "À partir de quand un outil est considéré inactif",
+  'konfiguration.asset_inaktiv_tage': 'À partir de quand un outil est considéré inactif',
 
   'prozess.ziele.titel': 'Cibles externes autorisées',
   'prozess.ziele.hinweis':
@@ -1400,7 +1418,7 @@ const fr: Record<Schluessel, string> = {
     "Des identifiants inscrits dans l'outil au lieu d'être gérés. Un oui constitue une violation de la couche 2.",
   'tool.ziele.titel': 'Cibles externes',
   'tool.ziele.hinweis':
-    "Vers où cet outil transmet réellement. La comparaison avec le cadre déclaré figure plus bas.",
+    'Vers où cet outil transmet réellement. La comparaison avec le cadre déclaré figure plus bas.',
   'tool.ziele.leer': 'Aucune cible externe enregistrée pour cet objet outil.',
   'tool.ziele.neu': 'Enregistrer une cible',
 
@@ -1431,7 +1449,11 @@ const fr: Record<Schluessel, string> = {
   'rechte.tool.nurLesen':
     "Vous voyez cet objet outil mais ne pouvez pas le modifier. L'écriture revient à son propriétaire technique, au propriétaire d'un processus lié ou au rôle de gouvernance.",
   'rechte.datenobjekt.nurLesen':
-    "Vous voyez cet objet de données mais ne pouvez pas le modifier. L'écriture revient à son propriétaire, au propriétaire d'objets de données du domaine ou au rôle de gouvernance.",
+    'Vous voyez cet objet de données sans pouvoir le modifier. Les données de base sont tenues par le responsable des objets de données du domaine ou par le responsable du processus source ; seul le premier fixe la catégorie.',
+  'rechte.datenobjekt.nurStammdaten':
+    'En tant que responsable du processus source, vous tenez le nom, la description et le système source. La catégorie est fixée par le responsable des objets de données du domaine — elle agit dans chaque processus qui utilise cette source.',
+  'rechte.datenobjekt.ankerFest':
+    'Le domaine ne change pas — seule la gouvernance peut le modifier.',
   'rechte.lenkung.nurLesen':
     'Ce dossier est clôturé par la personne concernée ou par le rôle de gouvernance.',
   'rechte.liste.leer':
@@ -1448,7 +1470,7 @@ const fr: Record<Schluessel, string> = {
 
   'verwaltung.titel': 'Administration',
   'verwaltung.hinweis':
-    "Utilisateurs et rôles. Qui attribue ici accorde tous les autres accès — soyez économe.",
+    'Utilisateurs et rôles. Qui attribue ici accorde tous les autres accès — soyez économe.',
   'verwaltung.nurLesen':
     "Consultation sans droit de modification : utilisateurs et rôles relèvent de l'administrateur.",
   'verwaltung.nutzer': 'Utilisateurs',
@@ -1466,24 +1488,24 @@ const fr: Record<Schluessel, string> = {
   'verwaltung.bestehende': 'Rôles attribués',
   'verwaltung.keineRolle': "Aucun rôle n'est encore attribué à cet utilisateur.",
   'verwaltung.rolle': 'Rôle',
-  'verwaltung.scopeTyp': "Périmètre",
+  'verwaltung.scopeTyp': 'Périmètre',
   'verwaltung.scope.global': "À l'échelle de l'entreprise",
   'verwaltung.scope.fachbereich': 'Domaine',
   'verwaltung.scope.organisationseinheit': 'Unité organisationnelle',
   'verwaltung.zuweisen': 'Attribuer le rôle',
   'verwaltung.entziehen': 'Retirer',
   'verwaltung.wirkung':
-    "Cette attribution donne en plus accès à {prozesse} objets processus et {tools} objets outils ({scope}).",
+    'Cette attribution donne en plus accès à {prozesse} objets processus et {tools} objets outils ({scope}).',
   'verwaltung.wirkungBeispiele': 'Par exemple',
 
   'nachweis.titel': 'Journal',
   'nachweis.hinweis':
-    "Chaque action modifiante avec sa date, son auteur et ce qui a changé (A.13.7).",
+    'Chaque action modifiante avec sa date, son auteur et ce qui a changé (A.13.7).',
   'nachweis.art': "Type d'objet",
   'nachweis.alleArten': "Tous les types d'objets",
   'nachweis.filterHinweis': "Le filtre figure dans l'adresse et peut donc être partagé.",
   'nachweis.eintraege': 'Modifications',
-  'nachweis.leer': "Aucune entrée pour cet extrait.",
+  'nachweis.leer': 'Aucune entrée pour cet extrait.',
   'nachweis.leerHinweis': "Dès que quelqu'un modifie quelque chose, cela figure ici.",
   'nachweis.aktion.erstellt': 'Créé',
   'nachweis.aktion.geaendert': 'Modifié',
@@ -1507,7 +1529,7 @@ const fr: Record<Schluessel, string> = {
   'klassen.ansicht.matrix': 'Matrice',
   'klassen.katalog': 'K1 à K10',
   'klassen.katalogHinweis':
-    "Chaque classe avec son nom, son objet et la condition qui la déclenche.",
+    'Chaque classe avec son nom, son objet et la condition qui la déclenche.',
   'klassen.ausloeser': 'Déclenchée',
   'klassen.matrix': 'Matrice des technologies',
   'klassen.matrixHinweis':
@@ -1519,7 +1541,7 @@ const fr: Record<Schluessel, string> = {
   'klassen.bewertung.kompensierbar': 'Compensable',
   'klassen.bewertung.nicht_erfuellbar': 'Non satisfiable',
   'klassen.feld.hinweis':
-    "Ce champ décide si un processus peut être exploité avec cette technologie. La modification agit immédiatement sur tous les constats.",
+    'Ce champ décide si un processus peut être exploité avec cette technologie. La modification agit immédiatement sur tous les constats.',
   'klassen.feld.bewertung': 'Évaluation',
   'klassen.feld.begruendung': 'Justification',
   'klassen.feld.begruendungHilfe':
@@ -1528,7 +1550,7 @@ const fr: Record<Schluessel, string> = {
 
   'klassen.befund.titel': "Classes d'exigences et technologie",
   'klassen.befund.hinweis':
-    "Les classes que cet outil hérite de ses processus, face à ce que sa technologie peut porter.",
+    'Les classes que cet outil hérite de ses processus, face à ce que sa technologie peut porter.',
   'klassen.befund.leer':
     "Cet objet outil n'hérite encore d'aucune classe — il lui faut un lien vers un processus évalué.",
   'klassen.befund.getragen': 'Toutes portées',
@@ -1581,7 +1603,7 @@ const fr: Record<Schluessel, string> = {
   'cockpit.gesamt': '{anzahl} en suspens',
   'cockpit.allesErledigt': 'Rien en suspens',
   'cockpit.nichtsOffen': 'Rien en suspens',
-  'cockpit.leerHinweis': "Rien à traiter sur cette ligne dans votre domaine.",
+  'cockpit.leerHinweis': 'Rien à traiter sur cette ligne dans votre domaine.',
   'cockpit.eintraege': 'Cas individuels',
   'cockpit.modul.prozesse': 'Objet processus',
   'cockpit.modul.tools': 'Objet outil',
@@ -1591,7 +1613,7 @@ const fr: Record<Schluessel, string> = {
   'cockpit.verteilung.je_technologie': 'Répartition des tiers par technologie',
   'cockpit.verteilung.je_monat': 'Répartition des tiers par mois',
   'cockpit.verteilung.hinweis':
-    "La couleur désigne le niveau, pas la série. Chaque nombre figure sur la barre.",
+    'La couleur désigne le niveau, pas la série. Chaque nombre figure sur la barre.',
   'cockpit.verteilung.leer': "Aucun classement pour cet extrait pour l'instant.",
   'cockpit.verteilung.kategorie': 'Catégorie',
   'technologie.apps-script': 'Apps Script',
@@ -1600,8 +1622,8 @@ const fr: Record<Schluessel, string> = {
   'technologie.appsheet': 'AppSheet',
   'technologie.unbekannt': 'Sans technologie',
 
-  'ja': 'Oui',
-  'nein': 'Non',
+  ja: 'Oui',
+  nein: 'Non',
 };
 
 export const KATALOG: Record<Sprache, Record<Schluessel, string>> = { de, fr };

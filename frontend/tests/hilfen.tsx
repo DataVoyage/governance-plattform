@@ -64,7 +64,12 @@ export const ALLE_TOOLRECHTE = {
   bestaetigen: true,
 };
 
-export const ALLE_DATENOBJEKTRECHTE = { bearbeiten: true, bestaetigen: true };
+export const ALLE_DATENOBJEKTRECHTE = {
+  bearbeiten: true,
+  kategorisieren: true,
+  anker_aendern: true,
+  bestaetigen: true,
+};
 
 export function prozess(ueberschreibungen: Partial<Prozess> = {}): Prozess {
   return {
@@ -243,6 +248,7 @@ export interface Route {
 const STANDARDROUTEN: Route[] = [
   { pfad: '/api/v1/fachbereiche', koerper: FACHBEREICHE },
   { pfad: '/api/v1/organisationseinheiten', koerper: EINHEITEN },
+  { pfad: '/api/v1/datenobjekte/katalog', koerper: [] },
   { pfad: '/api/v1/datenobjekte', koerper: [] },
   { pfad: '/api/v1/admin/users', koerper: [] },
   { pfad: /\/erlaubnisrahmen$/, koerper: rahmen() },
@@ -273,9 +279,7 @@ export function fetchAttrappe(eigene: Route[]) {
         (typeof r.pfad === 'string' ? url.endsWith(r.pfad) : r.pfad.test(url)),
     );
     const status = treffer?.status ?? (treffer ? 200 : 404);
-    const treffernummer = aufrufe.filter(
-      (a) => a.url === url && a.methode === methode,
-    ).length;
+    const treffernummer = aufrufe.filter((a) => a.url === url && a.methode === methode).length;
     const koerper =
       typeof treffer?.koerper === 'function'
         ? (treffer.koerper as (n: number) => unknown)(treffernummer)

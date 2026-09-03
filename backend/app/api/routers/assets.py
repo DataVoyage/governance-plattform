@@ -22,6 +22,7 @@ from app.schemas.asset import (
     DatenobjektAendern,
     DatenobjektAnlegen,
     DatenobjektAus,
+    DatenobjektKatalogAus,
     DatenobjektrechteAus,
     DatenobjektVerknuepfung,
     GeerbtAus,
@@ -301,13 +302,27 @@ def lege_datenobjekt_an(
     )
 
 
+@router.get("/datenobjekte/katalog", response_model=list[DatenobjektKatalogAus])
+def datenobjekt_katalog(principal: AktuellerNutzer, db: DbSession) -> list[DatenobjektKatalogAus]:
+    """Name, Fachbereich, Kategorie, Quellsystem jeder bestaetigten Quelle — zum Auswaehlen.
+
+    Die eine, schmale Ausnahme von der Bereichsregel (docs/rollen-und-scopes.md,
+    7.3): ein Prozess-Owner muss eine fremde Quelle als Input nennen koennen.
+    Mehr als diese vier Felder gibt es hier nicht, und das Detail bleibt zu.
+    """
+    return [
+        DatenobjektKatalogAus.model_validate(d)
+        for d in asset_service.liste_datenobjekt_katalog(db, principal)
+    ]
+
+
 @router.get("/datenobjekte/{datenobjekt_id}", response_model=DatenobjektAus)
 def datenobjekt_detail(
     datenobjekt_id: uuid.UUID, principal: AktuellerNutzer, db: DbSession
 ) -> DatenobjektAus:
-    # Der Principal wird jetzt gebraucht: die Antwort traegt, was er mit
-    # diesem Datenobjekt tun darf.
-    return _datenobjekt_aus(db, principal, asset_service.hole_datenobjekt(db, datenobjekt_id))
+    return _datenobjekt_aus(
+        db, principal, asset_service.hole_datenobjekt_sichtbar(db, principal, datenobjekt_id)
+    )
 
 
 @router.patch("/datenobjekte/{datenobjekt_id}", response_model=DatenobjektAus)
@@ -349,6 +364,5 @@ def wirkung_einer_umklassifizierung(
     Ohne ``kategorie`` beschreibt die Antwort den heutigen Stand — dieselbe
     Abfrage dient damit auch als Rueckwaertssicht auf ein Datenobjekt.
     """
-    del principal
-    datenobjekt = asset_service.hole_datenobjekt(db, datenobjekt_id)
+    datenobjekt = asset_service.hole_datenobjekt_sichtbar(db, principal, datenobjekt_id)
     return WirkungAus(**asset_service.wirkung_der_kategorie(db, datenobjekt, kategorie))

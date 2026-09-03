@@ -31,6 +31,7 @@ from app.models.enums import (
     Datenkategorie,
     Herkunft,
     Rolle,
+    ScopeTyp,
     Wirkungsart,
     Zugriffsart,
 )
@@ -39,9 +40,11 @@ from app.models.governance import (
     Prozessobjekt,
     ToolDatenobjekt,
     ToolObjekt,
+    prozess_input_datenobjekte,
+    prozess_output_datenobjekte,
     prozess_tool,
 )
-from app.models.organisation import Organisationseinheit
+from app.models.organisation import Fachbereich, Organisationseinheit
 from app.services import ableitung
 from app.services.changelog import (
     protokolliere_aenderung,
@@ -61,6 +64,9 @@ from app.services.prozess import (
 )
 from app.services.prozess import (
     darf_schreiben as darf_prozess_schreiben,
+)
+from app.services.prozess import (
+    sichtbarkeitsbedingung as prozess_sichtbarkeitsbedingung,
 )
 
 #: Felder, die bei einem importierten Datensatz nur am Ursprungssystem
@@ -283,43 +289,131 @@ def darf_tool_schreiben(db: Session, principal: Principal, tool: ToolObjekt) -> 
     )
 
 
+# --- Datenobjekte: Sicht und Schreibrecht (docs/rollen-und-scopes.md, 7) ---
+#
+# Ein Datenobjekt ist eine Quelle, kein Werk. Es hat genau einen Anker — den
+# Fachbereich als datenhaltende Stelle — und keine Person. Wer es sieht, sieht
+# es ueber diesen Anker (als Datenobjekt-Owner) oder ueber eine Referenz (der
+# eigene Prozess nutzt es, das eigene Tool greift darauf zu). Wer es schreibt,
+# ist nach Feld verschieden: die Kategorie wirkt in jeden referenzierenden
+# Prozess, deshalb setzt sie nur die Stelle, die die Daten haelt.
+#
+# Alle Regeln stehen hier und nur hier. Die Sichtbedingung ist SQL, damit die
+# Liste filtert; das Einzelstueck wird gegen dieselbe Bedingung geprueft, damit
+# Liste und Direktaufruf nie auseinanderlaufen (E-54).
+
+
+def datenobjekt_owner_fachbereiche(principal: Principal) -> set[uuid.UUID]:
+    """Die Fachbereiche, in denen der Principal Datenobjekt-Owner ist.
+
+    Nur Fachbereichs-Scopes zaehlen — eine Quelle gehoert einer Stelle, nicht
+    einer Landesorganisation; die Rollenvergabe lehnt Einheiten fuer diese
+    Rolle ab (R-11). Und nur *diese* Rolle zaehlt: ein Prozess-Umsetzer im
+    selben Fachbereich hat den Bereich, aber nicht dieses Recht.
+    """
+    return {
+        z.scope_id
+        for z in principal.zuweisungen
+        if z.rolle == Rolle.DATENOBJEKT_OWNER
+        and z.scope_typ == ScopeTyp.FACHBEREICH
+        and z.scope_id is not None
+    }
+
+
 def datenobjekt_sichtbarkeitsbedingung(
     db: Session, principal: Principal
 ) -> ColumnElement[bool] | None:
-    """Datenobjekte sind bereichsweit sichtbar, nicht einheitenscharf.
+    """Eigener Fachbereich als Datenobjekt-Owner, oder ueber eine Referenz.
 
-    Ein Datenobjekt wird einmal klassifiziert und von vielen Tool-Objekten
-    referenziert (Leitdokument A.4.5); eine engere Sicht wuerde genau diese
-    Wiederverwendung behindern. Ein Datenobjekt **ohne** Fachbereich ist
-    dagegen niemandem zugeordnet und bleibt den global lesenden Rollen und
-    seinem Owner vorbehalten — sonst waere es fuer jeden Angemeldeten sichtbar
-    und die Sichtbarkeitsregel aus Architektur 4.3 ausgehebelt.
+    Die Referenz laeuft ueber die Sichtregeln der anderen Objekte: was an einem
+    sichtbaren Prozess als Input oder Output haengt, was ein sichtbares Tool
+    liest oder schreibt. Ein Prozess-Owner sieht also die Quellen, die seine
+    Prozesse beruehren — nicht die uebrigen seines Fachbereichs, denn dafuer
+    gibt es keinen Grund. Ohne Fachbereich (vorgefunden, unbestaetigt) bleibt
+    ein Datenobjekt den globalen Rollen vorbehalten.
     """
     if principal.sieht_global:
         return None
-    fachbereiche = set(principal.scope_fachbereiche)
-    org_ids = principal.scope_organisationseinheiten
-    if org_ids:
-        fachbereiche.update(
-            db.execute(
-                select(Organisationseinheit.fachbereich_id).where(
-                    Organisationseinheit.id.in_(org_ids)
-                )
-            ).scalars()
-        )
+    eigene = datenobjekt_owner_fachbereiche(principal)
+    sichtbare_prozesse = select(Prozessobjekt.id).where(
+        prozess_sichtbarkeitsbedingung(db, principal)
+    )
+    ueber_input = select(prozess_input_datenobjekte.c.datenobjekt_id).where(
+        prozess_input_datenobjekte.c.prozessobjekt_id.in_(sichtbare_prozesse)
+    )
+    ueber_output = select(prozess_output_datenobjekte.c.datenobjekt_id).where(
+        prozess_output_datenobjekte.c.prozessobjekt_id.in_(sichtbare_prozesse)
+    )
+    sichtbare_tools = select(ToolObjekt.id).where(tool_sichtbarkeitsbedingung(db, principal))
+    ueber_tool = select(ToolDatenobjekt.datenobjekt_id).where(
+        ToolDatenobjekt.tool_objekt_id.in_(sichtbare_tools)
+    )
     return or_(
-        Datenobjekt.fachbereich_id.in_(fachbereiche) if fachbereiche else False,
-        Datenobjekt.owner_user_id == principal.user_id,
+        Datenobjekt.fachbereich_id.in_(eigene) if eigene else False,
+        Datenobjekt.id.in_(ueber_input),
+        Datenobjekt.id.in_(ueber_output),
+        Datenobjekt.id.in_(ueber_tool),
+    )
+
+
+def darf_datenobjekt_lesen(db: Session, principal: Principal, datenobjekt: Datenobjekt) -> bool:
+    """Dieselbe Bedingung wie die Liste, am Einzelstueck — wortwoertlich dieselbe."""
+    bedingung = datenobjekt_sichtbarkeitsbedingung(db, principal)
+    if bedingung is None:
+        return True
+    treffer = db.execute(
+        select(Datenobjekt.id).where(Datenobjekt.id == datenobjekt.id, bedingung)
+    ).scalar_one_or_none()
+    return treffer is not None
+
+
+def ist_datenobjekt_owner(principal: Principal, datenobjekt: Datenobjekt) -> bool:
+    return (
+        datenobjekt.fachbereich_id is not None
+        and datenobjekt.fachbereich_id in datenobjekt_owner_fachbereiche(principal)
+    )
+
+
+def traegt_gebenden_prozess(db: Session, principal: Principal, datenobjekt: Datenobjekt) -> bool:
+    """Der gebende Prozess ist der, der die Daten erzeugt — er hat sie als Output.
+
+    Kein eigenes Feld: er ergibt sich aus den Kanten (P1). Wer ihn traegt, darf
+    die Stammdaten der Quelle pflegen, denn er verantwortet, was dort entsteht.
+    """
+    return any(
+        darf_prozess_schreiben(db, principal, p.prozessgeber_org_id)
+        for p in datenobjekt.output_von_prozessen
     )
 
 
 def darf_datenobjekt_schreiben(db: Session, principal: Principal, datenobjekt: Datenobjekt) -> bool:
+    """Stammdaten — Name, Beschreibung, Quellsystem (7.4)."""
     if principal.ist_governance:
         return True
-    if datenobjekt.owner_user_id == principal.user_id:
+    if ist_datenobjekt_owner(principal, datenobjekt):
         return True
-    del db
-    return principal.hat_rolle(Rolle.DATENOBJEKT_OWNER, fachbereich_id=datenobjekt.fachbereich_id)
+    return traegt_gebenden_prozess(db, principal, datenobjekt)
+
+
+def darf_datenobjekt_kategorisieren(principal: Principal, datenobjekt: Datenobjekt) -> bool:
+    """Die Kategorie setzt die Stelle, die die Daten haelt — nicht die, die sie erzeugt."""
+    return principal.ist_governance or ist_datenobjekt_owner(principal, datenobjekt)
+
+
+def darf_datenobjekt_anker_aendern(principal: Principal, datenobjekt: Datenobjekt) -> bool:
+    """Ein Anker wandert nicht — ausser durch die Governance, oder durch die
+    Plattform bei einem vorgefundenen Objekt, das noch keinen hat."""
+    if principal.ist_governance:
+        return True
+    return principal.ist_plattform and datenobjekt.status == AssetStatus.IMPORTIERT_UNBESTAETIGT
+
+
+def darf_datenobjekt_bestaetigen(principal: Principal, datenobjekt: Datenobjekt) -> bool:
+    return (
+        principal.ist_governance
+        or principal.ist_plattform
+        or ist_datenobjekt_owner(principal, datenobjekt)
+    )
 
 
 # --- Lesen ----------------------------------------------------------------
@@ -346,6 +440,20 @@ def hole_datenobjekt(db: Session, datenobjekt_id: uuid.UUID) -> Datenobjekt:
     return datenobjekt
 
 
+def hole_datenobjekt_sichtbar(
+    db: Session, principal: Principal, datenobjekt_id: uuid.UUID
+) -> Datenobjekt:
+    """Wie ``hole_datenobjekt``, aber nur im eigenen Bereich.
+
+    Kein 404-Verstecken: die Existenz ist unkritisch, der Inhalt nicht —
+    dieselbe Linie wie bei Prozess- und Tool-Objekten.
+    """
+    datenobjekt = hole_datenobjekt(db, datenobjekt_id)
+    if not darf_datenobjekt_lesen(db, principal, datenobjekt):
+        raise Verboten("Datenobjekt liegt außerhalb des eigenen Bereichs")
+    return datenobjekt
+
+
 def liste_tools(
     db: Session,
     principal: Principal,
@@ -362,6 +470,26 @@ def liste_tools(
     if ohne_prozess:
         stmt = stmt.where(~ToolObjekt.id.in_(select(prozess_tool.c.tool_objekt_id)))
     return list(db.execute(stmt.order_by(ToolObjekt.name)).scalars())
+
+
+def liste_datenobjekt_katalog(db: Session, principal: Principal) -> list[Datenobjekt]:
+    """Jede bestaetigte, zugeordnete Quelle — fuer die Auswahl, nicht fuer die Pflege.
+
+    Ohne den Katalog koennte ein Prozess-Owner im Vertrieb die
+    Personalstammdaten nicht als Input waehlen, und genau diese
+    bereichsuebergreifende Wiederverwendung ist der Sinn von A.7. Wer keine
+    Rolle hat, bekommt auch ihn nicht.
+    """
+    verlange(bool(principal.rollen), "Der Katalog steht nur Rollentraegern offen")
+    stmt = (
+        select(Datenobjekt)
+        .where(
+            Datenobjekt.status == AssetStatus.BESTAETIGT,
+            Datenobjekt.fachbereich_id.is_not(None),
+        )
+        .order_by(Datenobjekt.name)
+    )
+    return list(db.execute(stmt).scalars())
 
 
 def liste_datenobjekte(
@@ -446,24 +574,78 @@ def bestaetige_tool(db: Session, principal: Principal, tool: ToolObjekt) -> Tool
 
 
 def lege_datenobjekt_an(db: Session, principal: Principal, werte: dict[str, Any]) -> Datenobjekt:
+    """Anlegen heisst: einen Fachbereich bekommen. Zwei Wege, kein dritter (7.2).
+
+    Ueber den gebenden Prozess: der Fachbereich ist der des Prozessgebers, das
+    Datenobjekt haengt als Output daran, und anlegen darf, wer den Prozess
+    schreiben darf. Oder ueber den Fachbereich selbst: dann muss der Anlegende
+    dessen Datenobjekt-Owner sein. Ein manuelles Datenobjekt ohne Fachbereich
+    gibt es nicht — es gehoerte niemandem und waere nur global sichtbar.
+    """
+    werte = dict(werte)
+    prozess_id = werte.pop("prozessobjekt_id", None)
+    gebender: Prozessobjekt | None = None
+    if prozess_id is not None:
+        gebender = db.get(Prozessobjekt, prozess_id)
+        if gebender is None:
+            raise Ungueltig("Der gebende Prozess existiert nicht")
+        verlange(
+            darf_prozess_schreiben(db, principal, gebender.prozessgeber_org_id),
+            "Als Output anlegen darf nur der Prozess-Owner des gebenden Prozesses",
+        )
+        werte["fachbereich_id"] = db.execute(
+            select(Organisationseinheit.fachbereich_id).where(
+                Organisationseinheit.id == gebender.prozessgeber_org_id
+            )
+        ).scalar_one()
+    if werte.get("fachbereich_id") is None:
+        raise Ungueltig(
+            "Ein Datenobjekt gehoert einem Fachbereich: entweder den gebenden Prozess "
+            "nennen oder den Fachbereich, dessen Datenobjekt-Owner Sie sind"
+        )
+    if db.get(Fachbereich, werte["fachbereich_id"]) is None:
+        raise Ungueltig("Fachbereich existiert nicht")
     datenobjekt = Datenobjekt(herkunft=Herkunft.MANUELL, status=AssetStatus.BESTAETIGT, **werte)
-    verlange(
-        darf_datenobjekt_schreiben(db, principal, datenobjekt),
-        "Datenobjekte legt der Datenobjekt-Owner des Fachbereichs oder die Governance an",
-    )
+    if gebender is None:
+        verlange(
+            principal.ist_governance or ist_datenobjekt_owner(principal, datenobjekt),
+            "Datenobjekte legt der Datenobjekt-Owner des Fachbereichs, der Owner des "
+            "gebenden Prozesses oder die Governance an",
+        )
     db.add(datenobjekt)
     db.flush()
     protokolliere_erstellung(db, datenobjekt, akteur_user_id=principal.user_id)
+    if gebender is not None:
+        gebender.output_datenobjekte.append(datenobjekt)
+        db.flush()
+        aktualisiere_abhaengige_prozesse(db, datenobjekt)
     return datenobjekt
 
 
 def aendere_datenobjekt(
     db: Session, principal: Principal, datenobjekt: Datenobjekt, werte: dict[str, Any]
 ) -> Datenobjekt:
-    verlange(
-        darf_datenobjekt_schreiben(db, principal, datenobjekt),
-        "Keine Schreibberechtigung fuer dieses Datenobjekt",
-    )
+    # Je Feld ein eigenes Recht (7.4) — die Kategorie wirkt in jeden Prozess,
+    # der Anker traegt jede Berechtigung; beides darf nicht, wer nur pflegt.
+    if "kategorie" in werte:
+        verlange(
+            darf_datenobjekt_kategorisieren(principal, datenobjekt),
+            "Die Kategorie setzt der Datenobjekt-Owner des Fachbereichs oder die Governance",
+        )
+    if "fachbereich_id" in werte:
+        verlange(
+            darf_datenobjekt_anker_aendern(principal, datenobjekt),
+            "Den Fachbereich eines Datenobjekts aendert nur die Governance",
+        )
+        if werte["fachbereich_id"] is None:
+            raise Ungueltig("Ein Datenobjekt gehoert einem Fachbereich; ohne geht es nicht")
+        if db.get(Fachbereich, werte["fachbereich_id"]) is None:
+            raise Ungueltig("Fachbereich existiert nicht")
+    if set(werte) - {"kategorie", "fachbereich_id"}:
+        verlange(
+            darf_datenobjekt_schreiben(db, principal, datenobjekt),
+            "Keine Schreibberechtigung fuer dieses Datenobjekt",
+        )
     _pruefe_stammdatenfelder(datenobjekt, werte)
     vorher = snapshot(datenobjekt)
     for feld, wert in werte.items():
@@ -490,9 +672,13 @@ def bestaetige_datenobjekt(
     db: Session, principal: Principal, datenobjekt: Datenobjekt
 ) -> Datenobjekt:
     verlange(
-        darf_datenobjekt_schreiben(db, principal, datenobjekt) or principal.ist_plattform,
-        "Bestaetigen darf der Datenobjekt-Owner oder die Governance-Rolle",
+        darf_datenobjekt_bestaetigen(principal, datenobjekt),
+        "Bestaetigen darf der Datenobjekt-Owner, die Plattform oder die Governance-Rolle",
     )
+    if datenobjekt.fachbereich_id is None:
+        raise Ungueltig(
+            "Bestaetigen heisst zuordnen: erst den Fachbereich setzen, dann bestaetigen"
+        )
     vorher = snapshot(datenobjekt)
     datenobjekt.status = AssetStatus.BESTAETIGT
     db.flush()

@@ -6,6 +6,8 @@ import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 
+import type { DatenobjektKatalog } from '@/api/typen';
+
 import { EINHEITEN, PROFIL, fetchAttrappe, prozess, zeichne, type Route } from './hilfen';
 
 const NUTZER = [
@@ -224,9 +226,7 @@ describe('Prozessformular', () => {
     ]);
     zeichne('/de/prozesse/neu');
     const owner = await screen.findByLabelText('Prozess-Owner');
-    await waitFor(() =>
-      expect(within(owner).getByText('Olivia Owner')).toBeInTheDocument(),
-    );
+    await waitFor(() => expect(within(owner).getByText('Olivia Owner')).toBeInTheDocument());
   });
 
   it('meldet einen Fehler beim Laden der Organisationseinheiten', async () => {
@@ -242,34 +242,20 @@ describe('Prozessformular', () => {
 
 // --- Umsetzungsplan AP-1: Kanten, Bearbeiten, Status ---------------------
 
-const DATENOBJEKTE = [
+const DATENOBJEKTE: DatenobjektKatalog[] = [
   {
     id: 'do-1',
     name: 'Entgeltdaten',
-    beschreibung: '',
-    kategorie: 'besondere_kategorie',
-    owner_user_id: null,
     fachbereich_id: 'fb-1',
-    herkunft: 'manuell',
-    quelle: 'SAP HCM',
-    externe_id: null,
-    status: 'bestaetigt',
-    metadaten: {},
-    schreibgeschuetzte_felder: [],
+    kategorie: 'besondere_kategorie',
+    quellsystem: 'SAP HCM',
   },
   {
     id: 'do-2',
     name: 'Buchungsjournal',
-    beschreibung: '',
-    kategorie: null,
-    owner_user_id: null,
     fachbereich_id: 'fb-1',
-    herkunft: 'manuell',
-    quelle: null,
-    externe_id: null,
-    status: 'bestaetigt',
-    metadaten: {},
-    schreibgeschuetzte_felder: [],
+    kategorie: null,
+    quellsystem: null,
   },
 ];
 
@@ -277,6 +263,7 @@ function mitBestand(weitere: Route[] = []) {
   return [
     ...grundrouten(),
     ...weitere,
+    { pfad: '/api/v1/datenobjekte/katalog', koerper: DATENOBJEKTE },
     { pfad: '/api/v1/datenobjekte', koerper: DATENOBJEKTE },
   ];
 }
@@ -333,7 +320,7 @@ describe('Prozessformular — Referenzen statt Freitext', () => {
     await userEvent.type(await screen.findByLabelText('Input — Datenobjekte'), 'Entgelt');
     const liste = screen.getByRole('listbox', { name: 'Input — Datenobjekte' });
     expect(within(liste).getByText('Personenbezogen — besonders')).toBeInTheDocument();
-    expect(within(liste).getByText('SAP HCM')).toBeInTheDocument();
+    expect(within(liste).getByText(/SAP HCM/)).toBeInTheDocument();
   });
 
   it('warnt ab dem achten Prozessschritt', async () => {

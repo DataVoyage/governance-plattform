@@ -279,3 +279,31 @@ def test_organisationseinheiten_filtern(client: TestClient, anmelden, organisati
     ).json()
     assert {e["land_code"] for e in nur_land} == {"DE", "FR"}
     assert len(client.get("/api/v1/fachbereiche", headers=nutzer.kopf).json()) == 2
+
+
+def test_datenobjekt_owner_wird_je_fachbereich_vergeben(
+    client: TestClient, anmelden, administrator, organisation
+) -> None:
+    """R-11 aus docs/rollen-und-scopes.md: eine Quelle gehoert einer Stelle, keiner Einheit."""
+    nutzer = anmelden("Datenobjekt-Owner")
+    auf_einheit = {
+        "user_id": nutzer.user_id,
+        "rolle": "datenobjekt_owner",
+        "scope_typ": "organisationseinheit",
+        "scope_id": organisation["fin_int"],
+    }
+    antwort = client.post(
+        "/api/v1/admin/rollenzuweisungen", json=auf_einheit, headers=administrator.kopf
+    )
+    assert antwort.status_code == 422
+    auf_fachbereich = {
+        **auf_einheit,
+        "scope_typ": "fachbereich",
+        "scope_id": organisation["fachbereich_finance"],
+    }
+    assert (
+        client.post(
+            "/api/v1/admin/rollenzuweisungen", json=auf_fachbereich, headers=administrator.kopf
+        ).status_code
+        == 201
+    )

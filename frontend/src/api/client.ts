@@ -12,6 +12,7 @@ import type {
   BewertungAbschluss,
   BewertungsModus,
   DatenObjekt,
+  DatenobjektKatalog,
   Datennutzung,
   Datenkategorie,
   Aufloesungsart,
@@ -56,8 +57,7 @@ import type {
   Zugriffsart,
 } from './typen';
 
-export const API_BASIS: string =
-  (import.meta.env?.VITE_API_BASIS as string | undefined) ?? '';
+export const API_BASIS: string = (import.meta.env?.VITE_API_BASIS as string | undefined) ?? '';
 
 export class ApiFehler extends Error {
   constructor(
@@ -122,9 +122,11 @@ export const api = {
   prozessAendern: (
     token: string,
     id: string,
-    daten: Partial<ProzessEingabe> & { status?: Prozess['status']; erlaubte_externe_ziele?: string[] },
-  ) =>
-    anfrage<Prozess>(`/api/v1/prozesse/${id}`, { methode: 'PATCH', koerper: daten, token }),
+    daten: Partial<ProzessEingabe> & {
+      status?: Prozess['status'];
+      erlaubte_externe_ziele?: string[];
+    },
+  ) => anfrage<Prozess>(`/api/v1/prozesse/${id}`, { methode: 'PATCH', koerper: daten, token }),
   wizardSchritt: (
     token: string,
     prozessId: string,
@@ -236,14 +238,16 @@ export const api = {
     }),
   datenobjekte: (token: string, abfrage = '') =>
     anfrage<DatenObjekt[]>(`/api/v1/datenobjekte${abfrage}`, { token }),
+  datenobjektKatalog: (token: string) =>
+    anfrage<DatenobjektKatalog[]>('/api/v1/datenobjekte/katalog', { token }),
   datenobjektAnlegen: (
     token: string,
     daten: {
       name: string;
       beschreibung?: string;
       kategorie?: Datenkategorie | null;
-      owner_user_id?: string | null;
       fachbereich_id?: string | null;
+      prozessobjekt_id?: string | null;
       quellsystem?: string | null;
     },
   ) => anfrage<DatenObjekt>('/api/v1/datenobjekte', { methode: 'POST', koerper: daten, token }),
@@ -256,11 +260,11 @@ export const api = {
       name: string;
       beschreibung: string;
       kategorie: Datenkategorie | null;
-      owner_user_id: string | null;
       fachbereich_id: string | null;
       quellsystem: string | null;
     }>,
-  ) => anfrage<DatenObjekt>(`/api/v1/datenobjekte/${id}`, { methode: 'PATCH', koerper: daten, token }),
+  ) =>
+    anfrage<DatenObjekt>(`/api/v1/datenobjekte/${id}`, { methode: 'PATCH', koerper: daten, token }),
   datenobjektWirkung: (token: string, id: string, kategorie?: Datenkategorie | null) =>
     anfrage<Wirkung>(
       `/api/v1/datenobjekte/${id}/wirkung${kategorie ? `?kategorie=${kategorie}` : ''}`,

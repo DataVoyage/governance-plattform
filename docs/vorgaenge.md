@@ -95,7 +95,7 @@ ihn zu hinterlegen, bekommt einen roten Test — und umgekehrt.
 
 | Kennung | Vorgang | Rolle | Erwartetes Ergebnis | AP | Stand |
 |---|---|---|---|---|---|
-| V-DAT-01 | Ein Datenobjekt mit Reifegrad 1 anlegen | Datenobjekt-Owner | Name, Kategorie, Owner, Fachbereich und Quellsystem sind in einem Zug erfassbar; das Objekt erscheint in der Liste | AP-2 | erfüllt |
+| V-DAT-01 | Ein Datenobjekt mit Reifegrad 1 anlegen | Datenobjekt-Owner | Name, Kategorie, Fachbereich und Quellsystem sind in einem Zug erfassbar — keine Person; das Objekt erscheint in der Liste mit seinem Fachbereich | AP-2 | erfüllt |
 | V-DAT-02 | Ein Datenobjekt ohne Kategorie anlegen | Datenobjekt-Owner | Es trägt sichtbar „Ohne Kategorie" und erscheint im Cockpit-Befund | AP-2 | erfüllt |
 | V-DAT-03 | Die Kategorie mit ihrem Ankertext wählen | Datenobjekt-Owner | Jede der fünf Kategorien aus A.7 nennt ihre Beispiele, damit die Wahl ohne Rückfrage gelingt | AP-2 | erfüllt |
 | V-DAT-04 | Sehen, welche Prozesse dieses Datenobjekt referenzieren | Datenobjekt-Owner | Die Liste nennt jeden Prozess mit Input- oder Output-Kennzeichnung und seiner Einstufung | AP-2 | erfüllt |
@@ -103,10 +103,12 @@ ihn zu hinterlegen, bekommt einen roten Test — und umgekehrt.
 | V-DAT-06 | Vor einer Umklassifizierung die Wirkung ansehen | Datenobjekt-Owner | Betroffene Prozesse, betroffene Tools und die Zahl neu mitbestimmungsrelevanter Prozesse stehen vor der Entscheidung | AP-2 | erfüllt |
 | V-DAT-07 | Die Umklassifizierung abbrechen | Datenobjekt-Owner | Nichts wird geschrieben, die Kategorie bleibt unverändert | AP-2 | erfüllt |
 | V-DAT-08 | Die Umklassifizierung übernehmen | Datenobjekt-Owner | Die Kategorie wechselt, und die abgeleiteten Flags der referenzierenden Prozesse sind sofort nachgeführt | AP-2 | erfüllt |
-| V-DAT-09 | Owner, Fachbereich und Quellsystem ändern | Datenobjekt-Owner | Die Änderung greift sofort und ist im Nachweis protokolliert | AP-2 | erfüllt |
+| V-DAT-09 | Fachbereich und Quellsystem ändern | Governance | Die Änderung greift sofort und ist im Nachweis protokolliert; den Fachbereich wechselt nur die Governance | AP-2 | erfüllt |
 | V-DAT-10 | Ein importiertes Datenobjekt bearbeiten | Datenobjekt-Owner | Stammdatenfelder sind gesperrt mit Verweis auf das Ursprungssystem, die Kategorie bleibt pflegbar | AP-2 | erfüllt |
 | V-DAT-11 | Die Datenobjektliste durchsuchen | alle | Name und Quellsystem sind durchsuchbar, die Kategorie ist je Zeile sichtbar | AP-2 | erfüllt |
-| V-DAT-12 | Ein Datenobjekt ohne Fachbereich aufrufen | Datenobjekt-Owner | Es ist nur für seinen Owner und global lesende Rollen sichtbar | AP-2 | erfüllt |
+| V-DAT-12 | Ein vorgefundenes Datenobjekt ohne Fachbereich aufrufen | Plattform | Es ist nur global lesenden Rollen sichtbar; bestätigen verlangt die Zuordnung | AP-2 | erfüllt |
+| V-DAT-13 | Eine Quelle als Output des eigenen Prozesses anlegen | Prozess-Owner | Der Fachbereich ergibt sich aus dem Prozessgeber, die Quelle hängt als Output am Prozess; Stammdaten sind pflegbar, die Kategorie bleibt beim Datenobjekt-Owner | AP-11 | erfüllt |
+| V-DAT-14 | Eine fremde Quelle als Input wählen | Prozess-Owner | Der Katalog nennt Name, Fachbereich und Kategorie jeder Quelle; das Detail bleibt außerhalb des eigenen Bereichs verschlossen | AP-11 | erfüllt |
 
 ## V-TOO — Tool-Objekt
 
@@ -226,6 +228,7 @@ ihn zu hinterlegen, bekommt einen roten Test — und umgekehrt.
 | V-ADM-07 | Die Konfiguration pflegen | Governance | Fristen, Schwellen und Vorlauf sind ohne Neustart änderbar | AP-6 | erfüllt |
 | V-ADM-08 | Als Auditor arbeiten wollen | Auditor | Alle Bereiche sind sichtbar, aber keine einzige Schaltfläche ändert etwas — mit dem Satz, warum | AP-9 | erfüllt |
 | V-ADM-09 | Als Prozess-Umsetzer den einen Schreibweg finden | Prozess-Umsetzer | Nur die lokale Abweichung ist bearbeitbar; alles Übrige ist gesperrt und erklärt | AP-9 | erfüllt |
+| V-ADM-10 | Ein fremdes Objekt über die API direkt abrufen | jede Rolle | Liste, Detail und Wirkung antworten gleich: außerhalb des eigenen Bereichs kommen keine Daten, nicht nur keine Anzeige | AP-9 | erfüllt |
 
 ## V-INT — Integration und Nachweis
 

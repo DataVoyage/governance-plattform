@@ -1,8 +1,8 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 
 import { ApiFehler, api } from '@/api/client';
-import type { DatenObjekt, Datenkategorie, Fachbereich, Nutzer } from '@/api/typen';
+import type { DatenObjekt, Datenkategorie, Fachbereich, Prozess } from '@/api/typen';
 import { useSprache } from '@/i18n/SprachKontext';
 import {
   Abzeichen,
@@ -41,40 +41,69 @@ export const KATEGORIE_TON: Record<Datenkategorie, Ton> = {
 /**
  * Datenobjekte (Architektur 8.3, Leitdokument A.7).
  *
- * Reifegrad 1 verlangt Name, Kategorie, Owner und Quellsystem — mehr nicht,
- * und das in rund dreißig Sekunden. Deshalb ein Blatt mit fünf Feldern statt
- * eines eigenen Formularpfads.
+ * Reifegrad 1 verlangt Name, Kategorie, datenhaltende Stelle und Quellsystem —
+ * mehr nicht, und das in rund dreißig Sekunden. Die Stelle ist ein
+ * Fachbereich, keine Person (docs/rollen-und-scopes.md, 7). Sie wird nicht
+ * frei gewählt, sondern ergibt sich: aus dem gebenden Prozess, wenn ein
+ * Prozess-Owner die Quelle als Output anlegt, oder aus dem eigenen Bereich,
+ * wenn ein Datenobjekt-Owner sie erfasst. Das Formular bietet genau die Wege
+ * an, die der Angemeldete hat.
  */
 export function DatenobjektListe() {
   const { t, pfad } = useSprache();
-  const { token } = useSitzung();
+  const { token, profil, hatRolle } = useSitzung();
   const [datenobjekte, setDatenobjekte] = useState<DatenObjekt[] | null>(null);
-  const [nutzer, setNutzer] = useState<Nutzer[]>([]);
   const [fachbereiche, setFachbereiche] = useState<Fachbereich[]>([]);
+  const [prozesse, setProzesse] = useState<Prozess[]>([]);
   const [suche, setSuche] = useState('');
   const [blattOffen, setBlattOffen] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
 
   const [name, setName] = useState('');
   const [kategorie, setKategorie] = useState('');
-  const [owner, setOwner] = useState('');
   const [fachbereich, setFachbereich] = useState('');
+  const [gebender, setGebender] = useState('');
   const [quellsystem, setQuellsystem] = useState('');
 
   useEffect(() => {
     if (token === null) return;
     Promise.all([
       api.datenobjekte(token),
-      api.nutzer(token).catch(() => [] as Nutzer[]),
       api.fachbereiche(token).catch(() => [] as Fachbereich[]),
+      api.prozesse(token).catch(() => [] as Prozess[]),
     ])
-      .then(([alle, personen, bereiche]) => {
+      .then(([alle, bereiche, eigene]) => {
         setDatenobjekte(alle);
-        setNutzer(personen);
         setFachbereiche(bereiche);
+        setProzesse(eigene);
       })
       .catch(() => setFehler(t('app.fehler')));
   }, [token, t]);
+
+  /** Die Fachbereiche, für die der Angemeldete Datenobjekt-Owner ist — Governance alle.
+   *  Nur eine Vorauswahl; die Regel steht auf dem Server (E-53). */
+  const eigeneFachbereiche = useMemo(() => {
+    if (hatRolle('governance')) return fachbereiche;
+    const kennungen = new Set(
+      (profil?.rollen ?? [])
+        .filter((z) => z.rolle === 'datenobjekt_owner' && z.scope_typ === 'fachbereich')
+        .map((z) => z.scope_id),
+    );
+    return fachbereiche.filter((f) => kennungen.has(f.id));
+  }, [fachbereiche, profil, hatRolle]);
+
+  /** Prozesse, die der Angemeldete schreiben darf — nur die geben Output. */
+  const gebendeProzesse = useMemo(() => prozesse.filter((p) => p.rechte.bearbeiten), [prozesse]);
+  const kannAnlegen = eigeneFachbereiche.length > 0 || gebendeProzesse.length > 0;
+
+  useEffect(() => {
+    if (fachbereich === '' && eigeneFachbereiche.length === 1) {
+      setFachbereich(eigeneFachbereiche[0].id);
+    }
+  }, [eigeneFachbereiche, fachbereich]);
+
+  const fachbereichName = (id: string | null) =>
+    fachbereiche.find((f) => f.id === id)?.name ?? null;
 
   async function anlegen(ereignis: FormEvent) {
     ereignis.preventDefault();
@@ -83,13 +112,14 @@ export function DatenobjektListe() {
       const angelegt = await api.datenobjektAnlegen(token, {
         name,
         kategorie: kategorie === '' ? null : (kategorie as Datenkategorie),
-        owner_user_id: owner === '' ? null : owner,
-        fachbereich_id: fachbereich === '' ? null : fachbereich,
+        fachbereich_id: gebender !== '' || fachbereich === '' ? null : fachbereich,
+        prozessobjekt_id: gebender === '' ? null : gebender,
         quellsystem: quellsystem === '' ? null : quellsystem,
       });
       setDatenobjekte((bisher) => [...(bisher ?? []), angelegt]);
       setName('');
       setKategorie('');
+      setGebender('');
       setQuellsystem('');
       setBlattOffen(false);
     } catch (ausnahme) {
@@ -107,11 +137,11 @@ export function DatenobjektListe() {
       (d.quellsystem ?? '').toLowerCase().includes(begriff),
   );
 
-  const anlegenKnopf = (
+  const anlegenKnopf = kannAnlegen ? (
     <Knopf art="gefuellt" onClick={() => setBlattOffen(true)}>
       {t('asset.datenobjekte.neu')}
     </Knopf>
-  );
+  ) : undefined;
 
   return (
     <>
@@ -122,6 +152,9 @@ export function DatenobjektListe() {
       />
 
       {fehler !== null && <Hinweis art="fehler">{fehler}</Hinweis>}
+      {!kannAnlegen && profil !== null && (
+        <Hinweis art="information">{t('asset.anlegen.keinWeg')}</Hinweis>
+      )}
 
       {datenobjekte.length === 0 ? (
         <Leerzustand
@@ -141,7 +174,12 @@ export function DatenobjektListe() {
                 key={datenobjekt.id}
                 ziel={pfad(`/datenobjekte/${datenobjekt.id}`)}
                 haupt={datenobjekt.name}
-                zweitzeile={datenobjekt.quellsystem ?? t('asset.quellsystem.leer')}
+                zweitzeile={[
+                  datenobjekt.quellsystem ?? t('asset.quellsystem.leer'),
+                  fachbereichName(datenobjekt.fachbereich_id),
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
                 wert={
                   datenobjekt.kategorie === null ? (
                     <Abzeichen ton="gelb" zeichen="!">
@@ -178,21 +216,30 @@ export function DatenobjektListe() {
               }))}
               hilfe={t('asset.kategorie.hilfe')}
             />
-            <Auswahl
-              beschriftung={t('asset.feld.owner')}
-              wert={owner}
-              aendern={setOwner}
-              leertext="—"
-              optionen={nutzer.map((n) => ({ wert: n.id, text: n.name }))}
-              hilfe={t('asset.owner.hilfe')}
-            />
-            <Auswahl
-              beschriftung={t('asset.feld.fachbereich')}
-              wert={fachbereich}
-              aendern={setFachbereich}
-              leertext="—"
-              optionen={fachbereiche.map((f) => ({ wert: f.id, text: f.name }))}
-            />
+            <p className="k-hilfe">{t('asset.anlegen.weg')}</p>
+            {gebendeProzesse.length > 0 && (
+              <Auswahl
+                beschriftung={t('asset.feld.gebenderProzess')}
+                wert={gebender}
+                aendern={setGebender}
+                leertext="—"
+                optionen={gebendeProzesse.map((p) => ({ wert: p.id, text: p.name }))}
+                hilfe={t('asset.gebenderProzess.hilfe')}
+              />
+            )}
+            {eigeneFachbereiche.length > 0 && (
+              <Auswahl
+                beschriftung={t('asset.feld.fachbereich')}
+                wert={gebender === '' ? fachbereich : ''}
+                aendern={setFachbereich}
+                leertext="—"
+                optionen={eigeneFachbereiche.map((f) => ({ wert: f.id, text: f.name }))}
+                hilfe={t('asset.fachbereich.hilfe')}
+                gesperrt={
+                  gebender !== '' || (eigeneFachbereiche.length === 1 && !hatRolle('governance'))
+                }
+              />
+            )}
             <Feld
               beschriftung={t('asset.feld.quellsystem')}
               wert={quellsystem}

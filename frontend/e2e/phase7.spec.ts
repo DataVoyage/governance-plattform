@@ -70,7 +70,7 @@ async function landschaft(anfrage: APIRequestContext) {
   const datenobjekt = await json(
     await anfrage.post(`${API}/api/v1/datenobjekte`, {
       headers: h,
-      data: { name: `Kreditorenstamm ${kennung}` },
+      data: { name: `Kreditorenstamm ${kennung}`, fachbereich_id: fachbereich.id },
     }),
   );
   const prozess = await json(
@@ -117,7 +117,12 @@ async function landschaft(anfrage: APIRequestContext) {
     data: { prozessobjekt_id: prozess.id },
   });
   if (kante.status() !== 201) throw new Error(`Kante nicht angelegt: ${await kante.text()}`);
-  return { prozessId: prozess.id, toolId: tool.id, datenobjektName: datenobjekt.name, kopfzeilen: h };
+  return {
+    prozessId: prozess.id,
+    toolId: tool.id,
+    datenobjektName: datenobjekt.name,
+    kopfzeilen: h,
+  };
 }
 
 const service = { 'X-Service-Token': SERVICE_TOKEN };
@@ -207,9 +212,7 @@ test.describe('Phase 7 gegen den laufenden Server', () => {
         headers: service,
       })
     ).json();
-    expect(delta.changes.map((c: { entity_type: string }) => c.entity_type)).toEqual([
-      'bewertung',
-    ]);
+    expect(delta.changes.map((c: { entity_type: string }) => c.entity_type)).toEqual(['bewertung']);
     // Derselbe Cursor liefert erneut dasselbe Ergebnis.
     const wiederholt = await (
       await request.get(`${API}/api/v1/query/changes?since=${cursor}&entity_type=bewertung`, {

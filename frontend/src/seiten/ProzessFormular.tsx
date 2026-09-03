@@ -4,7 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ApiFehler, api } from '@/api/client';
 import type {
   Ausfallfolge,
-  DatenObjekt,
+  DatenobjektKatalog,
   Fachbereich,
   Kundenkreis,
   Nutzer,
@@ -75,7 +75,7 @@ export function ProzessFormular() {
   const [nutzer, setNutzer] = useState<Nutzer[]>([]);
   const [fachbereiche, setFachbereiche] = useState<Fachbereich[]>([]);
   const [einheiten, setEinheiten] = useState<Organisationseinheit[]>([]);
-  const [datenobjekte, setDatenobjekte] = useState<DatenObjekt[]>([]);
+  const [datenobjekte, setDatenobjekte] = useState<DatenobjektKatalog[]>([]);
   const [prozesse, setProzesse] = useState<Prozess[]>([]);
   const [laedt, setLaedt] = useState(true);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -106,7 +106,7 @@ export function ProzessFormular() {
       api.organisationseinheiten(token),
       api.fachbereiche(token),
       api.nutzer(token).catch(() => [] as Nutzer[]),
-      api.datenobjekte(token).catch(() => [] as DatenObjekt[]),
+      api.datenobjektKatalog(token).catch(() => [] as DatenobjektKatalog[]),
       api.prozesse(token).catch(() => [] as Prozess[]),
       bearbeiten ? api.prozess(token, id as string) : Promise.resolve(null),
     ])
@@ -155,12 +155,18 @@ export function ProzessFormular() {
       datenobjekte.map((objekt) => ({
         id: objekt.id,
         name: objekt.name,
-        zusatz: objekt.quelle ?? undefined,
+        // Quelle und datenhaltende Stelle — mehr kennt der Katalog nicht (7.3).
+        zusatz:
+          [objekt.quellsystem, fachbereiche.find((f) => f.id === objekt.fachbereich_id)?.name]
+            .filter(Boolean)
+            .join(' · ') || undefined,
         abzeichen:
-          objekt.kategorie === null ? t('asset.kategorie.keine') : t(`kategorie.${objekt.kategorie}` as never),
+          objekt.kategorie === null
+            ? t('asset.kategorie.keine')
+            : t(`kategorie.${objekt.kategorie}` as never),
         ton: objekt.kategorie === null ? 'gelb' : KATEGORIE_TON[objekt.kategorie],
       })),
-    [datenobjekte, t],
+    [datenobjekte, fachbereiche, t],
   );
 
   const prozessbestand: Referenz[] = useMemo(
@@ -342,9 +348,7 @@ export function ProzessFormular() {
             mehrzeilig
             hoechstlaenge={1000}
             hilfe={`${t('prozess.hilfe.schritte')} — ${t('prozess.schritte.zaehler')}: ${schrittzahl}`}
-            fehler={
-              schrittzahl > HOECHSTZAHL_SCHRITTE ? t('prozess.schritte.warnung') : undefined
-            }
+            fehler={schrittzahl > HOECHSTZAHL_SCHRITTE ? t('prozess.schritte.warnung') : undefined}
           />
           <Feld
             beschriftung={t('prozess.feld.output')}
@@ -383,7 +387,10 @@ export function ProzessFormular() {
             beschriftung={t('prozess.feld.ausfallfolge')}
             wert={ausfallfolge}
             aendern={(wert) => setAusfallfolge(wert as Ausfallfolge)}
-            optionen={AUSFALLFOLGEN.map((a) => ({ wert: a, text: t(`ausfallfolge.${a}` as never) }))}
+            optionen={AUSFALLFOLGEN.map((a) => ({
+              wert: a,
+              text: t(`ausfallfolge.${a}` as never),
+            }))}
           />
         </Karte>
 
@@ -453,9 +460,7 @@ export function ProzessFormular() {
                   <Feld
                     beschriftung={`${t('prozess.umsetzungen.abweichung')} — ${orgBezeichnung(e, fachbereiche)}`}
                     wert={abweichungen[e.id] ?? ''}
-                    aendern={(wert) =>
-                      setAbweichungen((bisher) => ({ ...bisher, [e.id]: wert }))
-                    }
+                    aendern={(wert) => setAbweichungen((bisher) => ({ ...bisher, [e.id]: wert }))}
                     hilfe={t('prozess.umsetzungen.abweichungHilfe')}
                   />
                 )}
@@ -467,9 +472,7 @@ export function ProzessFormular() {
         {fehler !== null && <Hinweis art="fehler">{fehler}</Hinweis>}
 
         <div className="formularfuss">
-          <Knopf
-            onClick={() => navigiere(pfad(bearbeiten ? `/prozesse/${id}` : '/prozesse'))}
-          >
+          <Knopf onClick={() => navigiere(pfad(bearbeiten ? `/prozesse/${id}` : '/prozesse'))}>
             {t('prozess.abbrechen')}
           </Knopf>
           <Knopf type="submit" art="gefuellt" gross>

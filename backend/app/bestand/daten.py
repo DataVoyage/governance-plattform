@@ -685,7 +685,6 @@ def baue(kontext: Kontext) -> None:
                     "name": name,
                     "beschreibung": f"Geführt im System {quellsystem}.",
                     "kategorie": kategorie,
-                    "owner_user_id": kontext.person(owner).id,
                     "fachbereich_id": kontext.fachbereich(bereich).id,
                     "quellsystem": quellsystem,
                 },

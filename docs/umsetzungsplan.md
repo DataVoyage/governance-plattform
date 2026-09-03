@@ -461,6 +461,26 @@ Playwright-Bericht zeigt 132 Läufe: die 124 Vorgänge und die acht Selbstprüfu
       Kennung gegen den Katalog und jedes Kriterium gegen seine Vorgangsspalte
 - [x] Phasen 1 bis 7 auf dieser Grundlage erneut abgenommen
 
+### AP-11 — Rollen und Scopes als Sollzustand; Datenobjekte danach *(E-55)*
+
+**Anwendervorgänge:** V-DAT-13, V-DAT-14; V-DAT-01, V-DAT-09 und V-DAT-12 neu gefasst.
+
+Ausgelöst durch Beobachtungen an der laufenden Anwendung: Datenobjekte trugen eine
+Person als Owner unter einer Hilfe, die von der „datenhaltenden Stelle" sprach; Dropdowns
+zeigten fremde Bereiche und alle Nutzernamen; wer sich selbst als Owner eintrug, durfte
+überall anlegen. Statt Einzelkorrekturen zuerst der Sollzustand.
+
+- [x] `docs/rollen-und-scopes.md`: Rollen, Scopes, Anker je Objekt, Matrix Rolle × Objekt ×
+      Aktion, Datenobjekte ausgearbeitet, Abweichungen nummeriert (R-1 bis R-11)
+- [x] Datenobjekt ohne Person: `owner_user_id` entfällt (Migration `d4f7a2c19e60`); der Anker
+      ist der Fachbereich, gesetzt über den gebenden Prozess oder den eigenen Scope (R-1 bis R-5)
+- [x] Sicht über Referenz statt über den Bereich; Katalog mit vier Feldern für die
+      Input-Auswahl (R-6); Datenobjekt-Owner nur je Fachbereich (R-11)
+- [x] Formulare bieten nur die Wege an, die der Angemeldete hat; Kategorie, Anker und
+      Stammdaten mit je eigenem Recht (R-8, R-10 für Datenobjekte)
+- [ ] R-7 (Scopes rollenblind), R-9 (Tool-Anker optional), R-8/R-10 für Prozess- und
+      Tool-Formulare — benannt, folgen als eigenes Paket
+
 ---
 
 ## 3. Reihenfolge und Meilensteine
@@ -473,6 +493,7 @@ Playwright-Bericht zeigt 132 Läufe: die 124 Vorgänge und die acht Selbstprüfu
 | **M4 — Regelkreis geschlossen** | AP-6, AP-7 | Rahmen, Verbote, Fristen, Technologieentscheidung |
 | **M5 — Steuerung** | AP-8, AP-9 | Cockpit vollständig, Anwendung selbsttragend |
 | **M6 — Abgenommen** | AP-10 | Nachweise über den Nutzerweg statt über die API |
+| **M7 — Konsistent** | AP-11 | Berechtigungen aus einem geschriebenen Sollzustand, nicht aus Einzelfällen |
 
 Zwischen den Meilensteinen bleibt die Anwendung jederzeit lauffähig und nutzbar — kein Paket
 hinterlässt einen halben Zustand.

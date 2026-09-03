@@ -66,9 +66,15 @@ test.describe('Phase 6 in der Oberflaeche', () => {
     const h = await kopf(request);
     const kennung = Math.random().toString(36).slice(2, 8);
     const name = `Ohne Kategorie ${kennung}`;
+    const fachbereich = await (
+      await request.post(`${API}/api/v1/fachbereiche`, {
+        headers: h,
+        data: { name: `Bereich ${kennung}`, code: `fb-${kennung}` },
+      })
+    ).json();
     await request.post(`${API}/api/v1/datenobjekte`, {
       headers: h,
-      data: { name, beschreibung: '' },
+      data: { name, beschreibung: '', fachbereich_id: fachbereich.id },
     });
 
     await anmelden(page);
@@ -91,9 +97,20 @@ test.describe('Phase 6 in der Oberflaeche', () => {
 
   test('ein Nutzer ohne Rolle sieht ein leeres Cockpit', async ({ page, request }) => {
     const h = await kopf(request);
-    await request.post(`${API}/api/v1/datenobjekte`, {
+    const kennung = Math.random().toString(36).slice(2, 8);
+    // Ein vorgefundenes Datenobjekt ohne Fachbereich — nur global sichtbar.
+    await request.post(`${API}/api/v1/import/assets`, {
       headers: h,
-      data: { name: `Sichtbar nur global ${Math.random().toString(36).slice(2, 8)}` },
+      data: {
+        quelle: 'zentrale-entwicklungsplattform',
+        datensaetze: [
+          {
+            typ: 'datenobjekt',
+            externe_id: `DO-${kennung}`,
+            name: `Sichtbar nur global ${kennung}`,
+          },
+        ],
+      },
     });
 
     const fremd = `e2e-cockpit-fremd-${Math.random().toString(36).slice(2, 8)}`;

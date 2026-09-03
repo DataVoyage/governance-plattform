@@ -489,7 +489,35 @@ def test_erinnerung_60_tage_vor_ablauf_und_ueberfaelligkeit(
         "/api/v1/selbstverpflichtungen/ueberfaellig", headers=owner.kopf
     ).json()
     assert ueberfaellig == []  # heute noch gueltig
-    assert [str(e.id) for e in erinnerung.ueberfaellige(db, nach_ablauf)] == [eintrag_id]
+    assert [str(e.id) for e in erinnerung.ueberfaellige_gesamt(db, nach_ablauf)] == [eintrag_id]
+
+
+def test_ueberfaellige_zeigt_nur_den_eigenen_bereich(
+    client: TestClient, owner, anmelden, prozess, db
+) -> None:
+    """Auch eine Auswertung ist eine Abfrage — sie darf nicht mehr zeigen als die Liste.
+
+    Die Route ist der Vorgriff auf eine Cockpit-Zeile. Das Cockpit filtert seit
+    jeher; diese Route tat es nicht und nannte jedem Angemeldeten, wer im
+    ganzen Unternehmen eine Frist hat verstreichen lassen.
+    """
+    from app.models.governance import Selbstverpflichtung
+    from app.services import erinnerung
+
+    bewerte(client, owner, prozess["id"], ds=3)
+    gib_selbstverpflichtung(client, owner, prozess["id"])
+    db.expire_all()
+    eintrag = db.query(Selbstverpflichtung).one()
+    nach_ablauf = eintrag.gueltig_bis + timedelta(days=1)
+
+    fremder = anmelden("Ohne Rolle")
+    # Der Datenzustand kennt den Eintrag; die Antwort an den Fremden nicht.
+    assert [str(e.id) for e in erinnerung.ueberfaellige_gesamt(db, nach_ablauf)] == [
+        str(eintrag.id)
+    ]
+    assert (
+        client.get("/api/v1/selbstverpflichtungen/ueberfaellig", headers=fremder.kopf).json() == []
+    )
 
 
 def test_abgelaufene_selbstverpflichtung_blockiert_die_aktivierung(

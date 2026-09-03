@@ -1449,3 +1449,135 @@ dazu dieselbe Rolle mit zwei Geltungsbereichen und einen ganz ohne Rolle. Sie
 tragen keine erfundenen Personennamen, sondern die Bezeichnung ihrer
 Zugangsart; Kennung und Name sind dasselbe eine Wort. Dokumentiert in
 `docs/demo-zugaenge.md`, festgehalten als V-ADM-07 und V-ADM-08.
+
+## E-54 — Die Sichtbarkeitsregel gilt auch beim Direktaufruf
+
+*Datum: 2026-09-03 — Status: umgesetzt*
+
+Die Frage war berechtigt: liefert eine Liste weniger, weil das Frontend
+weniger zeigt, oder weil weniger da ist? Die Messung über alle zehn
+Demo-Zugänge hat beides gefunden.
+
+**Der Regelfall war richtig.** Listen filtern in SQL, nicht in der Antwort:
+`ohnerolle` bekommt auf `/prozesse`, `/tools`, `/datenobjekte` und `/lenkung`
+ein leeres Feld, `prozessowner` sieht 11 von 56 Prozessobjekten. Der
+Direktaufruf eines fremden Prozess- oder Tool-Objekts antwortet mit 403,
+ebenso `/nachweis` und `/admin/users` für jede nicht globale Rolle. Die Daten
+sind nicht ausgeblendet, sie kommen nicht.
+
+**Zwei Routen waren es nicht.** `GET /datenobjekte/{id}` rief
+`hole_datenobjekt` ohne jede Prüfung auf und antwortete jedem Angemeldeten mit
+200 — auch `ohnerolle` auf einem Datenobjekt des Fachbereichs Personal.
+`/datenobjekte/{id}/wirkung` hatte sogar ein ausdrückliches `del principal`
+und gab zusätzlich preis, an wie vielen Prozessen und Tool-Objekten das
+Datenobjekt hängt. Wer eine Kennung kannte — aus einer geteilten Adresse, aus
+einer Verknüpfung, durch Raten —, las an der Liste vorbei.
+
+**Eine dritte Route war es auch.** `GET /selbstverpflichtungen/ueberfaellig`
+lieferte jedem Angemeldeten alle 27 überfälligen Erklärungen des Unternehmens —
+also namentlich, wer welche Frist hat verstreichen lassen. Die Route ist der
+Vorgriff auf eine Cockpit-Zeile aus Phase 6; das Cockpit filtert längst über
+`_sichtbare_prozesse`, der Vorgriff wurde nie nachgezogen. Die Oberfläche ruft
+ihn nicht mehr auf, was den Fehler so lange am Leben hielt.
+
+**Die Ursache war die doppelte Regel.** Die Bedingung stand nur als
+SQL-Ausdruck für Listen (`datenobjekt_sichtbarkeitsbedingung`); für ein
+einzelnes Objekt gab es keine Entsprechung, also stand an der Detailroute
+nichts. Prozess- und Tool-Objekte hatten ihre — deshalb waren sie dicht.
+
+Jetzt hat der Dienst `darf_datenobjekt_lesen` und `hole_datenobjekt_sichtbar`
+neben der Listenbedingung. Beide Routen gehen darüber. Ein Test hält es fest:
+derselbe fremde Zugang bekommt auf Liste, Detail, Wirkung und PATCH die
+gleiche Antwort — und ein Datenobjekt-Owner seines Bereichs weiterhin 200.
+
+Bei den Erinnerungen heißt die ungefilterte Fassung jetzt
+`ueberfaellige_gesamt` und sagt im Namen, was sie ist: für geplante Läufe und
+Prüfungen, nie für eine Antwort. `ueberfaellige` verlangt einen Principal und
+schneidet auf die sichtbaren Prozess- und Tool-Objekte zu. Diese Route hat
+bewusst **keinen** Eintrag im Vorgangskatalog: eine Frist lässt sich über HTTP
+nicht ablaufen lassen, ein Durchlauf könnte die Aussage also nicht belegen.
+Sie steht als Backend-Test in `test_gates.py`, wo sich die Uhr stellen lässt.
+
+**Was geprüft und für richtig befunden wurde.** Ungefiltert bleiben
+`/anforderungsklassen`, `/technologien`, `/technologiematrix`,
+`/selbstverpflichtungen/katalog`, `/gates/ausloeser`, `/konfiguration`,
+`/admin/rollen`, `/fachbereiche` und `/organisationseinheiten`. Das ist kein
+Versehen: das sind das Regelwerk und die Organisationsstruktur, nicht die
+Gegenstände der Governance. Wer bewertet wird, muss den Maßstab lesen dürfen.
+
+**Die Lehre ist die Regel selbst.** Eine Sichtbarkeitsregel, die zweimal
+formuliert wird, wird irgendwo nur einmal angewandt. Wo eine Liste gefiltert
+wird, gehört die Einzelprüfung in denselben Dienst und in dieselbe Datei —
+sonst fällt beim nächsten Endpunkt wieder auf, dass er sie nicht kennt.
+
+## E-55 — Erst der Sollzustand, dann der Code: Rollen, Scopes, Datenobjekte
+
+*Datum: 2026-09-03 — Status: umgesetzt (AP-11)*
+
+Nach E-54 fielen an der laufenden Anwendung mehrere Dinge zugleich auf:
+Datenobjekte trugen eine **Person** als Owner — unter einer Hilfe, die von der
+„datenhaltenden Stelle" sprach und dann ein Dropdown mit allen Nutzernamen
+bot. Fachrollen konnten den Fachbereich eines Datenobjekts frei wechseln, wo
+ein Tool-Objekt seinen Bereich nicht verlassen kann. Wer sich selbst als Owner
+eintrug, durfte in jedem Fachbereich anlegen. Und die Sicht auf Datenobjekte
+war bereichsweit für jede Rolle mit Scope im Fachbereich — auch für den
+Prozess-Umsetzer.
+
+**Die Entscheidung war eine über die Reihenfolge.** Jede dieser Stellen ließ
+sich für sich plausibel korrigieren, und genau so war es bis dahin gelaufen:
+E-54 hatte zwei Routen dicht gemacht, ohne dass irgendwo stand, was die Regel
+ist. Einzelkorrekturen an Berechtigungen verschieben Widersprüche, sie lösen
+sie nicht — beim nächsten Formular trifft jemand wieder eine eigene Annahme.
+Deshalb zuerst `docs/rollen-und-scopes.md`: die drei Bereiche, die acht
+Rollen, der Anker je Objekt, die Matrix Rolle × Objekt × Aktion, die
+Datenobjekte ausgearbeitet, und die Abweichungen des Codes nummeriert (R-1 bis
+R-11), damit Änderungen darauf zeigen können. Erst danach der Code.
+
+**Was am Datenobjekt entschieden ist.** Ein Datenobjekt ist eine Quelle, kein
+Werk. Es hat genau einen Anker — den **Fachbereich** als datenhaltende Stelle —
+und keine Person: ein Prozess hat einen Eigner, weil jemand bewertet und sich
+verpflichtet; ein Tool hat einen Owner, weil jemand attestiert; eine Quelle
+verlangt keine persönliche Erklärung. Wer sie klassifiziert, ist der
+Datenobjekt-Owner des Fachbereichs — eine Rolle, keine Eigenschaft des Objekts.
+Die Spalte `owner_user_id` fällt weg (Migration `d4f7a2c19e60`).
+
+Der Fachbereich wird nicht gewählt, er ergibt sich (P1): aus dem **gebenden
+Prozess**, wenn ein Prozess-Owner die Quelle als Output anlegt — der Prozess
+erzeugt die Daten, sein Prozessgeber bestimmt die Stelle, und der gebende
+Prozess ist kein eigenes Feld, sondern die Output-Kante; oder aus dem Scope
+des Datenobjekt-Owners. Ohne Anker gibt es ein Datenobjekt nur vorgefunden und
+unbestätigt; bestätigen heißt zuordnen.
+
+Die Rechte trennen sich nach Feld: **Stammdaten** pflegt der Datenobjekt-Owner
+oder der Owner des gebenden Prozesses; die **Kategorie** setzt nur der
+Datenobjekt-Owner, weil sie in jeden referenzierenden Prozess wirkt; den
+**Anker** wechselt nur die Governance, weil mit ihm jede Berechtigung wandert.
+Die Antwort trägt deshalb vier Rechte statt eines.
+
+**Sicht über die Referenz, nicht über den Bereich.** Ein Prozess-Owner sieht
+die Quellen, die seine Prozesse nutzen, ein Technischer Owner die, auf die
+seine Tools zugreifen — vollständig, weil sie die Wirkung einer Kategorie auf
+ihr Objekt verstehen müssen. Die übrigen Quellen ihres Fachbereichs sehen sie
+nicht; dafür gibt es keinen Grund. Damit bereichsübergreifende
+Wiederverwendung — der Sinn von A.7 — trotzdem möglich bleibt, gibt es einen
+**Katalog**: Name, Fachbereich, Kategorie, Quellsystem jeder bestätigten
+Quelle, als eigener Endpunkt mit eigenem Schema. Das ist die eine, schmale
+Ausnahme von „außerhalb des Bereichs kommt nichts", und sie ist als solche
+benannt. Ohne Rolle gibt es auch den Katalog nicht.
+
+**Was die Oberfläche daraus macht.** Das Formular bietet genau die Wege an,
+die der Angemeldete hat: dem Datenobjekt-Owner seinen Fachbereich (bei genau
+einem vorbelegt und gesperrt), dem Prozess-Owner seine Prozesse als gebende,
+der Governance beides. Wer keinen Weg hat, sieht kein „Anlegen", sondern einen
+Satz, der sagt, was fehlt. Am Detail steht der Fachbereich als Text, der
+gebende Prozess als Verweis, und die Kategorie ist gesperrt, wenn das Recht
+fehlt — mit dem Satz, wer es hat.
+
+**Was bewusst offen bleibt.** R-7 — Scopes zählen rollenblind, ein
+Prozess-Umsetzer in Vertrieb DE hat damit den Bereich für alles, was über
+`erlaubte_org_ids` läuft — ist die tiefste Abweichung, weil sie jede Sichtregel
+berührt; sie ist im Sollzustand benannt und folgt als eigenes Paket, ebenso
+R-9 (Tool-Anker) und die Personen-Dropdowns an Prozess und Tool (R-8, R-10).
+Für Datenobjekte ist R-7 bereits umgangen: `datenobjekt_owner_fachbereiche`
+zählt nur die Scopes dieser einen Rolle.
+

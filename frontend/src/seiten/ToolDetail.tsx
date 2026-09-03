@@ -5,7 +5,7 @@ import { ApiFehler, api } from '@/api/client';
 import type {
   Ausfuehrungsidentitaet,
   Datennutzung,
-  DatenObjekt,
+  DatenobjektKatalog,
   Deckung,
   Fachbereich,
   Lauftyp,
@@ -86,7 +86,7 @@ export function ToolDetail() {
   const [tool, setTool] = useState<ToolObjekt | null>(null);
   const [prozesse, setProzesse] = useState<Prozess[]>([]);
   const [nutzung, setNutzung] = useState<Datennutzung[]>([]);
-  const [datenobjekte, setDatenobjekte] = useState<DatenObjekt[]>([]);
+  const [datenobjekte, setDatenobjekte] = useState<DatenobjektKatalog[]>([]);
   const [nutzer, setNutzer] = useState<Nutzer[]>([]);
   const [einheiten, setEinheiten] = useState<Organisationseinheit[]>([]);
   const [fachbereiche, setFachbereiche] = useState<Fachbereich[]>([]);
@@ -104,7 +104,7 @@ export function ToolDetail() {
       api.tool(token, id),
       api.prozesse(token),
       api.toolDatennutzung(token, id).catch(() => [] as Datennutzung[]),
-      api.datenobjekte(token).catch(() => [] as DatenObjekt[]),
+      api.datenobjektKatalog(token).catch(() => [] as DatenobjektKatalog[]),
       api.nutzer(token).catch(() => [] as Nutzer[]),
       api.organisationseinheiten(token).catch(() => [] as Organisationseinheit[]),
       api.fachbereiche(token).catch(() => [] as Fachbereich[]),

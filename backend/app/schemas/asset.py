@@ -101,7 +101,15 @@ class ToolrechteAus(BaseModel):
 
 
 class DatenobjektrechteAus(BaseModel):
+    """Vier getrennte Rechte, weil vier verschiedene Rollen sie tragen
+    (docs/rollen-und-scopes.md, 7.4)."""
+
+    #: Name, Beschreibung, Quellsystem — Datenobjekt-Owner oder gebender Prozess.
     bearbeiten: bool = False
+    #: Die Kategorie — nur der Datenobjekt-Owner des Fachbereichs.
+    kategorisieren: bool = False
+    #: Den Fachbereich wechseln — nur die Governance.
+    anker_aendern: bool = False
     bestaetigen: bool = False
 
 
@@ -149,11 +157,18 @@ class ToolAus(BaseModel):
 
 
 class DatenobjektAnlegen(BaseModel):
+    """Zwei Wege, einen Fachbereich zu bekommen — keiner fragt (P1).
+
+    Entweder nennt der Anlegende den gebenden Prozess, dann ist der Fachbereich
+    der des Prozessgebers und das Datenobjekt haengt als dessen Output; oder er
+    nennt den Fachbereich selbst, dann muss er dessen Datenobjekt-Owner sein.
+    """
+
     name: str = Field(min_length=1, max_length=255)
     beschreibung: str = ""
     kategorie: Datenkategorie | None = None
-    owner_user_id: uuid.UUID | None = None
     fachbereich_id: uuid.UUID | None = None
+    prozessobjekt_id: uuid.UUID | None = None
     quellsystem: str | None = Field(default=None, max_length=255)
 
 
@@ -161,7 +176,6 @@ class DatenobjektAendern(BaseModel):
     name: str | None = Field(default=None, min_length=1, max_length=255)
     beschreibung: str | None = None
     kategorie: Datenkategorie | None = None
-    owner_user_id: uuid.UUID | None = None
     fachbereich_id: uuid.UUID | None = None
     quellsystem: str | None = Field(default=None, max_length=255)
     metadaten: dict[str, Any] | None = None
@@ -174,7 +188,6 @@ class DatenobjektAus(BaseModel):
     name: str
     beschreibung: str
     kategorie: Datenkategorie | None = None
-    owner_user_id: uuid.UUID | None = None
     fachbereich_id: uuid.UUID | None = None
     quellsystem: str | None = None
     herkunft: Herkunft
@@ -185,6 +198,24 @@ class DatenobjektAus(BaseModel):
     schreibgeschuetzte_felder: list[str] = Field(default_factory=list)
 
     rechte: DatenobjektrechteAus = Field(default_factory=DatenobjektrechteAus)
+
+
+class DatenobjektKatalogAus(BaseModel):
+    """Die vier Felder der Stufe 1 (A.7) — fuer die Auswahl, nicht fuer die Pflege.
+
+    Bewusst ein eigenes Schema statt der Detailantwort mit ausgeblendeten
+    Feldern: der Katalog ist die eine, schmale Ausnahme von der Regel, dass
+    ausserhalb des Bereichs nichts geliefert wird (docs/rollen-und-scopes.md,
+    7.3). Was er nicht enthaelt, ist auch nicht da.
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+    fachbereich_id: uuid.UUID | None = None
+    kategorie: Datenkategorie | None = None
+    quellsystem: str | None = None
 
 
 class ProzessVerknuepfung(BaseModel):

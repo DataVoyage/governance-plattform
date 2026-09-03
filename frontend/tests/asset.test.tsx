@@ -9,6 +9,7 @@ import { describe, expect, it } from 'vitest';
 import type { DatenObjekt, ToolObjekt } from '@/api/typen';
 import {
   EINHEITEN,
+  FACHBEREICHE,
   PROFIL,
   fetchAttrappe,
   geerbt,
@@ -24,8 +25,7 @@ function datenobjekt(ueberschreibungen: Partial<DatenObjekt> = {}): DatenObjekt 
     name: 'Kreditorenstamm',
     beschreibung: '',
     kategorie: null,
-    owner_user_id: null,
-    fachbereich_id: null,
+    fachbereich_id: 'fb-1',
     quellsystem: null,
     herkunft: 'manuell',
     quelle: null,
@@ -33,7 +33,7 @@ function datenobjekt(ueberschreibungen: Partial<DatenObjekt> = {}): DatenObjekt 
     status: 'bestaetigt',
     metadaten: {},
     schreibgeschuetzte_felder: [],
-    rechte: { bearbeiten: true, bestaetigen: true },
+    rechte: { bearbeiten: true, kategorisieren: true, anker_aendern: true, bestaetigen: true },
     ...ueberschreibungen,
   };
 }
@@ -61,9 +61,7 @@ describe('Tool-Liste', () => {
       ...grundrouten(),
       {
         pfad: '/api/v1/tools',
-        koerper: [
-          tool({ lauftyp: 'geplant', geerbt: geerbt({ kritikalitaet: 3, tier: 3 }) }),
-        ],
+        koerper: [tool({ lauftyp: 'geplant', geerbt: geerbt({ kritikalitaet: 3, tier: 3 }) })],
       },
     ]);
     zeichne('/de/tools');
@@ -115,7 +113,10 @@ describe('Tool-Liste', () => {
   it('legt ein Tool mit Owner, Technologie und Lauftyp an', async () => {
     const { aufrufe } = fetchAttrappe([
       ...grundrouten(),
-      { pfad: '/api/v1/admin/users', koerper: [{ id: 'user-9', name: 'Tina Technik', email: 't@x', ist_aktiv: true }] },
+      {
+        pfad: '/api/v1/admin/users',
+        koerper: [{ id: 'user-9', name: 'Tina Technik', email: 't@x', ist_aktiv: true }],
+      },
       { pfad: '/api/v1/tools', koerper: [] },
       {
         pfad: '/api/v1/tools',
@@ -128,16 +129,10 @@ describe('Tool-Liste', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Tool-Objekt anlegen' }));
     const blatt = screen.getByRole('dialog');
     await userEvent.type(within(blatt).getByLabelText('Name'), 'Neues Tool');
-    await userEvent.selectOptions(
-      within(blatt).getByLabelText('Technischer Owner'),
-      'user-9',
-    );
+    await userEvent.selectOptions(within(blatt).getByLabelText('Technischer Owner'), 'user-9');
     await userEvent.selectOptions(within(blatt).getByLabelText('Stellvertretung'), 'user-9');
     await userEvent.selectOptions(within(blatt).getByLabelText('Technologie'), 'appsheet');
-    await userEvent.selectOptions(
-      within(blatt).getByLabelText('Organisationseinheit'),
-      'org-de',
-    );
+    await userEvent.selectOptions(within(blatt).getByLabelText('Organisationseinheit'), 'org-de');
     await userEvent.selectOptions(within(blatt).getByLabelText('Lauftyp'), 'geplant');
     await userEvent.click(within(blatt).getByRole('button', { name: 'Speichern' }));
 
@@ -159,7 +154,9 @@ describe('Tool-Liste', () => {
     ]);
     zeichne('/de/tools');
     await userEvent.click(await screen.findByRole('button', { name: 'Tool-Objekt anlegen' }));
-    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Abbrechen' }));
+    await userEvent.click(
+      within(screen.getByRole('dialog')).getByRole('button', { name: 'Abbrechen' }),
+    );
     expect(screen.queryByRole('dialog')).toBeNull();
     expect(aufrufe.some((a) => a.methode === 'POST')).toBe(false);
   });
@@ -312,7 +309,10 @@ describe('Tool-Detail', () => {
         koerper: (nummer: number) => (nummer === 1 ? unattestiert() : tool()),
       },
       { pfad: '/api/v1/tools/tool-1/attestierungen', methode: 'PUT', koerper: tool() },
-      { pfad: '/api/v1/admin/users', koerper: [{ id: 'user-1', name: 'Olivia Owner', email: 'o@x', ist_aktiv: true }] },
+      {
+        pfad: '/api/v1/admin/users',
+        koerper: [{ id: 'user-1', name: 'Olivia Owner', email: 'o@x', ist_aktiv: true }],
+      },
     ]);
     zeichne('/de/tools/tool-1');
 
@@ -385,9 +385,7 @@ describe('Tool-Detail', () => {
         name: 'Rechnungspruefung entfernen',
       }),
     );
-    await waitFor(() =>
-      expect(aufrufe.some((a) => a.methode === 'DELETE')).toBe(true),
-    );
+    await waitFor(() => expect(aufrufe.some((a) => a.methode === 'DELETE')).toBe(true));
   });
 
   it('meldet einen abgelehnten Verknuepfungsversuch', async () => {
@@ -415,14 +413,13 @@ describe('Tool-Detail', () => {
       { pfad: '/api/v1/prozesse', koerper: [prozess()] },
       { pfad: '/api/v1/tools/tool-1', koerper: tool() },
       {
-        pfad: '/api/v1/datenobjekte',
+        pfad: '/api/v1/datenobjekte/katalog',
         koerper: [
           {
             id: 'do-1',
             name: 'Buchungen',
             beschreibung: '',
             kategorie: 'intern',
-            owner_user_id: null,
             fachbereich_id: 'fb-1',
             quellsystem: 'SAP',
             herkunft: 'manuell',
@@ -502,9 +499,7 @@ describe('Tool-Detail', () => {
       },
     ]);
     zeichne('/de/tools/tool-1');
-    expect(
-      await screen.findByText(/1 genutzte Datenobjekte liegen außerhalb/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/1 genutzte Datenobjekte liegen außerhalb/)).toBeInTheDocument();
     expect(screen.getByTestId('nutzung-do-1')).toHaveTextContent('Außerhalb des Prozessrahmens');
     expect(screen.getByTestId('nutzung-do-2')).toHaveTextContent('Nicht deklariert');
   });
@@ -546,7 +541,9 @@ describe('Tool-Detail', () => {
       }),
     );
 
-    await userEvent.click(screen.getByRole('button', { name: 'Buchungen — Verknüpfung entfernen' }));
+    await userEvent.click(
+      screen.getByRole('button', { name: 'Buchungen — Verknüpfung entfernen' }),
+    );
     await waitFor(() => expect(aufrufe.some((a) => a.methode === 'DELETE')).toBe(true));
   });
 
@@ -617,14 +614,13 @@ describe('Tool-Detail', () => {
       { pfad: '/api/v1/prozesse', koerper: [] },
       { pfad: '/api/v1/tools/tool-1', koerper: tool() },
       {
-        pfad: '/api/v1/datenobjekte',
+        pfad: '/api/v1/datenobjekte/katalog',
         koerper: [
           {
             id: 'do-9',
             name: 'Unklassifiziert',
             beschreibung: '',
             kategorie: null,
-            owner_user_id: null,
             fachbereich_id: null,
             quellsystem: null,
             herkunft: 'manuell',
@@ -695,10 +691,11 @@ describe('Datenobjekte', () => {
     ).toBeInTheDocument();
   });
 
-  it('legt ein Datenobjekt mit Reifegrad 1 an', async () => {
+  it('legt ein Datenobjekt als Output des eigenen Prozesses an', async () => {
     const { aufrufe } = fetchAttrappe([
       ...grundrouten(),
       { pfad: '/api/v1/datenobjekte', koerper: [] },
+      { pfad: '/api/v1/prozesse', koerper: [prozess()] },
       {
         pfad: '/api/v1/datenobjekte',
         methode: 'POST',
@@ -713,10 +710,11 @@ describe('Datenobjekte', () => {
     );
     const blatt = screen.getByRole('dialog', { name: 'Datenobjekt anlegen' });
     await userEvent.type(within(blatt).getByLabelText('Name'), 'Entgeltdaten');
-    await userEvent.selectOptions(
-      within(blatt).getByLabelText('Kategorie'),
-      'besondere_kategorie',
-    );
+    await userEvent.selectOptions(within(blatt).getByLabelText('Kategorie'), 'besondere_kategorie');
+    // Ein Prozess-Owner ohne Datenobjekt-Owner-Rolle hat genau einen Weg: den
+    // gebenden Prozess. Ein Fachbereichsfeld gibt es fuer ihn nicht.
+    expect(within(blatt).queryByLabelText('Fachbereich')).not.toBeInTheDocument();
+    await userEvent.selectOptions(within(blatt).getByLabelText('Gebender Prozess'), 'p-1');
     await userEvent.type(within(blatt).getByLabelText('Quellsystem'), 'SAP HCM');
     await userEvent.click(within(blatt).getByRole('button', { name: 'Speichern' }));
 
@@ -725,6 +723,8 @@ describe('Datenobjekte', () => {
       name: 'Entgeltdaten',
       kategorie: 'besondere_kategorie',
       quellsystem: 'SAP HCM',
+      prozessobjekt_id: 'p-1',
+      fachbereich_id: null,
     });
     expect(await screen.findByText('Entgeltdaten')).toBeInTheDocument();
   });
@@ -733,6 +733,7 @@ describe('Datenobjekte', () => {
     fetchAttrappe([
       ...grundrouten(),
       { pfad: '/api/v1/datenobjekte', koerper: [] },
+      { pfad: '/api/v1/prozesse', koerper: [prozess()] },
       {
         pfad: '/api/v1/datenobjekte',
         methode: 'POST',
@@ -756,6 +757,65 @@ describe('Datenobjekte', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument();
   });
 
+  it('bietet ohne einen Weg kein Anlegen an und sagt warum', async () => {
+    // Prozess-Owner ohne schreibbaren Prozess und ohne Datenobjekt-Owner-Rolle.
+    fetchAttrappe([
+      ...grundrouten(),
+      { pfad: '/api/v1/datenobjekte', koerper: [datenobjekt()] },
+      { pfad: '/api/v1/prozesse', koerper: [] },
+    ]);
+    zeichne('/de/datenobjekte');
+    expect(await screen.findByText('Kreditorenstamm')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Datenobjekt anlegen' })).not.toBeInTheDocument();
+    expect(screen.getByText(/Rolle Datenobjekt-Owner/)).toBeInTheDocument();
+  });
+
+  it('belegt fuer den Datenobjekt-Owner den einen Fachbereich vor und sperrt ihn', async () => {
+    const { aufrufe } = fetchAttrappe([
+      {
+        pfad: '/api/v1/auth/me',
+        koerper: {
+          ...PROFIL,
+          rollen: [
+            {
+              id: 'rz-9',
+              user_id: 'user-1',
+              rolle: 'datenobjekt_owner',
+              scope_typ: 'fachbereich',
+              scope_id: 'fb-1',
+            },
+          ],
+        },
+      },
+      ...grundrouten(),
+      { pfad: '/api/v1/fachbereiche', koerper: FACHBEREICHE },
+      { pfad: '/api/v1/datenobjekte', koerper: [] },
+      { pfad: '/api/v1/prozesse', koerper: [] },
+      {
+        pfad: '/api/v1/datenobjekte',
+        methode: 'POST',
+        status: 201,
+        koerper: datenobjekt({ name: 'Kassenbelege' }),
+      },
+    ]);
+    zeichne('/de/datenobjekte');
+    await userEvent.click(
+      (await screen.findAllByRole('button', { name: 'Datenobjekt anlegen' }))[0],
+    );
+    const blatt = screen.getByRole('dialog', { name: 'Datenobjekt anlegen' });
+    const fachbereich = within(blatt).getByLabelText('Fachbereich');
+    expect(fachbereich).toHaveValue('fb-1');
+    expect(fachbereich).toBeDisabled();
+    expect(within(blatt).queryByLabelText('Gebender Prozess')).not.toBeInTheDocument();
+    await userEvent.type(within(blatt).getByLabelText('Name'), 'Kassenbelege');
+    await userEvent.click(within(blatt).getByRole('button', { name: 'Speichern' }));
+    await waitFor(() => expect(aufrufe.some((a) => a.methode === 'POST')).toBe(true));
+    expect(aufrufe.find((a) => a.methode === 'POST')?.koerper).toMatchObject({
+      name: 'Kassenbelege',
+      fachbereich_id: 'fb-1',
+      prozessobjekt_id: null,
+    });
+  });
 });
 
 describe('Prozessdetail mit Assets', () => {
@@ -809,9 +869,7 @@ describe('Datenobjekt-Detail', () => {
         als_output: false,
       },
     ],
-    tools: [
-      { id: 'tool-1', name: 'Berichtsskript', zugriffsart: 'lesen', ueber_prozess: false },
-    ],
+    tools: [{ id: 'tool-1', name: 'Berichtsskript', zugriffsart: 'lesen', ueber_prozess: false }],
   });
 
   function routen(weitere: Route[] = []) {
@@ -858,7 +916,9 @@ describe('Datenobjekt-Detail', () => {
                 als_output: false,
               },
             ],
-            tools: [{ id: 'tool-1', name: 'Berichtsskript', zugriffsart: 'lesen', ueber_prozess: false }],
+            tools: [
+              { id: 'tool-1', name: 'Berichtsskript', zugriffsart: 'lesen', ueber_prozess: false },
+            ],
             mitbestimmung_neu: 1,
           }),
         },
@@ -871,10 +931,7 @@ describe('Datenobjekt-Detail', () => {
     );
     zeichne('/de/datenobjekte/do-1');
 
-    await userEvent.selectOptions(
-      await screen.findByLabelText('Kategorie'),
-      'besondere_kategorie',
-    );
+    await userEvent.selectOptions(await screen.findByLabelText('Kategorie'), 'besondere_kategorie');
 
     const blatt = await screen.findByRole('dialog', { name: 'Wirkung der Umklassifizierung' });
     expect(within(blatt).getByTestId('wirkung-prozesse')).toHaveTextContent('1');
@@ -909,7 +966,67 @@ describe('Datenobjekt-Detail', () => {
     expect(aufrufe.some((a) => a.methode === 'PATCH')).toBe(false);
   });
 
-  it('pflegt Owner und Quellsystem', async () => {
+  it('sperrt die Kategorie ohne Klassifizierungsrecht und zeigt den Fachbereich als Text', async () => {
+    fetchAttrappe([
+      ...grundrouten(),
+      { pfad: '/api/v1/fachbereiche', koerper: FACHBEREICHE },
+      { pfad: '/api/v1/datenobjekte/do-1/wirkung', koerper: STAND },
+      {
+        pfad: '/api/v1/datenobjekte/do-1',
+        koerper: datenobjekt({
+          rechte: {
+            bearbeiten: true,
+            kategorisieren: false,
+            anker_aendern: false,
+            bestaetigen: false,
+          },
+        }),
+      },
+    ]);
+    zeichne('/de/datenobjekte/do-1');
+    expect(await screen.findByLabelText('Kategorie')).toBeDisabled();
+    // Der Owner des gebenden Prozesses pflegt Stammdaten — und erfaehrt, was nicht.
+    expect(screen.getByLabelText('Quellsystem')).toBeEnabled();
+    expect(screen.getByText(/Kategorie setzt der Datenobjekt-Owner/)).toBeInTheDocument();
+    const fachbereich = screen.getByLabelText('Fachbereich');
+    expect(fachbereich).toHaveValue('Finance');
+    expect(fachbereich).toBeDisabled();
+    expect(screen.getByTestId('gebender-prozess')).toHaveTextContent(
+      'Kein Prozess erzeugt diese Quelle',
+    );
+  });
+
+  it('nennt den gebenden Prozess als Verweis', async () => {
+    fetchAttrappe([
+      // Vor den Standardrouten, weil die erste Antwort auf einen Pfad gewinnt.
+
+      {
+        pfad: '/api/v1/datenobjekte/do-1/wirkung',
+        koerper: wirkung({
+          prozesse: [
+            {
+              id: 'p-7',
+              name: 'Kassenabschluss',
+              tier: 1,
+              mitbestimmung_flag: false,
+              mitbestimmung_flag_neu: false,
+              als_input: false,
+              als_output: true,
+            },
+          ],
+        }),
+      },
+      ...routen(),
+    ]);
+    zeichne('/de/datenobjekte/do-1');
+    const gebender = await screen.findByTestId('gebender-prozess');
+    expect(within(gebender).getByRole('link', { name: 'Kassenabschluss' })).toHaveAttribute(
+      'href',
+      '/de/prozesse/p-7',
+    );
+  });
+
+  it('pflegt das Quellsystem', async () => {
     const { aufrufe } = fetchAttrappe(
       routen([
         {
@@ -959,10 +1076,7 @@ describe('Datenobjekte — Filter und Randfaelle', () => {
   });
 
   it('kennzeichnet ein Datenobjekt ohne Kategorie und ohne Quellsystem', async () => {
-    fetchAttrappe([
-      ...grundrouten(),
-      { pfad: '/api/v1/datenobjekte', koerper: [datenobjekt()] },
-    ]);
+    fetchAttrappe([...grundrouten(), { pfad: '/api/v1/datenobjekte', koerper: [datenobjekt()] }]);
     zeichne('/de/datenobjekte');
     const zeile = await screen.findByRole('link', { name: /Kreditorenstamm/ });
     expect(zeile).toHaveTextContent('Ohne Kategorie');

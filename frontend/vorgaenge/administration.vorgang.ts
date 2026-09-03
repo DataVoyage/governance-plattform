@@ -12,6 +12,8 @@ import {
   API,
   anmelden,
   anwenderMitRolle,
+  bewerten,
+  datenobjektAnlegen,
   kennzeichen,
   kopf,
   organisation,
@@ -269,4 +271,64 @@ vorgang('V-ADM-07', async ({ page, request }) => {
   await zeile.getByLabel('Ab wann ein Tool als inaktiv gilt').fill('180');
   await page.getByTestId('sichern-asset_inaktiv_tage').click();
   await expect(page.getByTestId('sichern-asset_inaktiv_tage')).toHaveText('Gesichert');
+});
+
+vorgang('V-ADM-10', async ({ request }) => {
+  // Ein Vorgang ohne Oberfläche, mit Absicht: die Frage ist, ob die Daten
+  // fehlen oder nur nicht angezeigt werden. Das lässt sich nur an der API
+  // beantworten — hier wird an der Liste vorbei direkt nach der Kennung
+  // gefragt.
+  const marke = kennzeichen();
+  const org: Organisation = await organisation(request, marke);
+  const datenobjekt = await datenobjektAnlegen(request, {
+    name: `Fremde Daten ${marke}`,
+    fachbereich_id: org.fachbereichId,
+  });
+
+  // Der Fremde ist kein Rechtloser: er trägt dieselbe Rolle, nur in einem
+  // anderen Fachbereich. Genau daran hängt die Regel — nicht an der Rolle.
+  const anderer: Organisation = await organisation(request, `${marke}b`);
+  await anwenderMitRolle(
+    request,
+    `fremd-${marke}`,
+    `Anderer Bereich ${marke}`,
+    'datenobjekt_owner',
+    'fachbereich',
+    anderer.fachbereichId,
+  );
+  const fremd = await kopf(request, `fremd-${marke}`, `Anderer Bereich ${marke}`);
+
+  // Vier Wege zum selben Objekt, vier gleiche Antworten.
+  const liste = await (await request.get(`${API}/api/v1/datenobjekte`, { headers: fremd })).json();
+  expect(liste.map((eintrag: { id: string }) => eintrag.id)).not.toContain(datenobjekt.id);
+  expect(
+    (await request.get(`${API}/api/v1/datenobjekte/${datenobjekt.id}`, { headers: fremd })).status(),
+  ).toBe(403);
+  expect(
+    (
+      await request.get(`${API}/api/v1/datenobjekte/${datenobjekt.id}/wirkung`, { headers: fremd })
+    ).status(),
+  ).toBe(403);
+  expect(
+    (
+      await request.patch(`${API}/api/v1/datenobjekte/${datenobjekt.id}`, {
+        headers: fremd,
+        data: { kategorie: 'vertraulich' },
+      })
+    ).status(),
+  ).toBe(403);
+
+  // Die Gegenprobe: im eigenen Bereich steht dasselbe Objekt offen.
+  await anwenderMitRolle(
+    request,
+    `eigen-${marke}`,
+    `Im Bereich ${marke}`,
+    'datenobjekt_owner',
+    'fachbereich',
+    org.fachbereichId,
+  );
+  const eigen = await kopf(request, `eigen-${marke}`, `Im Bereich ${marke}`);
+  expect(
+    (await request.get(`${API}/api/v1/datenobjekte/${datenobjekt.id}`, { headers: eigen })).status(),
+  ).toBe(200);
 });

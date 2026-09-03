@@ -73,7 +73,14 @@ class Toolrechte:
 
 @dataclass(frozen=True)
 class Datenobjektrechte:
+    """Vier Rechte, weil vier Rollen sie tragen (docs/rollen-und-scopes.md, 7.4)."""
+
+    #: Name, Beschreibung, Quellsystem.
     bearbeiten: bool = False
+    #: Die Kategorie — sie wirkt in jeden referenzierenden Prozess.
+    kategorisieren: bool = False
+    #: Den Fachbereich wechseln — mit ihm wandert jede Berechtigung.
+    anker_aendern: bool = False
     bestaetigen: bool = False
 
 
@@ -118,10 +125,11 @@ def fuer_tool(db: Session, principal: Principal, tool: ToolObjekt) -> Toolrechte
 def fuer_datenobjekt(
     db: Session, principal: Principal, datenobjekt: Datenobjekt
 ) -> Datenobjektrechte:
-    schreiben = asset_service.darf_datenobjekt_schreiben(db, principal, datenobjekt)
     return Datenobjektrechte(
-        bearbeiten=schreiben,
-        bestaetigen=(schreiben or principal.ist_plattform)
+        bearbeiten=asset_service.darf_datenobjekt_schreiben(db, principal, datenobjekt),
+        kategorisieren=asset_service.darf_datenobjekt_kategorisieren(principal, datenobjekt),
+        anker_aendern=asset_service.darf_datenobjekt_anker_aendern(principal, datenobjekt),
+        bestaetigen=asset_service.darf_datenobjekt_bestaetigen(principal, datenobjekt)
         and datenobjekt.status == AssetStatus.IMPORTIERT_UNBESTAETIGT,
     )
 

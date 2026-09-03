@@ -35,7 +35,7 @@ async function organisation(anfrage: APIRequestContext, kennung: string) {
     })
   ).json();
   const ich = await (await anfrage.get(`${API}/api/v1/auth/me`, { headers: h })).json();
-  return { h, int, ich };
+  return { h, int, ich, fachbereich };
 }
 
 async function prozessAnlegen(
@@ -76,12 +76,18 @@ async function anmelden(seite: Page) {
 
 /** Die drei Erklaerungen aus A.6 abgeben — Vorbedingung jeder Prozesskante. */
 async function attestieren(seite: Page, kein_mensch = false) {
-  await seite.getByTestId('attest_entscheidung_ueber_personen').getByRole('button', { name: 'Nein' }).click();
+  await seite
+    .getByTestId('attest_entscheidung_ueber_personen')
+    .getByRole('button', { name: 'Nein' })
+    .click();
   await seite
     .getByTestId('attest_mensch_dazwischen')
     .getByRole('button', { name: kein_mensch ? 'Nein' : 'Ja' })
     .click();
-  await seite.getByTestId('attest_undeklarierte_quellen').getByRole('button', { name: 'Nein' }).click();
+  await seite
+    .getByTestId('attest_undeklarierte_quellen')
+    .getByRole('button', { name: 'Nein' })
+    .click();
   await seite.getByRole('button', { name: /Erklärung (abgeben|erneuern)/ }).click();
   await expect(seite.getByText('Vollständig abgegeben')).toBeVisible();
 }
@@ -169,9 +175,9 @@ test.describe('Phase 3 in der Oberflaeche', () => {
     await expect(page.getByTestId('geerbt-kritikalitaet')).toContainText('3');
 
     // Das Maximum bleibt adressierbar: die massgebliche Kante ist benannt.
-    await expect(
-      page.getByRole('link', { name: new RegExp(kritisch.name) }),
-    ).toContainText('Bestimmt das Maximum');
+    await expect(page.getByRole('link', { name: new RegExp(kritisch.name) })).toContainText(
+      'Bestimmt das Maximum',
+    );
   });
 
   test('genutzte Datenobjekte werden gegen den Prozessrahmen geprueft', async ({
@@ -179,17 +185,25 @@ test.describe('Phase 3 in der Oberflaeche', () => {
     request,
   }) => {
     const kennung = Math.random().toString(36).slice(2, 8);
-    const { h } = await organisation(request, `rahmen-${kennung}`);
+    const { h, fachbereich } = await organisation(request, `rahmen-${kennung}`);
     const imRahmen = await (
       await request.post(`${API}/api/v1/datenobjekte`, {
         headers: h,
-        data: { name: `Kreditorenstamm ${kennung}`, kategorie: 'intern' },
+        data: {
+          name: `Kreditorenstamm ${kennung}`,
+          kategorie: 'intern',
+          fachbereich_id: fachbereich.id,
+        },
       })
     ).json();
     const daneben = await (
       await request.post(`${API}/api/v1/datenobjekte`, {
         headers: h,
-        data: { name: `Gesundheitsakte ${kennung}`, kategorie: 'besondere_kategorie' },
+        data: {
+          name: `Gesundheitsakte ${kennung}`,
+          kategorie: 'besondere_kategorie',
+          fachbereich_id: fachbereich.id,
+        },
       })
     ).json();
     const prozess = await prozessAnlegen(request, `Rahmenprozess ${kennung}`, 'gering', {
@@ -222,12 +236,12 @@ test.describe('Phase 3 in der Oberflaeche', () => {
 
   test('Kategorie eines Datenobjekts wirkt im verknuepften Prozess', async ({ page, request }) => {
     const kennung = Math.random().toString(36).slice(2, 8);
-    const { h } = await organisation(request, `kat-${kennung}`);
+    const { h, fachbereich } = await organisation(request, `kat-${kennung}`);
     const datenobjektName = `Zeiterfassung ${kennung}`;
     const datenobjekt = await (
       await request.post(`${API}/api/v1/datenobjekte`, {
         headers: h,
-        data: { name: datenobjektName, beschreibung: '' },
+        data: { name: datenobjektName, beschreibung: '', fachbereich_id: fachbereich.id },
       })
     ).json();
     const prozess = await prozessAnlegen(request, `Zeitprozess ${kennung}`, 'gering', {

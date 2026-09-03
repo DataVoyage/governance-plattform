@@ -19,8 +19,11 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.core.permissions import Principal
 from app.models.governance import Benachrichtigung, Prozessobjekt, Selbstverpflichtung, ToolObjekt
+from app.services import asset as asset_service
 from app.services import konfiguration
+from app.services import prozess as prozess_service
 
 ANLASS_ERINNERUNG = "selbstverpflichtung_laeuft_ab"
 ANLASS_UEBERFAELLIG = "selbstverpflichtung_ueberfaellig"
@@ -127,13 +130,47 @@ def lauf(db: Session, jetzt: datetime | None = None) -> Erinnerungslauf:
     return ergebnis
 
 
-def ueberfaellige(db: Session, jetzt: datetime | None = None) -> list[Selbstverpflichtung]:
-    """Cockpit-Zeile „ueberfaellige Selbstverpflichtungen" (Architektur 8.7)."""
+def ueberfaellige_gesamt(db: Session, jetzt: datetime | None = None) -> list[Selbstverpflichtung]:
+    """Der reine Datenzustand, ohne Ruecksicht auf einen Betrachter.
+
+    Der Name sagt es ausdruecklich: diese Liste ist ungefiltert und gehoert
+    deshalb in geplante Laeufe und Pruefungen, nie in eine Antwort an einen
+    Menschen. Wer sie ausliefert, nimmt ``ueberfaellige``.
+    """
     zeitpunkt = jetzt or datetime.now(UTC)
     eintraege = db.execute(
         select(Selbstverpflichtung).where(Selbstverpflichtung.gueltig_bis.is_not(None))
     ).scalars()
     return [e for e in eintraege if (_als_utc(e.gueltig_bis) or zeitpunkt) < zeitpunkt]
+
+
+def ueberfaellige(
+    db: Session, principal: Principal, jetzt: datetime | None = None
+) -> list[Selbstverpflichtung]:
+    """Dieselbe Liste, aber nur zu Objekten im eigenen Bereich.
+
+    Eine Selbstverpflichtung haengt an einem Prozess- oder einem Tool-Objekt.
+    Sie ist genau dann sichtbar, wenn das Objekt es ist — dieselbe Bedingung,
+    die auch die Listen dieser Objekte filtert. Ohne sie stuende hier, wer im
+    ganzen Unternehmen eine Frist hat verstreichen lassen (E-54).
+    """
+    if principal.sieht_global:
+        return ueberfaellige_gesamt(db, jetzt)
+    sichtbare_prozesse = set(
+        db.execute(
+            select(Prozessobjekt.id).where(prozess_service.sichtbarkeitsbedingung(db, principal))
+        ).scalars()
+    )
+    sichtbare_tools = set(
+        db.execute(
+            select(ToolObjekt.id).where(asset_service.tool_sichtbarkeitsbedingung(db, principal))
+        ).scalars()
+    )
+    return [
+        e
+        for e in ueberfaellige_gesamt(db, jetzt)
+        if e.prozessobjekt_id in sichtbare_prozesse or e.tool_objekt_id in sichtbare_tools
+    ]
 
 
 def benachrichtigungen(db: Session, empfaenger_user_id: uuid.UUID) -> list[Benachrichtigung]:

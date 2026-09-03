@@ -88,7 +88,12 @@ export interface Toolrechte {
 }
 
 export interface Datenobjektrechte {
+  /** Name, Beschreibung, Quellsystem. */
   bearbeiten: boolean;
+  /** Die Kategorie — nur der Datenobjekt-Owner des Fachbereichs. */
+  kategorisieren: boolean;
+  /** Den Fachbereich wechseln — nur die Governance. */
+  anker_aendern: boolean;
   bestaetigen: boolean;
 }
 
@@ -232,11 +237,7 @@ export interface BewertungAbschluss {
 export type Herkunft = 'importiert' | 'manuell';
 export type AssetStatus = 'importiert_unbestaetigt' | 'bestaetigt' | 'inaktiv';
 export type Datenkategorie =
-  | 'oeffentlich'
-  | 'intern'
-  | 'vertraulich'
-  | 'personenbezogen'
-  | 'besondere_kategorie';
+  'oeffentlich' | 'intern' | 'vertraulich' | 'personenbezogen' | 'besondere_kategorie';
 
 export interface Geerbt {
   kritikalitaet: number;
@@ -340,7 +341,6 @@ export interface DatenObjekt {
   name: string;
   beschreibung: string;
   kategorie: Datenkategorie | null;
-  owner_user_id: string | null;
   fachbereich_id: string | null;
   quellsystem: string | null;
   herkunft: Herkunft;
@@ -350,6 +350,19 @@ export interface DatenObjekt {
   metadaten: Record<string, unknown>;
   schreibgeschuetzte_felder: string[];
   rechte: Datenobjektrechte;
+}
+
+/**
+ * Die vier Felder der Stufe 1 (A.7) jeder bestätigten Quelle — zum Auswählen,
+ * nicht zum Pflegen. Was hier nicht steht, liefert der Server auch nicht
+ * (docs/rollen-und-scopes.md, 7.3).
+ */
+export interface DatenobjektKatalog {
+  id: string;
+  name: string;
+  fachbereich_id: string | null;
+  kategorie: Datenkategorie | null;
+  quellsystem: string | null;
 }
 
 // --- Selbstverpflichtung und Gates (Phase 4) -------------------------------
@@ -468,11 +481,7 @@ export type Klassenbewertung = 'erfuellt' | 'kompensierbar' | 'nicht_erfuellbar'
  * Matrixeintrag ist nicht abgedeckt, sondern unbeantwortet.
  */
 export type Befundart =
-  | 'erfuellt'
-  | 'kompensiert'
-  | 'kompensation_fehlt'
-  | 'ausschluss'
-  | 'ungeprueft';
+  'erfuellt' | 'kompensiert' | 'kompensation_fehlt' | 'ausschluss' | 'ungeprueft';
 
 /** Eine Anforderungsklasse mit Name, Zweck und Auslöserbedingung (A.9.2). */
 export interface Anforderungsklasse {

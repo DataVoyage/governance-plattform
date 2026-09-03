@@ -100,10 +100,12 @@ def test_unbekannte_zeile_liefert_404(client: TestClient, governance) -> None:
 
 
 def test_eintraege_verweisen_auf_das_vorgefilterte_zielmodul(
-    client: TestClient, governance, owner, vertretung, prozess_daten
+    client: TestClient, governance, owner, vertretung, prozess_daten, organisation
 ) -> None:
     datenobjekt = client.post(
-        "/api/v1/datenobjekte", json={"name": "Ohne Kategorie"}, headers=governance.kopf
+        "/api/v1/datenobjekte",
+        json={"name": "Ohne Kategorie", "fachbereich_id": organisation["fachbereich_finance"]},
+        headers=governance.kopf,
     ).json()
     treffer = zeile(client, governance, "datenobjekte_ohne_kategorie")
     assert treffer["anzahl"] == 1

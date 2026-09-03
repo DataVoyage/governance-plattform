@@ -222,9 +222,8 @@ def eigene_benachrichtigungen(principal: AktuellerNutzer, db: DbSession) -> list
 
 @router.get("/selbstverpflichtungen/ueberfaellig", response_model=list[SelbstverpflichtungAus])
 def ueberfaellige(principal: AktuellerNutzer, db: DbSession) -> list:
-    """Vorgriff auf die Cockpit-Zeile aus Phase 6, hier als Datenzustand."""
-    del principal
-    return erinnerung_service.ueberfaellige(db)
+    """Vorgriff auf die Cockpit-Zeile aus Phase 6, gefiltert wie das Cockpit."""
+    return erinnerung_service.ueberfaellige(db, principal)
 
 
 # Gate 1 ist die Tier-3-Erstfreigabe; der Typ steht hier nur der Lesbarkeit

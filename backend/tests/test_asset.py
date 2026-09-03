@@ -354,7 +354,7 @@ def test_verknuepfung_loesen_und_doppelte_verknuepfung(
 
 
 def test_kategorie_des_datenobjekts_wirkt_im_prozess(
-    client: TestClient, governance, owner, vertretung, prozess_daten
+    client: TestClient, governance, owner, vertretung, prozess_daten, organisation
 ) -> None:
     """Abnahmekriterium 3.4: keine Duplizierung, der Prozess liest die Kategorie.
 
@@ -365,7 +365,11 @@ def test_kategorie_des_datenobjekts_wirkt_im_prozess(
     """
     datenobjekt = client.post(
         "/api/v1/datenobjekte",
-        json={"name": "Zeiterfassung", "beschreibung": "Arbeitszeiten"},
+        json={
+            "name": "Zeiterfassung",
+            "beschreibung": "Arbeitszeiten",
+            "fachbereich_id": organisation["fachbereich_finance"],
+        },
         headers=governance.kopf,
     ).json()
     assert datenobjekt["kategorie"] is None
@@ -400,10 +404,12 @@ def test_kategorie_des_datenobjekts_wirkt_im_prozess(
 
 
 def test_kategorieaenderung_wirkt_auch_ueber_die_prozesskette(
-    client: TestClient, governance, owner, vertretung, prozess_daten
+    client: TestClient, governance, owner, vertretung, prozess_daten, organisation
 ) -> None:
     datenobjekt = client.post(
-        "/api/v1/datenobjekte", json={"name": "Personaldaten"}, headers=governance.kopf
+        "/api/v1/datenobjekte",
+        json={"name": "Personaldaten", "fachbereich_id": organisation["fachbereich_finance"]},
+        headers=governance.kopf,
     ).json()
     nachfolger = lege_prozess_an(
         client,
@@ -510,6 +516,73 @@ def test_nur_governance_entfernt_tools(client: TestClient, governance, techniker
     assert client.get(f"/api/v1/tools/{tool['id']}", headers=governance.kopf).status_code == 404
 
 
+def test_fremdes_datenobjekt_ist_weder_lesbar_noch_aenderbar(
+    client: TestClient, governance, anmelden, organisation
+) -> None:
+    """Die Liste zu filtern genuegt nicht — der Direktaufruf muss dieselbe Antwort geben.
+
+    Wer die Kennung kennt, umgeht sonst die Liste und liest ueber die API, was
+    ihm die Oberflaeche verbirgt. Auch die Wirkungsvorschau haengt daran: sie
+    zaehlt Prozesse und Tool-Objekte an einem Datenobjekt.
+    """
+    datenobjekt = client.post(
+        "/api/v1/datenobjekte",
+        json={
+            "name": "Fremde Bereichsdaten",
+            "fachbereich_id": organisation["fachbereich_finance"],
+        },
+        headers=governance.kopf,
+    ).json()
+    fremder = anmelden("Ohne Rolle")
+    assert client.get("/api/v1/datenobjekte", headers=fremder.kopf).json() == []
+    assert (
+        client.get(f"/api/v1/datenobjekte/{datenobjekt['id']}", headers=fremder.kopf).status_code
+        == 403
+    )
+    assert (
+        client.get(
+            f"/api/v1/datenobjekte/{datenobjekt['id']}/wirkung", headers=fremder.kopf
+        ).status_code
+        == 403
+    )
+    assert (
+        client.patch(
+            f"/api/v1/datenobjekte/{datenobjekt['id']}",
+            json={"kategorie": "vertraulich"},
+            headers=fremder.kopf,
+        ).status_code
+        == 403
+    )
+
+
+def test_datenobjekt_owner_liest_sein_datenobjekt_direkt(
+    client: TestClient, governance, anmelden, rolle_geben, organisation
+) -> None:
+    """Die Gegenprobe: im eigenen Bereich bleibt der Direktaufruf offen."""
+    datenobjekt = client.post(
+        "/api/v1/datenobjekte",
+        json={
+            "name": "Eigene Bereichsdaten",
+            "fachbereich_id": organisation["fachbereich_finance"],
+        },
+        headers=governance.kopf,
+    ).json()
+    do_owner = anmelden("Datenobjekt-Owner")
+    rolle_geben(
+        do_owner.user_id, "datenobjekt_owner", "fachbereich", organisation["fachbereich_finance"]
+    )
+    assert (
+        client.get(f"/api/v1/datenobjekte/{datenobjekt['id']}", headers=do_owner.kopf).status_code
+        == 200
+    )
+    assert (
+        client.get(
+            f"/api/v1/datenobjekte/{datenobjekt['id']}/wirkung", headers=do_owner.kopf
+        ).status_code
+        == 200
+    )
+
+
 def test_datenobjekt_owner_darf_kategorisieren(
     client: TestClient, governance, anmelden, rolle_geben, organisation
 ) -> None:
@@ -550,7 +623,7 @@ def test_unbekanntes_asset_liefert_404(client: TestClient, governance) -> None:
 
 
 def test_filter_ohne_prozess_und_ohne_kategorie(
-    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren
+    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren, organisation
 ) -> None:
     prozess = lege_prozess_an(client, owner, vertretung, prozess_daten)
     verknuepft = client.post(
@@ -569,12 +642,16 @@ def test_filter_ohne_prozess_und_ohne_kategorie(
 
     client.post(
         "/api/v1/datenobjekte",
-        json={"name": "Ohne Kategorie"},
+        json={"name": "Ohne Kategorie", "fachbereich_id": organisation["fachbereich_finance"]},
         headers=governance.kopf,
     )
     client.post(
         "/api/v1/datenobjekte",
-        json={"name": "Mit Kategorie", "kategorie": "intern"},
+        json={
+            "name": "Mit Kategorie",
+            "kategorie": "intern",
+            "fachbereich_id": organisation["fachbereich_finance"],
+        },
         headers=governance.kopf,
     )
     unkategorisiert = client.get(
@@ -592,12 +669,14 @@ def test_status_filter_auf_tools(client: TestClient, plattform, governance) -> N
     assert [t["name"] for t in unbestaetigt] == ["Neu"]
 
 
-def test_tool_liest_und_schreibt_datenobjekte(client: TestClient, governance) -> None:
+def test_tool_liest_und_schreibt_datenobjekte(client: TestClient, governance, organisation) -> None:
     tool = client.post(
         "/api/v1/tools", json={"name": "Verarbeiter"}, headers=governance.kopf
     ).json()
     datenobjekt = client.post(
-        "/api/v1/datenobjekte", json={"name": "Buchungen"}, headers=governance.kopf
+        "/api/v1/datenobjekte",
+        json={"name": "Buchungen", "fachbereich_id": organisation["fachbereich_finance"]},
+        headers=governance.kopf,
     ).json()
     angelegt = client.post(
         f"/api/v1/tools/{tool['id']}/datenobjekte",
@@ -619,15 +698,41 @@ def test_tool_liest_und_schreibt_datenobjekte(client: TestClient, governance) ->
     assert kanten[0]["datenobjekt_id"] == datenobjekt["id"]
 
 
-def test_datenobjekt_bestaetigen(client: TestClient, plattform, governance) -> None:
+def test_datenobjekt_bestaetigen_heisst_zuordnen(
+    client: TestClient, plattform, governance, organisation
+) -> None:
+    """Ein vorgefundenes Datenobjekt hat keinen Fachbereich; bestaetigen verlangt einen (7.2).
+
+    Sonst gaebe es ein bestaetigtes Objekt, das niemandem gehoert — sichtbar
+    nur global, klassifizierbar von niemandem.
+    """
     importiere(client, plattform, [{"typ": "datenobjekt", "externe_id": "DO-9", "name": "Neu"}])
     datenobjekt = client.get("/api/v1/datenobjekte", headers=governance.kopf).json()[0]
     assert datenobjekt["status"] == "importiert_unbestaetigt"
-    antwort = client.post(
+    assert datenobjekt["fachbereich_id"] is None
+    ohne = client.post(
         f"/api/v1/datenobjekte/{datenobjekt['id']}/bestaetigung", headers=governance.kopf
+    )
+    assert ohne.status_code == 422
+
+    # Die Plattform darf den Anker setzen — nur solange das Objekt unbestaetigt ist.
+    zuordnung = client.patch(
+        f"/api/v1/datenobjekte/{datenobjekt['id']}",
+        json={"fachbereich_id": organisation["fachbereich_finance"]},
+        headers=plattform.kopf,
+    )
+    assert zuordnung.status_code == 200, zuordnung.text
+    antwort = client.post(
+        f"/api/v1/datenobjekte/{datenobjekt['id']}/bestaetigung", headers=plattform.kopf
     )
     assert antwort.status_code == 200
     assert antwort.json()["status"] == "bestaetigt"
+    danach = client.patch(
+        f"/api/v1/datenobjekte/{datenobjekt['id']}",
+        json={"fachbereich_id": organisation["fachbereich_hr"]},
+        headers=plattform.kopf,
+    )
+    assert danach.status_code == 403
 
 
 def test_assetaenderungen_landen_im_nachweis(client: TestClient, governance, db) -> None:
@@ -654,7 +759,11 @@ def test_datenobjekt_ohne_fachbereich_bleibt_global(
     Sonst waere die Sichtbarkeitsregel aus Architektur 4.3 ausgehebelt: wer
     keine Rolle hat, saehe alles, was noch keinem Fachbereich zugeordnet ist.
     """
-    client.post("/api/v1/datenobjekte", json={"name": "Herrenlos"}, headers=governance.kopf)
+    client.post(
+        "/api/v1/datenobjekte",
+        json={"name": "Herrenlos", "fachbereich_id": organisation["fachbereich_finance"]},
+        headers=governance.kopf,
+    )
     fremder = anmelden("Ohne Rolle")
     assert client.get("/api/v1/datenobjekte", headers=fremder.kopf).json() == []
 
@@ -669,25 +778,29 @@ def test_datenobjekt_ohne_fachbereich_bleibt_global(
 # --- Umsetzungsplan AP-2: Reifegrad 1, Kategorien, Wirkung ---------------
 
 
-def test_datenobjekt_traegt_owner_und_quellsystem(
-    client: TestClient, governance, techniker
+def test_datenobjekt_traegt_fachbereich_und_quellsystem(
+    client: TestClient, governance, organisation
 ) -> None:
-    """Reifegrad 1 aus Leitdokument A.7: Name, Kategorie, Owner, Quellsystem."""
+    """Reifegrad 1 aus Leitdokument A.7: Name, Kategorie, datenhaltende Stelle, Quellsystem.
+
+    Die Stelle ist der Fachbereich — keine Person (docs/rollen-und-scopes.md, 7.1).
+    """
     antwort = client.post(
         "/api/v1/datenobjekte",
         json={
             "name": "Entgeltdaten",
             "beschreibung": "Monatliche Abrechnung",
             "kategorie": "besondere_kategorie",
-            "owner_user_id": techniker.user_id,
+            "fachbereich_id": organisation["fachbereich_hr"],
             "quellsystem": "SAP HCM",
         },
         headers=governance.kopf,
     )
     assert antwort.status_code == 201, antwort.text
     datenobjekt = antwort.json()
-    assert datenobjekt["owner_user_id"] == techniker.user_id
+    assert datenobjekt["fachbereich_id"] == organisation["fachbereich_hr"]
     assert datenobjekt["quellsystem"] == "SAP HCM"
+    assert "owner_user_id" not in datenobjekt
 
     geaendert = client.patch(
         f"/api/v1/datenobjekte/{datenobjekt['id']}",
@@ -697,22 +810,39 @@ def test_datenobjekt_traegt_owner_und_quellsystem(
     assert geaendert.json()["quellsystem"] == "SAP HCM (Mandant 100)"
 
 
-def test_mitarbeiterbezogen_ist_keine_kategorie_mehr(client: TestClient, governance) -> None:
+def test_datenobjekt_ohne_fachbereich_gibt_es_nicht(client: TestClient, governance) -> None:
+    """Auch die Governance legt keine herrenlose Quelle an (7.2)."""
+    antwort = client.post(
+        "/api/v1/datenobjekte", json={"name": "Niemandes Daten"}, headers=governance.kopf
+    )
+    assert antwort.status_code == 422
+    assert "Fachbereich" in antwort.json()["detail"]
+
+
+def test_mitarbeiterbezogen_ist_keine_kategorie_mehr(
+    client: TestClient, governance, organisation
+) -> None:
     """Leitdokument A.7 schliesst sie ausdruecklich aus (siehe E-19)."""
     antwort = client.post(
         "/api/v1/datenobjekte",
-        json={"name": "Zeiterfassung", "kategorie": "mitarbeiterbezogen"},
+        json={
+            "name": "Zeiterfassung",
+            "kategorie": "mitarbeiterbezogen",
+            "fachbereich_id": organisation["fachbereich_finance"],
+        },
         headers=governance.kopf,
     )
     assert antwort.status_code == 422, antwort.text
 
 
 def test_wirkung_zeigt_betroffene_prozesse_und_tools(
-    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren
+    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren, organisation
 ) -> None:
     """Simulation vor Entscheidung (Leitdokument A.4.7)."""
     datenobjekt = client.post(
-        "/api/v1/datenobjekte", json={"name": "Personaldaten"}, headers=governance.kopf
+        "/api/v1/datenobjekte",
+        json={"name": "Personaldaten", "fachbereich_id": organisation["fachbereich_finance"]},
+        headers=governance.kopf,
     ).json()
     prozess = lege_prozess_an(
         client,
@@ -761,10 +891,12 @@ def test_wirkung_zeigt_betroffene_prozesse_und_tools(
 
 
 def test_wirkung_ohne_kategorie_beschreibt_den_stand(
-    client: TestClient, governance, owner, vertretung, prozess_daten
+    client: TestClient, governance, owner, vertretung, prozess_daten, organisation
 ) -> None:
     datenobjekt = client.post(
-        "/api/v1/datenobjekte", json={"name": "Artikelstamm"}, headers=governance.kopf
+        "/api/v1/datenobjekte",
+        json={"name": "Artikelstamm", "fachbereich_id": organisation["fachbereich_finance"]},
+        headers=governance.kopf,
     ).json()
     lege_prozess_an(
         client,
@@ -783,7 +915,7 @@ def test_wirkung_ohne_kategorie_beschreibt_den_stand(
 
 
 def test_job_rechnet_ableitungen_nach(
-    client: TestClient, governance, owner, vertretung, prozess_daten, db
+    client: TestClient, governance, owner, vertretung, prozess_daten, db, organisation
 ) -> None:
     """Ein Regelwechsel darf den Bestand nicht still veralten lassen (E-19)."""
     from app import jobs
@@ -791,7 +923,11 @@ def test_job_rechnet_ableitungen_nach(
 
     datenobjekt = client.post(
         "/api/v1/datenobjekte",
-        json={"name": "Gehaltsliste", "kategorie": "besondere_kategorie"},
+        json={
+            "name": "Gehaltsliste",
+            "kategorie": "besondere_kategorie",
+            "fachbereich_id": organisation["fachbereich_finance"],
+        },
         headers=governance.kopf,
     ).json()
     prozess = lege_prozess_an(
@@ -895,11 +1031,13 @@ def test_wirkungsart_bleibt_offen_solange_niemand_erklaert_hat(
 
 
 def test_nur_lesendes_tool_mit_mensch_dazwischen_gestaltet(
-    client: TestClient, governance, attestieren
+    client: TestClient, governance, attestieren, organisation
 ) -> None:
     tool = client.post("/api/v1/tools", json={"name": "Bericht"}, headers=governance.kopf).json()
     datenobjekt = client.post(
-        "/api/v1/datenobjekte", json={"name": "Umsaetze"}, headers=governance.kopf
+        "/api/v1/datenobjekte",
+        json={"name": "Umsaetze", "fachbereich_id": organisation["fachbereich_finance"]},
+        headers=governance.kopf,
     ).json()
     client.post(
         f"/api/v1/tools/{tool['id']}/datenobjekte",
@@ -912,12 +1050,14 @@ def test_nur_lesendes_tool_mit_mensch_dazwischen_gestaltet(
 
 
 def test_kein_mensch_dazwischen_macht_auch_reines_lesen_veraendernd(
-    client: TestClient, governance, attestieren
+    client: TestClient, governance, attestieren, organisation
 ) -> None:
     """Die Warnung aus A.6: das sieht man an keiner Berechtigung."""
     tool = client.post("/api/v1/tools", json={"name": "Autopilot"}, headers=governance.kopf).json()
     datenobjekt = client.post(
-        "/api/v1/datenobjekte", json={"name": "Bewerbungen"}, headers=governance.kopf
+        "/api/v1/datenobjekte",
+        json={"name": "Bewerbungen", "fachbereich_id": organisation["fachbereich_finance"]},
+        headers=governance.kopf,
     ).json()
     client.post(
         f"/api/v1/tools/{tool['id']}/datenobjekte",
@@ -930,12 +1070,14 @@ def test_kein_mensch_dazwischen_macht_auch_reines_lesen_veraendernd(
 
 
 def test_schreibzugriff_macht_das_tool_veraendernd(
-    client: TestClient, governance, attestieren
+    client: TestClient, governance, attestieren, organisation
 ) -> None:
     tool = client.post("/api/v1/tools", json={"name": "Bucher"}, headers=governance.kopf).json()
     attestieren(governance.kopf, tool["id"])
     datenobjekt = client.post(
-        "/api/v1/datenobjekte", json={"name": "Belege"}, headers=governance.kopf
+        "/api/v1/datenobjekte",
+        json={"name": "Belege", "fachbereich_id": organisation["fachbereich_finance"]},
+        headers=governance.kopf,
     ).json()
     client.post(
         f"/api/v1/tools/{tool['id']}/datenobjekte",
@@ -951,17 +1093,25 @@ def test_schreibzugriff_macht_das_tool_veraendernd(
 
 
 def test_zweckbindung_erkennt_datenobjekt_ausserhalb_des_prozessrahmens(
-    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren
+    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren, organisation
 ) -> None:
     """„Tool liest D im Rahmen von P" — oder eben erkennbar daneben."""
     erlaubt = client.post(
         "/api/v1/datenobjekte",
-        json={"name": "Kreditorenstamm", "kategorie": "intern"},
+        json={
+            "name": "Kreditorenstamm",
+            "kategorie": "intern",
+            "fachbereich_id": organisation["fachbereich_finance"],
+        },
         headers=governance.kopf,
     ).json()
     fremd = client.post(
         "/api/v1/datenobjekte",
-        json={"name": "Gesundheitsakte", "kategorie": "besondere_kategorie"},
+        json={
+            "name": "Gesundheitsakte",
+            "kategorie": "besondere_kategorie",
+            "fachbereich_id": organisation["fachbereich_finance"],
+        },
         headers=governance.kopf,
     ).json()
     prozess = lege_prozess_an(
@@ -995,17 +1145,25 @@ def test_zweckbindung_erkennt_datenobjekt_ausserhalb_des_prozessrahmens(
 
 
 def test_gleiche_kategorie_deckt_das_datenobjekt_nur_schwach(
-    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren
+    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren, organisation
 ) -> None:
     """Der schwaechere Test aus A.4.6: Kategorie gedeckt, Objekt nicht erklaert."""
     erklaert = client.post(
         "/api/v1/datenobjekte",
-        json={"name": "Kreditorenstamm", "kategorie": "intern"},
+        json={
+            "name": "Kreditorenstamm",
+            "kategorie": "intern",
+            "fachbereich_id": organisation["fachbereich_finance"],
+        },
         headers=governance.kopf,
     ).json()
     weiteres = client.post(
         "/api/v1/datenobjekte",
-        json={"name": "Debitorenstamm", "kategorie": "intern"},
+        json={
+            "name": "Debitorenstamm",
+            "kategorie": "intern",
+            "fachbereich_id": organisation["fachbereich_finance"],
+        },
         headers=governance.kopf,
     ).json()
     prozess = lege_prozess_an(
@@ -1030,10 +1188,12 @@ def test_gleiche_kategorie_deckt_das_datenobjekt_nur_schwach(
     assert eintrag["kategorie_gedeckt"] is True
 
 
-def test_zugriffsart_aendern_und_kante_loesen(client: TestClient, governance) -> None:
+def test_zugriffsart_aendern_und_kante_loesen(client: TestClient, governance, organisation) -> None:
     tool = client.post("/api/v1/tools", json={"name": "Skript"}, headers=governance.kopf).json()
     datenobjekt = client.post(
-        "/api/v1/datenobjekte", json={"name": "Belege"}, headers=governance.kopf
+        "/api/v1/datenobjekte",
+        json={"name": "Belege", "fachbereich_id": organisation["fachbereich_finance"]},
+        headers=governance.kopf,
     ).json()
     client.post(
         f"/api/v1/tools/{tool['id']}/datenobjekte",
@@ -1070,13 +1230,15 @@ def test_zugriffsart_aendern_und_kante_loesen(client: TestClient, governance) ->
     )
 
 
-def test_datenkante_steht_im_changelog(client: TestClient, governance, db) -> None:
+def test_datenkante_steht_im_changelog(client: TestClient, governance, db, organisation) -> None:
     """Architektur 10.4: kein schreibender Vorgang ohne Nachweis."""
     from app.models.audit import ChangeLog
 
     tool = client.post("/api/v1/tools", json={"name": "Skript"}, headers=governance.kopf).json()
     datenobjekt = client.post(
-        "/api/v1/datenobjekte", json={"name": "Belege"}, headers=governance.kopf
+        "/api/v1/datenobjekte",
+        json={"name": "Belege", "fachbereich_id": organisation["fachbereich_finance"]},
+        headers=governance.kopf,
     ).json()
     client.post(
         f"/api/v1/tools/{tool['id']}/datenobjekte",
@@ -1131,12 +1293,16 @@ def test_geerbtes_maximum_nennt_die_massgebliche_kante(
 
 
 def test_attestierung_ueber_personen_macht_den_prozess_mitbestimmungsrelevant(
-    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren
+    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren, organisation
 ) -> None:
     """Personenbezug allein genuegt nicht — die erklaerte Wirkung schon."""
     datenobjekt = client.post(
         "/api/v1/datenobjekte",
-        json={"name": "Kontaktdaten", "kategorie": "personenbezogen"},
+        json={
+            "name": "Kontaktdaten",
+            "kategorie": "personenbezogen",
+            "fachbereich_id": organisation["fachbereich_finance"],
+        },
         headers=governance.kopf,
     ).json()
     prozess = lege_prozess_an(
@@ -1188,12 +1354,16 @@ def test_lauftyp_und_stellvertretung_am_tool(
 
 
 def test_nachtraegliche_attestierung_zieht_die_ableitung_nach(
-    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren
+    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren, organisation
 ) -> None:
     """Wer seine Erklaerung korrigiert, korrigiert damit auch das Flag."""
     datenobjekt = client.post(
         "/api/v1/datenobjekte",
-        json={"name": "Kontaktdaten", "kategorie": "personenbezogen"},
+        json={
+            "name": "Kontaktdaten",
+            "kategorie": "personenbezogen",
+            "fachbereich_id": organisation["fachbereich_finance"],
+        },
         headers=governance.kopf,
     ).json()
     prozess = lege_prozess_an(
@@ -1220,3 +1390,160 @@ def test_nachtraegliche_attestierung_zieht_die_ableitung_nach(
         ]
         is True
     )
+
+
+# --- Rollen und Scopes: Datenobjekte (docs/rollen-und-scopes.md, Abschnitt 7) -
+
+
+@pytest.fixture
+def datenowner(anmelden, rolle_geben, organisation):
+    nutzer = anmelden("Datenobjekt-Owner Finance", subject="sub-datenowner")
+    rolle_geben(
+        nutzer.user_id, "datenobjekt_owner", "fachbereich", organisation["fachbereich_finance"]
+    )
+    return nutzer
+
+
+def _quelle(client: TestClient, wer, name: str, fachbereich_id: str, **weitere) -> dict:
+    antwort = client.post(
+        "/api/v1/datenobjekte",
+        json={"name": name, "fachbereich_id": fachbereich_id, **weitere},
+        headers=wer.kopf,
+    )
+    assert antwort.status_code == 201, antwort.text
+    return antwort.json()
+
+
+def test_prozess_owner_sieht_nur_die_quellen_seiner_prozesse(
+    client: TestClient, governance, owner, vertretung, prozess_daten, organisation
+) -> None:
+    """7.3: ueber die Referenz, nicht ueber den Fachbereich.
+
+    Der Prozess-Owner hat den Bereich Finance — aber keinen Grund, die
+    Kassenbelege zu sehen, wenn keiner seiner Prozesse sie nutzt.
+    """
+    fin = organisation["fachbereich_finance"]
+    genutzt = _quelle(client, governance, "Kreditorenstamm", fin)
+    ungenutzt = _quelle(client, governance, "Kassenbelege", fin)
+    lege_prozess_an(client, owner, vertretung, prozess_daten, input_datenobjekt_ids=[genutzt["id"]])
+
+    sichtbar = [d["id"] for d in client.get("/api/v1/datenobjekte", headers=owner.kopf).json()]
+    assert sichtbar == [genutzt["id"]]
+    assert (
+        client.get(f"/api/v1/datenobjekte/{genutzt['id']}", headers=owner.kopf).status_code == 200
+    )
+    assert (
+        client.get(f"/api/v1/datenobjekte/{ungenutzt['id']}", headers=owner.kopf).status_code == 403
+    )
+    # Der Katalog kennt beide — mit vier Feldern, nicht mehr.
+    katalog = client.get("/api/v1/datenobjekte/katalog", headers=owner.kopf).json()
+    assert {k["name"] for k in katalog} == {"Kreditorenstamm", "Kassenbelege"}
+    assert set(katalog[0]) == {"id", "name", "fachbereich_id", "kategorie", "quellsystem"}
+
+
+def test_scope_zaehlt_nur_fuer_seine_rolle(
+    client: TestClient, governance, anmelden, rolle_geben, organisation
+) -> None:
+    """Ein Prozess-Umsetzer in Finance DE hat den Bereich, aber nicht das Recht (Abschnitt 2)."""
+    _quelle(client, governance, "Kassenbelege", organisation["fachbereich_finance"])
+    umsetzer = anmelden("Umsetzer")
+    rolle_geben(
+        umsetzer.user_id, "prozess_umsetzer", "organisationseinheit", organisation["fin_de"]
+    )
+    assert client.get("/api/v1/datenobjekte", headers=umsetzer.kopf).json() == []
+
+
+def test_gebender_prozess_pflegt_stammdaten_aber_nicht_die_kategorie(
+    client: TestClient, governance, owner, vertretung, prozess_daten, datenowner, organisation
+) -> None:
+    """7.2 und 7.4: der Fachbereich kommt vom Prozessgeber, die Kategorie bleibt bei der Stelle."""
+    prozess = lege_prozess_an(client, owner, vertretung, prozess_daten)
+    antwort = client.post(
+        "/api/v1/datenobjekte",
+        json={"name": "Zahllauf", "prozessobjekt_id": prozess["id"], "quellsystem": "SAP FI"},
+        headers=owner.kopf,
+    )
+    assert antwort.status_code == 201, antwort.text
+    quelle = antwort.json()
+    assert quelle["fachbereich_id"] == organisation["fachbereich_finance"]
+    assert quelle["rechte"] == {
+        "bearbeiten": True,
+        "kategorisieren": False,
+        "anker_aendern": False,
+        "bestaetigen": False,
+    }
+    nachgeladen = client.get(f"/api/v1/prozesse/{prozess['id']}", headers=owner.kopf).json()
+    assert quelle["id"] in nachgeladen["output_datenobjekt_ids"]
+
+    pfad = f"/api/v1/datenobjekte/{quelle['id']}"
+    assert (
+        client.patch(pfad, json={"quellsystem": "SAP S/4"}, headers=owner.kopf).status_code == 200
+    )
+    assert client.patch(pfad, json={"kategorie": "intern"}, headers=owner.kopf).status_code == 403
+    assert (
+        client.patch(
+            pfad, json={"fachbereich_id": organisation["fachbereich_hr"]}, headers=owner.kopf
+        ).status_code
+        == 403
+    )
+    # Der Datenobjekt-Owner des Fachbereichs klassifiziert — und nur er wandert nicht.
+    assert (
+        client.patch(pfad, json={"kategorie": "intern"}, headers=datenowner.kopf).status_code == 200
+    )
+    assert (
+        client.patch(
+            pfad, json={"fachbereich_id": organisation["fachbereich_hr"]}, headers=datenowner.kopf
+        ).status_code
+        == 403
+    )
+    assert (
+        client.patch(
+            pfad, json={"fachbereich_id": organisation["fachbereich_hr"]}, headers=governance.kopf
+        ).status_code
+        == 200
+    )
+
+
+def test_fremder_prozess_gibt_keinen_output(
+    client: TestClient, governance, owner, anmelden, prozess_daten, organisation
+) -> None:
+    vertretung = anmelden("Vertretung HR", subject="sub-vertretung-hr")
+    fremd = client.post(
+        "/api/v1/prozesse",
+        json=prozess_daten(
+            governance.user_id,
+            vertretung.user_id,
+            prozessgeber_org_id=organisation["hr_int"],
+        ),
+        headers=governance.kopf,
+    )
+    assert fremd.status_code == 201, fremd.text
+    antwort = client.post(
+        "/api/v1/datenobjekte",
+        json={"name": "Nicht meine", "prozessobjekt_id": fremd.json()["id"]},
+        headers=owner.kopf,
+    )
+    assert antwort.status_code == 403
+
+
+def test_datenobjekt_owner_legt_nur_im_eigenen_fachbereich_an(
+    client: TestClient, datenowner, organisation
+) -> None:
+    fremd = client.post(
+        "/api/v1/datenobjekte",
+        json={"name": "Personaldaten", "fachbereich_id": organisation["fachbereich_hr"]},
+        headers=datenowner.kopf,
+    )
+    assert fremd.status_code == 403
+    eigen = _quelle(client, datenowner, "Kreditorenstamm", organisation["fachbereich_finance"])
+    assert eigen["rechte"]["kategorisieren"] is True
+    assert eigen["rechte"]["anker_aendern"] is False
+
+
+def test_katalog_nur_fuer_rollentraeger(
+    client: TestClient, governance, anmelden, organisation
+) -> None:
+    _quelle(client, governance, "Kassenbelege", organisation["fachbereich_finance"])
+    niemand = anmelden("Ohne Rolle")
+    assert client.get("/api/v1/datenobjekte/katalog", headers=niemand.kopf).status_code == 403
+    assert client.get("/api/v1/datenobjekte", headers=niemand.kopf).json() == []

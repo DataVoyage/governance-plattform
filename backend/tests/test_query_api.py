@@ -139,13 +139,17 @@ def test_unbekanntes_prozessobjekt(client: TestClient) -> None:
 
 
 def test_erlaubnisrahmen_vereinigt_die_prozesskanten(
-    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren
+    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren, organisation
 ) -> None:
     kreditoren = client.post(
-        "/api/v1/datenobjekte", json={"name": "Kreditorenstamm"}, headers=governance.kopf
+        "/api/v1/datenobjekte",
+        json={"name": "Kreditorenstamm", "fachbereich_id": organisation["fachbereich_finance"]},
+        headers=governance.kopf,
     ).json()
     buchungen = client.post(
-        "/api/v1/datenobjekte", json={"name": "Buchungen"}, headers=governance.kopf
+        "/api/v1/datenobjekte",
+        json={"name": "Buchungen", "fachbereich_id": organisation["fachbereich_finance"]},
+        headers=governance.kopf,
     ).json()
 
     eng = client.post(

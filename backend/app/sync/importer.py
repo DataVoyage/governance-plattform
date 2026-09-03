@@ -31,7 +31,7 @@ from app.services.changelog import protokolliere, protokolliere_aenderung, snaps
 
 #: Felder, die ein Sync niemals ueberschreibt (Architektur 7.2, Punkt 1).
 GESCHUETZTE_FELDER: frozenset[str] = frozenset(
-    {"kategorie", "owner_user_id", "technischer_owner_user_id", "status", "fachbereich_id"}
+    {"kategorie", "technischer_owner_user_id", "status", "fachbereich_id"}
 )
 
 

@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 
 import { ApiFehler, api } from '@/api/client';
-import type { DatenObjekt, Datenkategorie, Fachbereich, Nutzer, Wirkung } from '@/api/typen';
+import type { DatenObjekt, Datenkategorie, Fachbereich, Wirkung } from '@/api/typen';
 import { useSprache } from '@/i18n/SprachKontext';
 import { KATEGORIEN, KATEGORIE_TON } from '@/seiten/DatenobjektListe';
 import {
@@ -36,7 +36,6 @@ export function DatenobjektDetail() {
   const { token } = useSitzung();
   const [datenobjekt, setDatenobjekt] = useState<DatenObjekt | null>(null);
   const [wirkung, setWirkung] = useState<Wirkung | null>(null);
-  const [nutzer, setNutzer] = useState<Nutzer[]>([]);
   const [fachbereiche, setFachbereiche] = useState<Fachbereich[]>([]);
   const [vorschau, setVorschau] = useState<{ kategorie: string; wirkung: Wirkung } | null>(null);
   /** Freitext ist ein Entwurf, bis gespeichert wird. Er darf nicht von der
@@ -49,14 +48,12 @@ export function DatenobjektDetail() {
     Promise.all([
       api.datenobjekt(token, id),
       api.datenobjektWirkung(token, id),
-      api.nutzer(token).catch(() => [] as Nutzer[]),
       api.fachbereiche(token).catch(() => [] as Fachbereich[]),
     ])
-      .then(([geladen, stand, personen, bereiche]) => {
+      .then(([geladen, stand, bereiche]) => {
         setDatenobjekt(geladen);
         setQuellsystem(geladen.quellsystem ?? '');
         setWirkung(stand);
-        setNutzer(personen);
         setFachbereiche(bereiche);
       })
       .catch(() => setFehler(t('app.fehler')));
@@ -93,7 +90,7 @@ export function DatenobjektDetail() {
     }
   }
 
-  async function feldAendern(feld: 'owner_user_id' | 'fachbereich_id' | 'quellsystem', wert: string) {
+  async function feldAendern(feld: 'fachbereich_id' | 'quellsystem', wert: string) {
     if (token === null || id === undefined) return;
     try {
       const aktualisiert = await api.datenobjektAendern(token, id, {
@@ -111,6 +108,10 @@ export function DatenobjektDetail() {
     return <Ladeschimmer beschriftung={t('app.laden')} zeilen={4} />;
 
   const gesperrt = datenobjekt.schreibgeschuetzte_felder;
+  const { rechte } = datenobjekt;
+  const gebende = wirkung.prozesse.filter((p) => p.als_output);
+  const fachbereichName =
+    fachbereiche.find((f) => f.id === datenobjekt.fachbereich_id)?.name ?? '—';
 
   return (
     <>
@@ -132,8 +133,11 @@ export function DatenobjektDetail() {
       />
 
       {fehler !== null && <Hinweis art="fehler">{fehler}</Hinweis>}
-      {!datenobjekt.rechte.bearbeiten && (
+      {!rechte.bearbeiten && !rechte.kategorisieren && (
         <Hinweis art="information">{t('rechte.datenobjekt.nurLesen')}</Hinweis>
+      )}
+      {rechte.bearbeiten && !rechte.kategorisieren && (
+        <Hinweis art="information">{t('rechte.datenobjekt.nurStammdaten')}</Hinweis>
       )}
       {gesperrt.length > 0 && <Hinweis art="information">{t('asset.importHinweis')}</Hinweis>}
 
@@ -148,24 +152,47 @@ export function DatenobjektDetail() {
             text: `${t(`kategorie.${k}` as never)} — ${t(`kategorie.anker.${k}` as never)}`,
           }))}
           hilfe={t('asset.kategorie.wirkungHinweis')}
-          gesperrt={!datenobjekt.rechte.bearbeiten}
+          gesperrt={!rechte.kategorisieren}
         />
-        <Auswahl
-          beschriftung={t('asset.feld.owner')}
-          wert={datenobjekt.owner_user_id ?? ''}
-          aendern={(wert) => feldAendern('owner_user_id', wert)}
-          leertext="—"
-          optionen={nutzer.map((n) => ({ wert: n.id, text: n.name }))}
-          hilfe={t('asset.owner.hilfe')}
-          gesperrt={!datenobjekt.rechte.bearbeiten}
-        />
-        <Auswahl
-          beschriftung={t('asset.feld.fachbereich')}
-          wert={datenobjekt.fachbereich_id ?? ''}
-          aendern={(wert) => feldAendern('fachbereich_id', wert)}
-          leertext="—"
-          optionen={fachbereiche.map((f) => ({ wert: f.id, text: f.name }))}
-          gesperrt={!datenobjekt.rechte.bearbeiten}
+        {rechte.anker_aendern ? (
+          <Auswahl
+            beschriftung={t('asset.feld.fachbereich')}
+            wert={datenobjekt.fachbereich_id ?? ''}
+            aendern={(wert) => feldAendern('fachbereich_id', wert)}
+            leertext="—"
+            optionen={fachbereiche.map((f) => ({ wert: f.id, text: f.name }))}
+            hilfe={t('asset.fachbereich.hilfe')}
+          />
+        ) : (
+          <Feld
+            beschriftung={t('asset.feld.fachbereich')}
+            wert={fachbereichName}
+            aendern={() => undefined}
+            hilfe={t('rechte.datenobjekt.ankerFest')}
+            disabled
+          />
+        )}
+        <Werteliste
+          eintraege={[
+            {
+              beschriftung: t('asset.feld.gebenderProzess'),
+              pruefkennung: 'gebender-prozess',
+              wert:
+                gebende.length === 0 ? (
+                  t('asset.gebenderProzess.keiner')
+                ) : (
+                  <>
+                    {gebende.map((p, i) => (
+                      <span key={p.id}>
+                        {i > 0 && ', '}
+                        <Link to={pfad(`/prozesse/${p.id}`)}>{p.name}</Link>
+                      </span>
+                    ))}
+                  </>
+                ),
+              herkunft: t('asset.gebenderProzess.hilfe'),
+            },
+          ]}
         />
         <Feld
           beschriftung={t('asset.feld.quellsystem')}
@@ -173,10 +200,10 @@ export function DatenobjektDetail() {
           aendern={setQuellsystem}
           hilfe={t('asset.quellsystem.hilfe')}
           hoechstlaenge={255}
-          disabled={!datenobjekt.rechte.bearbeiten}
+          disabled={!rechte.bearbeiten}
         />
         <Knopf
-          disabled={!datenobjekt.rechte.bearbeiten}
+          disabled={!rechte.bearbeiten}
           onClick={() => feldAendern('quellsystem', quellsystem)}
         >
           {t('asset.speichern')}
@@ -185,7 +212,9 @@ export function DatenobjektDetail() {
 
       <Gruppe etikett={t('asset.verwendung.prozesse')} hinweis={t('asset.verwendung.hinweis')}>
         {wirkung.prozesse.length === 0 ? (
-          <Zeile haupt={<span className="leerhinweis">{t('asset.verwendung.keineProzesse')}</span>} />
+          <Zeile
+            haupt={<span className="leerhinweis">{t('asset.verwendung.keineProzesse')}</span>}
+          />
         ) : (
           wirkung.prozesse.map((p) => (
             <ZeileVerweis

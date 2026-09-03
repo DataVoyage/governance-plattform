@@ -83,6 +83,15 @@ def weise_rolle_zu(
         and db.get(Organisationseinheit, daten.scope_id) is None
     ):
         raise HTTPException(status_code=404, detail="Organisationseinheit nicht gefunden")
+    # R-11: eine Quelle gehoert einer datenhaltenden Stelle, nicht einer
+    # Landesorganisation. Die Schreibregel wuerde fuer eine Einheit nie positiv
+    # pruefen; eine Zuweisung, die nichts bewirkt, ist eine Falle.
+    if daten.rolle == "datenobjekt_owner" and daten.scope_typ == "organisationseinheit":
+        raise HTTPException(
+            status_code=422,
+            detail="Der Datenobjekt-Owner wird je Fachbereich vergeben — eine Quelle "
+            "gehört einer datenhaltenden Stelle, nicht einer Landesorganisation",
+        )
     bestehend = db.execute(
         select(Rollenzuweisung).where(
             Rollenzuweisung.user_id == daten.user_id,

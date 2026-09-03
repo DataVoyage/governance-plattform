@@ -224,9 +224,11 @@ class Datenobjekt(Base, TimestampMixin):
     beschreibung: Mapped[str] = mapped_column(Text, default="")
     # Governance-gepflegtes Feld — vom Sync nie ueberschrieben (Architektur 7.2).
     kategorie: Mapped[str | None] = mapped_column(String(48), nullable=True)
-    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
-        GUID, ForeignKey("users.id"), nullable=True
-    )
+    # Der eine Anker: die datenhaltende Stelle (docs/rollen-und-scopes.md, 7.2).
+    # Keine Person — eine Quelle verlangt keine persoenliche Erklaerung, und
+    # wer sie klassifiziert, ist eine Rolle im Fachbereich, keine Eigenschaft
+    # des Objekts. ``None`` gibt es nur importiert-unbestaetigt: die Plattform
+    # hat die Quelle vorgefunden, und die Bestaetigung verlangt die Zuordnung.
     fachbereich_id: Mapped[uuid.UUID | None] = mapped_column(
         GUID, ForeignKey("fachbereiche.id"), nullable=True
     )

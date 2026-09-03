@@ -53,6 +53,13 @@ dazu, warum.
 Tool-Objekt und den vollständigen Nachweis — und findet in der ganzen Anwendung
 keine einzige Schaltfläche, die etwas ändert.
 
+**Eine Quelle gehört einer Stelle, keiner Person.** `datenowner` sieht die
+Datenobjekte des Fachbereichs Personal vollständig und klassifiziert sie;
+`prozessowner` sieht davon nur die, die einer seiner Vertriebsprozesse nutzt —
+und findet im Katalog trotzdem jede, um sie als Input zu nennen. Wer eine
+fremde Quelle direkt aufruft, bekommt keine Anzeige, sondern gar keine Daten
+(`docs/rollen-und-scopes.md`, Abschnitt 7).
+
 **Ohne Rolle bleibt es leer.** `ohnerolle` kommt bis zur Prozessliste und findet
 dort nichts: keine Objekte, kein „Anlegen", ein Satz, der erklärt warum. Das ist
 kein Fehler, sondern die Sichtbarkeitsregel aus Architektur 4.3.

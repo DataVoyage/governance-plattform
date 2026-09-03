@@ -46,11 +46,13 @@ export function vorgang(
       eintrag.stand === 'offen',
       `Noch offen, vorgesehen in ${eintrag.ap}. Erwartet: ${eintrag.erwartet}`,
     );
-    test.info().annotations.push(
-      { type: 'Rolle', description: eintrag.rolle },
-      { type: 'Arbeitspaket', description: eintrag.ap },
-      { type: 'Erwartetes Ergebnis', description: eintrag.erwartet },
-    );
+    test
+      .info()
+      .annotations.push(
+        { type: 'Rolle', description: eintrag.rolle },
+        { type: 'Arbeitspaket', description: eintrag.ap },
+        { type: 'Erwartetes Ergebnis', description: eintrag.erwartet },
+      );
     await lauf!({ page, request });
   });
 }
@@ -106,7 +108,11 @@ export async function organisation(
         data: { fachbereich_id: fachbereich.id, ebene, land_code: land ?? null },
       }),
     );
-  const [int, de, fr] = [await einheit('INT'), await einheit('LAND', 'DE'), await einheit('LAND', 'FR')];
+  const [int, de, fr] = [
+    await einheit('INT'),
+    await einheit('LAND', 'DE'),
+    await einheit('LAND', 'FR'),
+  ];
   const ich = await json(await anfrage.get(`${API}/api/v1/auth/me`, { headers: h }));
   return {
     fachbereichId: fachbereich.id,
@@ -119,11 +125,26 @@ export async function organisation(
   };
 }
 
+/**
+ * Eine Quelle gehört immer einem Fachbereich (docs/rollen-und-scopes.md, 7.2).
+ * Wer keinen nennt, bekommt einen frischen — der Durchlauf soll die Regel
+ * nicht umgehen, sondern sie erfüllen, ohne dass jeder Aufrufer sie buchstabiert.
+ */
 export async function datenobjektAnlegen(
   anfrage: APIRequestContext,
   daten: Record<string, unknown>,
-): Promise<{ id: string; name: string }> {
+): Promise<{ id: string; name: string; fachbereich_id: string }> {
   const h = await kopf(anfrage);
+  if (daten.fachbereich_id === undefined && daten.prozessobjekt_id === undefined) {
+    const marke = kennzeichen();
+    const fachbereich = await json(
+      await anfrage.post(`${API}/api/v1/fachbereiche`, {
+        headers: h,
+        data: { name: `Quelle ${marke}`, code: `q-${marke}` },
+      }),
+    );
+    daten = { ...daten, fachbereich_id: fachbereich.id };
+  }
   return json(await anfrage.post(`${API}/api/v1/datenobjekte`, { headers: h, data: daten }));
 }
 
@@ -191,9 +212,26 @@ export async function bewerten(
   // Jede Frage jedes Blocks wird beantwortet; nur so gilt der Durchlauf als
   // abgeschlossen. `2a` bejaht kürzt den DS-Block ab und ergibt Tier 3.
   const antworten: Record<string, boolean> = Object.fromEntries(
-    ['1a', '1b', '1c', '2a', '2b', '2c', '3a', '3b', '3c', '4a', '4b', '4c', '5a', '5b', '5c', '6a', '6b', '6c'].map(
-      (frage) => [frage, frage === '2a' ? hoch : false],
-    ),
+    [
+      '1a',
+      '1b',
+      '1c',
+      '2a',
+      '2b',
+      '2c',
+      '3a',
+      '3b',
+      '3c',
+      '4a',
+      '4b',
+      '4c',
+      '5a',
+      '5b',
+      '5c',
+      '6a',
+      '6b',
+      '6c',
+    ].map((frage) => [frage, frage === '2a' ? hoch : false]),
   );
   const antwort = await anfrage.post(`${API}/api/v1/prozesse/${prozessId}/bewertungen`, {
     headers: h,

@@ -30,13 +30,17 @@ def owner(anmelden, rolle_geben, organisation):
 
 
 @pytest.fixture
-def datenobjekt(client: TestClient, governance):
+def datenobjekt(client: TestClient, governance, organisation):
     """Ein Baukasten fuer Datenobjekte einer bestimmten Kategorie."""
 
     def _anlegen(name: str, kategorie: str | None = "intern") -> dict:
         antwort = client.post(
             "/api/v1/datenobjekte",
-            json={"name": name, "kategorie": kategorie},
+            json={
+                "name": name,
+                "kategorie": kategorie,
+                "fachbereich_id": organisation["fachbereich_finance"],
+            },
             headers=governance.kopf,
         )
         assert antwort.status_code == 201, antwort.text

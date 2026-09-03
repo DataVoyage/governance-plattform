@@ -520,16 +520,22 @@ def test_unbekanntes_input_datenobjekt(
 # --- Umsetzungsplan AP-1: Schreibkante, Kette und Flughoehe ---------------
 
 
-def _datenobjekt(client: TestClient, anmeldung, name: str) -> dict:
+def _datenobjekt(client: TestClient, anmeldung, name: str, organisation) -> dict:
     antwort = client.post(
-        "/api/v1/datenobjekte", json={"name": name, "beschreibung": ""}, headers=anmeldung.kopf
+        "/api/v1/datenobjekte",
+        json={
+            "name": name,
+            "beschreibung": "",
+            "fachbereich_id": organisation["fachbereich_finance"],
+        },
+        headers=anmeldung.kopf,
     )
     assert antwort.status_code == 201, antwort.text
     return antwort.json()
 
 
 def test_output_datenobjekte_sind_referenzierbar(
-    client: TestClient, owner, governance, vertretung, prozess_daten
+    client: TestClient, owner, governance, vertretung, prozess_daten, organisation
 ) -> None:
     """Die Schreibkante des SIPOC (Leitdokument A.4.1) ist erfassbar.
 
@@ -537,8 +543,8 @@ def test_output_datenobjekte_sind_referenzierbar(
     die Aufwaertsanalyse aus A.4.3 und der Erlaubnisrahmen aus A.13.2 haengen
     daran.
     """
-    eingang = _datenobjekt(client, governance, "Kreditorenstamm")
-    ergebnis = _datenobjekt(client, governance, "Buchungsjournal")
+    eingang = _datenobjekt(client, governance, "Kreditorenstamm", organisation)
+    ergebnis = _datenobjekt(client, governance, "Buchungsjournal", organisation)
 
     antwort = anlegen(
         client,
@@ -557,9 +563,9 @@ def test_output_datenobjekte_sind_referenzierbar(
 
 
 def test_output_datenobjekte_sind_aenderbar(
-    client: TestClient, owner, governance, vertretung, prozess_daten
+    client: TestClient, owner, governance, vertretung, prozess_daten, organisation
 ) -> None:
-    ergebnis = _datenobjekt(client, governance, "Zahlungsvorschlag")
+    ergebnis = _datenobjekt(client, governance, "Zahlungsvorschlag", organisation)
     prozess = anlegen(client, owner, prozess_daten(owner.user_id, vertretung.user_id)).json()
 
     antwort = client.patch(
