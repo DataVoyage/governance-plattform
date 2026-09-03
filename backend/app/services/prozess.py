@@ -17,6 +17,7 @@ from app.schemas.prozess import (
     ProzessAendern,
     ProzessAnlegen,
     ProzessAus,
+    ProzessrechteAus,
     UmsetzungAus,
 )
 from app.services import ableitung
@@ -199,7 +200,13 @@ def neueste_bewertung(prozess: Prozessobjekt):
     return max(prozess.bewertungen, key=lambda b: b.bewertet_am)
 
 
-def zu_schema(prozess: Prozessobjekt) -> ProzessAus:
+def zu_schema(prozess: Prozessobjekt, rechte: ProzessrechteAus | None = None) -> ProzessAus:
+    """Die Ausgabe eines Prozessobjekts.
+
+    ``rechte`` traegt, was der Anfragende damit tun darf. Sie kommen von
+    aussen herein, weil ihre Berechnung auf diesem Modul aufbaut — ein
+    Aufruf von hier waere ein Kreis.
+    """
     bewertung = neueste_bewertung(prozess)
     return ProzessAus(
         id=prozess.id,
@@ -230,6 +237,7 @@ def zu_schema(prozess: Prozessobjekt) -> ProzessAus:
         tier=bewertung.tier if bewertung else None,
         ausgeloeste_k_klassen=list(bewertung.ausgeloeste_k_klassen) if bewertung else [],
         bewertung_gueltig_bis=bewertung.gueltig_bis if bewertung else None,
+        rechte=rechte or ProzessrechteAus(),
     )
 
 

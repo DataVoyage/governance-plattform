@@ -101,11 +101,20 @@ export function Auswahl({
   pflicht = false,
   leertext,
   beschriftungVerborgen = false,
+  gesperrt = false,
 }: FeldRahmen & {
   wert: string;
   aendern: (wert: string) => void;
   optionen: AuswahlOption[];
   leertext?: string;
+  /**
+   * Der Baustein bleibt sichtbar, nimmt aber keine Eingabe an.
+   *
+   * Wer nichts aendern darf, soll den Wert trotzdem sehen — ein
+   * ausgeblendetes Feld waere eine Luecke im Bild, kein Schutz. Der Server
+   * prueft ohnehin unabhaengig (Architektur 10.2).
+   */
+  gesperrt?: boolean;
   /**
    * Beschriftung nur fuer Vorleseprogramme.
    *
@@ -130,6 +139,7 @@ export function Auswahl({
         id={kennung}
         value={wert}
         required={pflicht}
+        disabled={gesperrt}
         aria-describedby={beschreibung(fehler, hilfe, kennung)}
         aria-invalid={fehler !== undefined ? true : undefined}
         onChange={(e) => aendern(e.target.value)}
@@ -161,6 +171,7 @@ export function Umschalter({
   hilfe,
   an,
   aendern,
+  gesperrt = false,
 }: {
   beschriftung: string;
   zweitzeile?: string;
@@ -172,6 +183,8 @@ export function Umschalter({
   hilfe?: string;
   an: boolean;
   aendern: (an: boolean) => void;
+  /** Sichtbar, aber nicht bedienbar — siehe ``Auswahl``. */
+  gesperrt?: boolean;
 }) {
   const kennung = useId();
   return (
@@ -184,6 +197,7 @@ export function Umschalter({
         <input
           type="checkbox"
           checked={an}
+          disabled={gesperrt}
           aria-describedby={hilfe === undefined ? undefined : `${kennung}-hilfe`}
           onChange={(e) => aendern(e.target.checked)}
         />
@@ -204,11 +218,14 @@ export function SegmentierteSteuerung<T extends string>({
   optionen,
   beschriftungZeigen = false,
   hilfe,
+  gesperrt = false,
 }: {
   beschriftung: string;
   wert: T;
   aendern: (wert: T) => void;
   optionen: { wert: T; text: string }[];
+  /** Sichtbar, aber nicht bedienbar — siehe ``Auswahl``. */
+  gesperrt?: boolean;
   /** Sichtbare Beschriftung, wo die Knopftexte allein nicht sagen, worum es geht. */
   beschriftungZeigen?: boolean;
   hilfe?: string;
@@ -220,6 +237,7 @@ export function SegmentierteSteuerung<T extends string>({
           key={option.wert}
           type="button"
           aria-pressed={option.wert === wert}
+          disabled={gesperrt}
           onClick={() => aendern(option.wert)}
         >
           {option.text}

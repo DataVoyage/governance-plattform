@@ -26,7 +26,7 @@ function tierTon(tier: number | null): Ton {
 
 export function ProzessListe() {
   const { t, pfad } = useSprache();
-  const { token } = useSitzung();
+  const { token, hatRolle } = useSitzung();
   const [prozesse, setProzesse] = useState<Prozess[] | null>(null);
   const [einheiten, setEinheiten] = useState<Organisationseinheit[]>([]);
   const [fachbereiche, setFachbereiche] = useState<Fachbereich[]>([]);
@@ -47,6 +47,11 @@ export function ProzessListe() {
   if (fehler !== null) return <Hinweis art="fehler">{fehler}</Hinweis>;
   if (prozesse === null) return <Ladeschimmer beschriftung={t('app.laden')} zeilen={4} />;
 
+  // Anlegen darf, wer irgendwo Prozess-Owner ist. In welchem Bereich, prüft
+  // der Server beim Speichern — hier geht es nur darum, niemandem ein Formular
+  // hinzustellen, das er nicht abschicken kann.
+  const darfAnlegen = hatRolle('prozess_owner') || hatRolle('governance');
+
   const begriff = suche.trim().toLowerCase();
   const treffer = prozesse.filter((p) => p.name.toLowerCase().includes(begriff));
 
@@ -55,7 +60,7 @@ export function ProzessListe() {
       <Seitenkopf
         titel={t('prozess.liste.titel')}
         aktionen={
-          prozesse.length === 0 ? undefined : (
+          prozesse.length === 0 || !darfAnlegen ? undefined : (
             <Link className="k-knopf k-knopf--gefuellt" to={pfad('/prozesse/neu')}>
               {t('prozess.liste.neu')}
             </Link>
@@ -67,11 +72,13 @@ export function ProzessListe() {
         <Leerzustand
           zeichen="▤"
           titel={t('prozess.liste.leer')}
-          text={t('prozess.hilfe.nachgelagert')}
+          text={darfAnlegen ? t('prozess.hilfe.nachgelagert') : t('rechte.liste.leer')}
           aktion={
-            <Link className="k-knopf k-knopf--gefuellt" to={pfad('/prozesse/neu')}>
-              {t('prozess.liste.neu')}
-            </Link>
+            darfAnlegen ? (
+              <Link className="k-knopf k-knopf--gefuellt" to={pfad('/prozesse/neu')}>
+                {t('prozess.liste.neu')}
+              </Link>
+            ) : undefined
           }
         />
       ) : (

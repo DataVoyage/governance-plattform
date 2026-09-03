@@ -85,6 +85,26 @@ class AttestierungAendern(BaseModel):
     attest_undeklarierte_quellen: bool
 
 
+class ToolrechteAus(BaseModel):
+    """Was der Anfragende mit **diesem** Tool-Objekt tun darf.
+
+    Eine Auskunft, keine Sicherung — siehe ``services/rechte.py``.
+    """
+
+    bearbeiten: bool = False
+    attestieren: bool = False
+    verknuepfen: bool = False
+    zustand_melden: bool = False
+    kompensieren: bool = False
+    selbstverpflichten: bool = False
+    bestaetigen: bool = False
+
+
+class DatenobjektrechteAus(BaseModel):
+    bearbeiten: bool = False
+    bestaetigen: bool = False
+
+
 class ToolAus(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -125,6 +145,8 @@ class ToolAus(BaseModel):
     #: Bei importierten Datensaetzen am Ursprungssystem zu pflegen.
     schreibgeschuetzte_felder: list[str] = Field(default_factory=list)
 
+    rechte: ToolrechteAus = Field(default_factory=ToolrechteAus)
+
 
 class DatenobjektAnlegen(BaseModel):
     name: str = Field(min_length=1, max_length=255)
@@ -161,6 +183,8 @@ class DatenobjektAus(BaseModel):
     status: AssetStatus
     metadaten: dict[str, Any] = Field(default_factory=dict)
     schreibgeschuetzte_felder: list[str] = Field(default_factory=list)
+
+    rechte: DatenobjektrechteAus = Field(default_factory=DatenobjektrechteAus)
 
 
 class ProzessVerknuepfung(BaseModel):

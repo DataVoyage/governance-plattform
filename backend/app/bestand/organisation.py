@@ -104,6 +104,79 @@ class Person:
 #: Zutun — genau wie im Betrieb ueber ``GP_BOOTSTRAP_ADMIN_SUBJECTS``.
 ERSTZUGANG = "petersen"
 
+#: Zugaenge fuer die Vorfuehrung — je Rolle einer, dazu die beiden Faelle, an
+#: denen sich der Unterschied zeigt: derselbe Rollenname mit zwei
+#: Geltungsbereichen, und ein Zugang ganz ohne Rolle.
+#:
+#: Sie tragen **keinen erfundenen Personennamen**, sondern die Bezeichnung
+#: ihrer Zugangsart — ein Konto namens „governance" sagt, wofuer es da ist.
+#: Kennung und Name sind dasselbe eine Wort: die Anmeldemaske verlangt beides,
+#: und vor Publikum soll das in zwei Sekunden getippt sein. Weil beide Felder
+#: denselben Wert tragen, bleibt der Datensatz beim Anmelden unveraendert.
+#:
+#: Sonderrechte haben sie keine — dieselben Rollen wie alle anderen. Was jeder
+#: von ihnen sieht und darf, steht in ``docs/demo-zugaenge.md``.
+DEMOZUGAENGE: tuple[Person, ...] = (
+    Person("governance", "governance", "Governance, unternehmensweit", None, "governance@global"),
+    Person(
+        "auditor",
+        "auditor",
+        "Auditor, unternehmensweit, ausschliesslich lesend",
+        None,
+        "auditor@global",
+    ),
+    Person(
+        "plattform", "plattform", "Plattformbetrieb, unternehmensweit", None, "plattform@global"
+    ),
+    Person(
+        "administrator",
+        "administrator",
+        "App-Administrator, unternehmensweit",
+        None,
+        "app_administrator@global",
+    ),
+    # Zweimal dieselbe Rolle, zwei Geltungsbereiche. Daran zeigt sich, dass
+    # eine Berechtigung nie aus der Rolle allein entsteht (P-App-3).
+    Person(
+        "prozessowner",
+        "prozessowner",
+        "Prozess-Owner, Fachbereich Vertrieb",
+        None,
+        "prozess_owner@fb:vertrieb",
+    ),
+    Person(
+        "bereichsowner",
+        "bereichsowner",
+        "Prozess-Owner, nur Einheit Logistik International",
+        None,
+        "prozess_owner@oe:logistik",
+    ),
+    Person(
+        "prozessumsetzer",
+        "prozessumsetzer",
+        "Prozess-Umsetzer, Einheit Vertrieb DE",
+        None,
+        "prozess_umsetzer@oe:vertrieb-de",
+    ),
+    Person(
+        "toolowner",
+        "toolowner",
+        "Technischer Owner, Fachbereich Logistik",
+        None,
+        "technischer_owner@fb:logistik",
+    ),
+    Person(
+        "datenowner",
+        "datenowner",
+        "Datenobjekt-Owner, Fachbereich Personal",
+        None,
+        "datenobjekt_owner@fb:personal",
+    ),
+    # Angemeldet, aber ohne Rolle: der Fall, in dem die Anwendung nichts zeigt
+    # und nichts anbietet.
+    Person("ohnerolle", "ohnerolle", "Angemeldet, ohne jede Rollenzuweisung", None),
+)
+
 PERSONEN: tuple[Person, ...] = (
     # --- Konzernfunktionen -------------------------------------------------
     Person(
@@ -474,6 +547,8 @@ PERSONEN: tuple[Person, ...] = (
     ),
     Person("baumann", "Kevin Baumann", "Datenplattform", "neubauer", "technischer_owner@fb:it"),
     Person("dietrich", "Verena Dietrich", "Stammdaten IT", "neubauer", "datenobjekt_owner@fb:it"),
+    # --- Zugaenge fuer die Vorfuehrung -------------------------------------
+    *DEMOZUGAENGE,
 )
 
 
@@ -506,7 +581,9 @@ def _kennung(name: str) -> str:
 
 
 def _lege_person_an(kontext: Kontext, person: Person, akteur_id, beschreibung: str = "") -> User:
-    kennung = _kennung(person.name)
+    # Die Vorfuehrzugaenge tragen ihre Kennung im Schluessel: sie muss im
+    # Vortrag eintippbar sein und darf sich nicht aus dem Namen ergeben.
+    kennung = person.schluessel if person in DEMOZUGAENGE else _kennung(person.name)
     fuehrungskraft = (
         None if person.fuehrungskraft is None else kontext.person(person.fuehrungskraft).id
     )

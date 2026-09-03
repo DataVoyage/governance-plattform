@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 import { ApiFehler, api } from '@/api/client';
-import type { Deckung, GateStatus, GateTyp, GateVorgang } from '@/api/typen';
+import type { Deckung, GateStatus, GateTyp, GateVorgang, Prozessrechte } from '@/api/typen';
 import { useSprache } from '@/i18n/SprachKontext';
 import { Abzeichen, Auswahl, Feld, Gruppe, Hinweis, Karte, Knopf, Werteliste, Zeile } from '@/ui';
 import { useSitzung } from '@/zustand/Sitzung';
@@ -27,7 +27,14 @@ const GATE_TON: Record<GateStatus, 'gruen' | 'gelb' | 'rot' | 'neutral'> = {
  * sechster, freier Grund ist hier nicht wählbar, weil die Liste im
  * Leitdokument bewusst abschließend ist.
  */
-export function ProzessGovernance({ prozessId }: { prozessId: string }) {
+export function ProzessGovernance({
+  prozessId,
+  rechte,
+}: {
+  prozessId: string;
+  /** Was der Angemeldete an diesem Prozessobjekt tun darf — vom Server. */
+  rechte: Prozessrechte;
+}) {
   const { t, pfad } = useSprache();
   const { token } = useSitzung();
 
@@ -112,15 +119,17 @@ export function ProzessGovernance({ prozessId }: { prozessId: string }) {
             ]}
           />
         )}
-        <div className="k-knopfreihe">
-          <Link
-            className="k-knopf k-knopf--getoent"
-            to={pfad(`/prozesse/${prozessId}/selbstverpflichtung`)}
-            data-testid="sv-oeffnen"
-          >
-            {t('sv.abgeben')}
-          </Link>
-        </div>
+        {rechte.selbstverpflichten && (
+          <div className="k-knopfreihe">
+            <Link
+              className="k-knopf k-knopf--getoent"
+              to={pfad(`/prozesse/${prozessId}/selbstverpflichtung`)}
+              data-testid="sv-oeffnen"
+            >
+              {t('sv.abgeben')}
+            </Link>
+          </div>
+        )}
       </Karte>
 
       <Karte titel={t('gate.titel')} beischrift={t('gate.hinweis')}>
@@ -181,23 +190,27 @@ export function ProzessGovernance({ prozessId }: { prozessId: string }) {
             ]}
           />
         )}
-        <Feld
-          beschriftung={t('gate.begruendung')}
-          wert={begruendung}
-          aendern={setBegruendung}
-          hilfe={t('gate.begruendungHilfe')}
-        />
-        {fehler !== null && <Hinweis art="fehler">{fehler}</Hinweis>}
-        <div className="k-knopfreihe">
-          <Knopf
-            art="gefuellt"
-            onClick={einreichen}
-            disabled={!einreichbar}
-            data-testid="gate-einreichen"
-          >
-            {t('gate.einreichen')}
-          </Knopf>
-        </div>
+        {rechte.gate_einreichen && (
+          <>
+            <Feld
+              beschriftung={t('gate.begruendung')}
+              wert={begruendung}
+              aendern={setBegruendung}
+              hilfe={t('gate.begruendungHilfe')}
+            />
+            {fehler !== null && <Hinweis art="fehler">{fehler}</Hinweis>}
+            <div className="k-knopfreihe">
+              <Knopf
+                art="gefuellt"
+                onClick={einreichen}
+                disabled={!einreichbar}
+                data-testid="gate-einreichen"
+              >
+                {t('gate.einreichen')}
+              </Knopf>
+            </div>
+          </>
+        )}
       </Karte>
     </>
   );

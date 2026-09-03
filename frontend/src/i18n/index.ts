@@ -620,6 +620,25 @@ const de = {
   'konzept.nurDeutsch':
     'Der Vortrag liegt bislang nur auf Deutsch vor. Die Anwendung selbst ist übersetzt.',
 
+  // Was die Oberfläche sagt, wo eine Rolle etwas nicht darf. Eine fehlende
+  // Schaltfläche erklärt sich nicht von selbst — und ein Formular, dessen
+  // Speichern in einem 403 endet, ist eine vergeudete halbe Stunde.
+  'rechte.prozess.nurLesen':
+    'Sie sehen dieses Prozessobjekt, dürfen es aber nicht ändern. Schreiben darf der Prozess-Owner des zuständigen Bereichs oder die Governance-Rolle.',
+  'rechte.prozess.nurUmsetzung':
+    'Als Prozess-Umsetzer pflegen Sie die lokale Abweichung Ihrer Landesorganisation — und nur diese. Alles Übrige bleibt beim Prozessgeber.',
+  'rechte.tool.nurLesen':
+    'Sie sehen dieses Tool-Objekt, dürfen es aber nicht ändern. Schreiben darf sein technischer Owner, der Prozess-Owner einer verknüpften Kante oder die Governance-Rolle.',
+  'rechte.datenobjekt.nurLesen':
+    'Sie sehen dieses Datenobjekt, dürfen es aber nicht ändern. Schreiben darf sein Owner, der Datenobjekt-Owner des Fachbereichs oder die Governance-Rolle.',
+  'rechte.lenkung.nurLesen':
+    'Diesen Vorgang schließt der Betroffene oder die Governance-Rolle.',
+  'rechte.liste.leer':
+    'In Ihrem Geltungsbereich liegt nichts. Eine Rolle wirkt nie allein, sondern immer zusammen mit einem Bereich — beides vergibt der App-Administrator.',
+
+  // Was die Oberfläche sagt, wenn eine Rolle etwas nicht darf. Eine fehlende
+  // Schaltfläche erklärt sich nicht von selbst.
+
   'rolle.prozess_owner': 'Prozess-Owner',
   'rolle.prozess_umsetzer': 'Prozess-Umsetzer',
   'rolle.technischer_owner': 'Technischer Owner',
@@ -1404,6 +1423,19 @@ const fr: Record<Schluessel, string> = {
   'konzept.fortschritt': 'Progression de la présentation',
   'konzept.nurDeutsch':
     "La présentation n'existe pour l'instant qu'en allemand. L'application elle-même est traduite.",
+
+  'rechte.prozess.nurLesen':
+    "Vous voyez cet objet de processus mais ne pouvez pas le modifier. L'écriture revient au propriétaire de processus du domaine concerné ou au rôle de gouvernance.",
+  'rechte.prozess.nurUmsetzung':
+    "En tant que responsable de mise en œuvre, vous gérez l'écart local de votre société nationale — et rien d'autre. Le reste appartient au domaine émetteur.",
+  'rechte.tool.nurLesen':
+    "Vous voyez cet objet outil mais ne pouvez pas le modifier. L'écriture revient à son propriétaire technique, au propriétaire d'un processus lié ou au rôle de gouvernance.",
+  'rechte.datenobjekt.nurLesen':
+    "Vous voyez cet objet de données mais ne pouvez pas le modifier. L'écriture revient à son propriétaire, au propriétaire d'objets de données du domaine ou au rôle de gouvernance.",
+  'rechte.lenkung.nurLesen':
+    'Ce dossier est clôturé par la personne concernée ou par le rôle de gouvernance.',
+  'rechte.liste.leer':
+    "Rien dans votre périmètre. Un rôle n'agit jamais seul : il vaut toujours pour un périmètre donné — les deux sont attribués par l'administrateur.",
 
   'rolle.prozess_owner': 'Responsable de processus',
   'rolle.prozess_umsetzer': 'Metteur en œuvre',

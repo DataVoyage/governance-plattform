@@ -12,6 +12,7 @@ from app.schemas.lenkung import (
     Abbrechen,
     Aufloesen,
     LenkungAus,
+    LenkungsrechteAus,
     MeldungAus,
     ZustandAus,
     ZustandMelden,
@@ -20,8 +21,18 @@ from app.schemas.rahmen import Schicht2VerbotAus
 from app.services import asset as asset_service
 from app.services import lenkung as lenkung_service
 from app.services import rahmen as rahmen_service
+from app.services import rechte as rechte_service
 
 router = APIRouter(tags=["Compliance und Lenkung"])
+
+
+def _vorgang_aus(db, principal, vorgang) -> LenkungAus:
+    """Ein Lenkungsvorgang samt dem, was der Anfragende damit tun darf."""
+    ausgabe = LenkungAus.model_validate(vorgang)
+    ausgabe.rechte = LenkungsrechteAus(
+        **vars(rechte_service.fuer_lenkungsvorgang(db, principal, vorgang))
+    )
+    return ausgabe
 
 
 @router.get("/tools/{tool_id}/compliance", response_model=list[ZustandAus])
@@ -55,7 +66,7 @@ def melden(
     )
     return MeldungAus(
         zustand=ZustandAus.model_validate(zustand),
-        lenkungsvorgang=LenkungAus.model_validate(vorgang) if vorgang is not None else None,
+        lenkungsvorgang=_vorgang_aus(db, principal, vorgang) if vorgang is not None else None,
     )
 
 
@@ -84,16 +95,19 @@ def liste(
     nur_offen: bool = True,
     eskalationsstufe: int | None = None,
 ) -> list:
-    return lenkung_service.liste(
-        db, principal, nur_offen=nur_offen, eskalationsstufe=eskalationsstufe
-    )
+    return [
+        _vorgang_aus(db, principal, v)
+        for v in lenkung_service.liste(
+            db, principal, nur_offen=nur_offen, eskalationsstufe=eskalationsstufe
+        )
+    ]
 
 
 @router.get("/lenkungsvorgaenge/{vorgang_id}", response_model=LenkungAus)
 def detail(vorgang_id: uuid.UUID, principal: AktuellerNutzer, db: DbSession) -> LenkungAus:
     vorgang = lenkung_service.hole(db, vorgang_id)
     asset_service.hole_tool_sichtbar(db, principal, vorgang.tool_objekt_id)
-    return LenkungAus.model_validate(vorgang)
+    return _vorgang_aus(db, principal, vorgang)
 
 
 @router.post("/lenkungsvorgaenge/{vorgang_id}/aufloesung", response_model=LenkungAus)
@@ -101,7 +115,9 @@ def aufloesen(
     vorgang_id: uuid.UUID, daten: Aufloesen, principal: AktuellerNutzer, db: DbSession
 ) -> LenkungAus:
     vorgang = lenkung_service.hole(db, vorgang_id)
-    return LenkungAus.model_validate(
+    return _vorgang_aus(
+        db,
+        principal,
         lenkung_service.loese_auf(
             db,
             principal,
@@ -109,7 +125,7 @@ def aufloesen(
             art=daten.art,
             bewertung_id=daten.bewertung_id,
             kommentar=daten.kommentar,
-        )
+        ),
     )
 
 
@@ -118,6 +134,6 @@ def abbrechen(
     vorgang_id: uuid.UUID, daten: Abbrechen, principal: AktuellerNutzer, db: DbSession
 ) -> LenkungAus:
     vorgang = lenkung_service.hole(db, vorgang_id)
-    return LenkungAus.model_validate(
-        lenkung_service.brich_ab(db, principal, vorgang, daten.kommentar)
+    return _vorgang_aus(
+        db, principal, lenkung_service.brich_ab(db, principal, vorgang, daten.kommentar)
     )

@@ -184,18 +184,22 @@ export function Lenkung() {
                 </p>
               )}
 
-              <div className="k-knopfreihe">
-                {ARTEN.map((art) => (
-                  <Knopf
-                    key={art}
-                    art="getoent"
-                    onClick={() => oeffne(vorgang, art)}
-                    data-testid={`${art}-${vorgang.id}`}
-                  >
-                    {t(`lenkung.art.${art}` as never)}
-                  </Knopf>
-                ))}
-              </div>
+              {vorgang.rechte.aufloesen ? (
+                <div className="k-knopfreihe">
+                  {ARTEN.map((art) => (
+                    <Knopf
+                      key={art}
+                      art="getoent"
+                      onClick={() => oeffne(vorgang, art)}
+                      data-testid={`${art}-${vorgang.id}`}
+                    >
+                      {t(`lenkung.art.${art}` as never)}
+                    </Knopf>
+                  ))}
+                </div>
+              ) : (
+                <Hinweis art="information">{t('rechte.lenkung.nurLesen')}</Hinweis>
+              )}
             </Karte>
           );
         })

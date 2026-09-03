@@ -40,6 +40,7 @@ function vorgang(ueberschreibungen: Partial<Lenkungsvorgang> = {}): Lenkungsvorg
     aufgeloest_am: null,
     beschreibung: 'Schreibt ausserhalb des Rahmens',
     erstellt_am: '2026-09-01T10:00:00Z',
+    rechte: { aufloesen: true, abbrechen: true },
     ...ueberschreibungen,
   };
 }

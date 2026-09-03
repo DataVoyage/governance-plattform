@@ -157,26 +157,40 @@ export function ProzessDetail() {
             {prozess.tier !== null && (
               <Abzeichen ton={tierTon(prozess.tier)}>{`Tier ${prozess.tier}`}</Abzeichen>
             )}
-            <Link
-              className="k-knopf k-knopf--getoent"
-              to={pfad(`/prozesse/${prozess.id}/bearbeiten`)}
-            >
-              {t('prozess.bearbeiten')}
-            </Link>
-            {prozess.status !== 'aktiv' ? (
-              <Knopf art="gefuellt" onClick={() => setzeStatus('aktiv')}>
-                {t('prozess.aktivieren')}
-              </Knopf>
-            ) : (
-              <Knopf art="zerstoerend" onClick={() => setzeStatus('stillgelegt')}>
-                {t('prozess.stilllegen')}
-              </Knopf>
+            {prozess.rechte.bearbeiten && (
+              <>
+                <Link
+                  className="k-knopf k-knopf--getoent"
+                  to={pfad(`/prozesse/${prozess.id}/bearbeiten`)}
+                >
+                  {t('prozess.bearbeiten')}
+                </Link>
+                {prozess.status !== 'aktiv' ? (
+                  <Knopf art="gefuellt" onClick={() => setzeStatus('aktiv')}>
+                    {t('prozess.aktivieren')}
+                  </Knopf>
+                ) : (
+                  <Knopf art="zerstoerend" onClick={() => setzeStatus('stillgelegt')}>
+                    {t('prozess.stilllegen')}
+                  </Knopf>
+                )}
+              </>
             )}
           </>
         }
       />
 
       {fehler !== null && <Hinweis art="fehler">{fehler}</Hinweis>}
+
+      {/* Eine fehlende Schaltfläche erklärt sich nicht von selbst. Wer nichts
+          ändern darf, soll wissen warum — und wen er fragen kann. */}
+      {!prozess.rechte.bearbeiten && (
+        <Hinweis art="information">
+          {prozess.rechte.umsetzung_pflegen
+            ? t('rechte.prozess.nurUmsetzung')
+            : t('rechte.prozess.nurLesen')}
+        </Hinweis>
+      )}
 
       <Gruppe etikett={t('prozess.gruppe.sipoc')}>
         <Zeile
@@ -285,9 +299,14 @@ export function ProzessDetail() {
       <Karte
         titel={t('bewertung.historie')}
         aktion={
-          <Link className="k-knopf k-knopf--getoent" to={pfad(`/prozesse/${prozess.id}/bewertung`)}>
-            {t('bewertung.starten')}
-          </Link>
+          prozess.rechte.bewerten ? (
+            <Link
+              className="k-knopf k-knopf--getoent"
+              to={pfad(`/prozesse/${prozess.id}/bewertung`)}
+            >
+              {t('bewertung.starten')}
+            </Link>
+          ) : undefined
         }
       >
         {bewertungen.length === 0 ? (
@@ -336,7 +355,7 @@ export function ProzessDetail() {
 
       <ProzessKlassen prozessId={prozess.id} />
 
-      <ProzessGovernance prozessId={prozess.id} />
+      <ProzessGovernance prozessId={prozess.id} rechte={prozess.rechte} />
 
       <Gruppe etikett={t('asset.tools.amProzess')}>
         {tools.length === 0 ? (

@@ -1401,3 +1401,51 @@ ist umgestellt. Was offen ist — der Zugang des Betriebsrats — steht weiter
 drin, aber als gemeinsam festzulegender Punkt, nicht als Antrag.
 
 Der Vorgangskatalog trägt den Fall als **V-ANM-08**.
+
+## E-53 — Die Rechte stehen am Objekt, nicht im Frontend
+
+**Befund aus dem Betrieb.** Die Rollen wirkten ausschließlich auf der API. Die
+Oberfläche zeigte jedem alles, ließ jedes Feld bearbeiten — und lieferte den
+Bescheid erst beim Speichern als 403. Wer nicht schreiben durfte, erfuhr das
+also erst **nach** getaner Arbeit. Das ist die schlechteste aller Reihenfolgen.
+
+Bemerkenswert daran: der Anspruch stand längst im Code. Über `Sitzung.tsx`
+steht seit Phase 1 „Das Frontend blendet nicht erlaubte Aktionen aus, verlässt
+sich aber nicht darauf." Ausgeblendet wurde bis hierher nichts außer der
+Gate-Entscheidung und zwei Navigationspunkten.
+
+**Die naheliegende Abhilfe wäre falsch gewesen.** Die Regeln im Frontend
+nachzubauen hätte eine zweite Fassung derselben Logik ergeben — und zwei
+Fassungen laufen auseinander. Die eine, die zählt, wäre immer die andere
+gewesen.
+
+**Entscheidung.** Der Server rechnet je Objekt aus, was der Anfragende damit
+tun darf, und schreibt es als `rechte` an die Antwort (`services/rechte.py`).
+Die Oberfläche liest es und blendet aus, was nicht geht. Sie kennt die Regeln
+nicht und soll sie nicht kennen.
+
+Das ist eine **Auskunft, keine Sicherung**: jede schreibende Route prüft
+unverändert weiter (Architektur 10.2). Wer die API direkt anspricht, läuft in
+dieselbe Prüfung wie zuvor.
+
+**Die Grenze verläuft am Objekt.** Am Objekt hängt, was vom Objekt abhängt: ob
+jemand *dieses* Prozessobjekt bearbeiten darf, entscheidet dessen Prozessgeber.
+Rein rollengebundene Rechte — Gate entscheiden, Matrix pflegen, Einstellungen
+ändern, Rollen vergeben — stehen nicht dort; sie hängen an keinem Objekt, und
+die Oberfläche kennt die eigenen Rollen ohnehin aus dem Profil.
+
+**Was ausgeblendet wird und was nicht.** Schaltflächen verschwinden,
+Eingabefelder bleiben stehen und werden gesperrt. Ein ausgeblendetes Feld wäre
+eine Lücke im Bild, kein Schutz — wer nichts ändern darf, soll den Wert
+trotzdem sehen. Dafür haben die Formularbausteine `Auswahl`, `Umschalter` und
+`SegmentierteSteuerung` eine Eigenschaft `gesperrt` bekommen.
+
+**Und die Anwendung erklärt sich.** Eine fehlende Schaltfläche erklärt sich
+nicht von selbst. Wo nichts geht, steht ein Satz, der sagt warum und wer es
+darf — beim Prozess-Umsetzer sogar, welchen einen Weg er hat.
+
+**Zehn Zugänge für die Vorführung.** Der Beispielbestand legt je Rolle einen an,
+dazu dieselbe Rolle mit zwei Geltungsbereichen und einen ganz ohne Rolle. Sie
+tragen keine erfundenen Personennamen, sondern die Bezeichnung ihrer
+Zugangsart; Kennung und Name sind dasselbe eine Wort. Dokumentiert in
+`docs/demo-zugaenge.md`, festgehalten als V-ADM-07 und V-ADM-08.

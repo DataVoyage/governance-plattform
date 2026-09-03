@@ -32,6 +32,13 @@ class ZustandAus(BaseModel):
     festgestellt_von: uuid.UUID | None = None
 
 
+class LenkungsrechteAus(BaseModel):
+    """Wer diesen Vorgang schliessen darf (A.13.6)."""
+
+    aufloesen: bool = False
+    abbrechen: bool = False
+
+
 class LenkungAus(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -48,6 +55,8 @@ class LenkungAus(BaseModel):
     aufgeloest_am: datetime | None = None
     beschreibung: str
     erstellt_am: datetime
+
+    rechte: LenkungsrechteAus = Field(default_factory=LenkungsrechteAus)
 
 
 class MeldungAus(BaseModel):

@@ -174,6 +174,64 @@ vorgang('V-ADM-06', async ({ page, request }) => {
   await expect(page.locator('[data-testid^="nutzer-"]')).toHaveCount(0);
 });
 
+vorgang('V-ADM-08', async ({ page, request }) => {
+  // Der Auditor liest bereichsübergreifend und schreibt nie. Bis AP-9 sah er
+  // trotzdem jedes Bearbeitungsfeld und erfuhr erst beim Speichern, dass es
+  // nicht geht. Geprüft wird jetzt beides: er sieht alles, und er findet
+  // nichts, was etwas ändert — mit dem Satz, warum.
+  const marke = kennzeichen();
+  const org: Organisation = await organisation(request, marke);
+  const prozess = await prozessAnlegen(request, org, { name: `Geprüft ${marke}` });
+
+  await anwenderMitRolle(request, `pruefer-${marke}`, `Prüfer ${marke}`, 'auditor', 'global');
+  await anmelden(page, `pruefer-${marke}`, `Prüfer ${marke}`);
+
+  // Sichtbar ist alles — auch ein Prozessobjekt aus einem fremden Bereich.
+  await page.goto(`/de/prozesse/${prozess.id}`);
+  await expect(page.getByRole('heading', { name: `Geprüft ${marke}` })).toBeVisible();
+
+  // Änderbar ist nichts, und die Anwendung sagt es.
+  await expect(page.getByText(/dürfen es aber nicht ändern/).first()).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Bearbeiten' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Aktivieren' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Bewertung durchführen' })).toHaveCount(0);
+  await expect(page.getByTestId('sv-oeffnen')).toHaveCount(0);
+  await expect(page.getByTestId('gate-einreichen')).toHaveCount(0);
+
+  // Auch die Liste bietet nichts zum Anlegen an.
+  await page.goto('/de/prozesse');
+  await expect(page.getByRole('link', { name: 'Prozessobjekt anlegen' })).toHaveCount(0);
+});
+
+vorgang('V-ADM-09', async ({ page, request }) => {
+  // Der Prozess-Umsetzer darf genau eine Sache: die lokale Abweichung seiner
+  // Landesorganisation. Alles Übrige ist gesperrt — und erklärt.
+  const marke = kennzeichen();
+  const org: Organisation = await organisation(request, marke);
+  const prozess = await prozessAnlegen(request, org, {
+    name: `Umgesetzt ${marke}`,
+    umsetzung_land_org_ids: [org.deId],
+  });
+
+  await anwenderMitRolle(
+    request,
+    `umsetzer-${marke}`,
+    `Umsetzer ${marke}`,
+    'prozess_umsetzer',
+    'organisationseinheit',
+    org.deId,
+  );
+  await anmelden(page, `umsetzer-${marke}`, `Umsetzer ${marke}`);
+
+  await page.goto(`/de/prozesse/${prozess.id}`);
+  await expect(page.getByRole('heading', { name: `Umgesetzt ${marke}` })).toBeVisible();
+
+  // Der eine Weg wird benannt, die übrigen fehlen.
+  await expect(page.getByText(/lokale Abweichung Ihrer Landesorganisation/)).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Bearbeiten' })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: 'Bewertung durchführen' })).toHaveCount(0);
+});
+
 vorgang('V-ADM-07', async ({ page, request }) => {
   const marke = kennzeichen();
   await anwenderMitRolle(

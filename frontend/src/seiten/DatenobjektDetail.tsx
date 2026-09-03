@@ -132,6 +132,9 @@ export function DatenobjektDetail() {
       />
 
       {fehler !== null && <Hinweis art="fehler">{fehler}</Hinweis>}
+      {!datenobjekt.rechte.bearbeiten && (
+        <Hinweis art="information">{t('rechte.datenobjekt.nurLesen')}</Hinweis>
+      )}
       {gesperrt.length > 0 && <Hinweis art="information">{t('asset.importHinweis')}</Hinweis>}
 
       <Karte titel={t('asset.reifegrad1')} beischrift={t('asset.reifegrad1.hinweis')}>
@@ -145,6 +148,7 @@ export function DatenobjektDetail() {
             text: `${t(`kategorie.${k}` as never)} — ${t(`kategorie.anker.${k}` as never)}`,
           }))}
           hilfe={t('asset.kategorie.wirkungHinweis')}
+          gesperrt={!datenobjekt.rechte.bearbeiten}
         />
         <Auswahl
           beschriftung={t('asset.feld.owner')}
@@ -153,6 +157,7 @@ export function DatenobjektDetail() {
           leertext="—"
           optionen={nutzer.map((n) => ({ wert: n.id, text: n.name }))}
           hilfe={t('asset.owner.hilfe')}
+          gesperrt={!datenobjekt.rechte.bearbeiten}
         />
         <Auswahl
           beschriftung={t('asset.feld.fachbereich')}
@@ -160,6 +165,7 @@ export function DatenobjektDetail() {
           aendern={(wert) => feldAendern('fachbereich_id', wert)}
           leertext="—"
           optionen={fachbereiche.map((f) => ({ wert: f.id, text: f.name }))}
+          gesperrt={!datenobjekt.rechte.bearbeiten}
         />
         <Feld
           beschriftung={t('asset.feld.quellsystem')}
@@ -167,8 +173,12 @@ export function DatenobjektDetail() {
           aendern={setQuellsystem}
           hilfe={t('asset.quellsystem.hilfe')}
           hoechstlaenge={255}
+          disabled={!datenobjekt.rechte.bearbeiten}
         />
-        <Knopf onClick={() => feldAendern('quellsystem', quellsystem)}>
+        <Knopf
+          disabled={!datenobjekt.rechte.bearbeiten}
+          onClick={() => feldAendern('quellsystem', quellsystem)}
+        >
           {t('asset.speichern')}
         </Knopf>
       </Karte>

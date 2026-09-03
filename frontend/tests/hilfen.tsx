@@ -45,6 +45,27 @@ export const EINHEITEN = [
   { id: 'org-fr', fachbereich_id: 'fb-1', ebene: 'LAND' as const, land_code: 'FR' },
 ];
 
+/** Alles erlaubt — die Rechte übersteuert, wer sie prüfen will. */
+export const ALLE_PROZESSRECHTE = {
+  bearbeiten: true,
+  bewerten: true,
+  selbstverpflichten: true,
+  gate_einreichen: true,
+  umsetzung_pflegen: true,
+};
+
+export const ALLE_TOOLRECHTE = {
+  bearbeiten: true,
+  attestieren: true,
+  verknuepfen: true,
+  zustand_melden: true,
+  kompensieren: true,
+  selbstverpflichten: true,
+  bestaetigen: true,
+};
+
+export const ALLE_DATENOBJEKTRECHTE = { bearbeiten: true, bestaetigen: true };
+
 export function prozess(ueberschreibungen: Partial<Prozess> = {}): Prozess {
   return {
     id: 'p-1',
@@ -73,6 +94,7 @@ export function prozess(ueberschreibungen: Partial<Prozess> = {}): Prozess {
     tier: null,
     ausgeloeste_k_klassen: [],
     bewertung_gueltig_bis: null,
+    rechte: ALLE_PROZESSRECHTE,
     ...ueberschreibungen,
   };
 }
@@ -128,6 +150,7 @@ export function tool(ueberschreibungen: Partial<ToolObjekt> = {}): ToolObjekt {
     wirkungsart: 'gestaltend',
     wirkungsart_grund: 'nur_lesend',
     schreibgeschuetzte_felder: [],
+    rechte: ALLE_TOOLRECHTE,
     ...ueberschreibungen,
   };
 }

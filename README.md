@@ -117,6 +117,13 @@ Rahmenelement wird irgendwo verletzt, alle sechs Verbote aus A.13.2 Schicht 2
 kommen vor, und alle drei Eskalationsstufen sind belegt. `tests/test_bestand.py`
 hält das fest.
 
+Er legt zugleich **zehn Zugänge für Vorführung und Entwicklung** an — einen je
+Rolle, dazu dieselbe Rolle mit zwei Geltungsbereichen und einen ganz ohne
+Rolle. Kennung und Name sind jeweils dasselbe eine Wort
+(`governance`, `auditor`, `prozessowner`, …); die Tabelle steht in
+[`docs/demo-zugaenge.md`](docs/demo-zugaenge.md). Sie funktionieren
+ausschließlich im Entwicklungsmodus und haben keine Sonderrechte.
+
 Die Begründung der Entwurfsentscheidungen steht in
 [`docs/entscheidungen.md`](docs/entscheidungen.md), E-49.
 

@@ -99,6 +99,22 @@ class UmsetzungAus(BaseModel):
     lokale_abweichung: str | None = None
 
 
+class ProzessrechteAus(BaseModel):
+    """Was der Anfragende mit **diesem** Prozessobjekt tun darf.
+
+    Eine Auskunft, keine Sicherung: die Pruefung beim Schreiben laeuft
+    unabhaengig weiter (Architektur 10.2). Sie erspart der Oberflaeche, die
+    Regeln ein zweites Mal zu kennen — und dem Anwender, eine Eingabe zu
+    machen, die er nicht speichern darf.
+    """
+
+    bearbeiten: bool = False
+    bewerten: bool = False
+    selbstverpflichten: bool = False
+    gate_einreichen: bool = False
+    umsetzung_pflegen: bool = False
+
+
 class ProzessAus(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -136,3 +152,5 @@ class ProzessAus(BaseModel):
     tier: int | None = None
     ausgeloeste_k_klassen: list[str] = Field(default_factory=list)
     bewertung_gueltig_bis: datetime | None = None
+
+    rechte: ProzessrechteAus = Field(default_factory=ProzessrechteAus)

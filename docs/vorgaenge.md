@@ -224,6 +224,8 @@ ihn zu hinterlegen, bekommt einen roten Test — und umgekehrt.
 | V-ADM-05 | Als frisch berechtigter Nutzer arbeiten | Prozess-Owner | Genau die Objekte des zugewiesenen Scopes sind sichtbar, keine anderen | AP-9 | erfüllt |
 | V-ADM-06 | Ohne Administratorrolle die Verwaltung suchen | alle | Sie ist weder verlinkt noch über ihre Adresse erreichbar | AP-9 | erfüllt |
 | V-ADM-07 | Die Konfiguration pflegen | Governance | Fristen, Schwellen und Vorlauf sind ohne Neustart änderbar | AP-6 | erfüllt |
+| V-ADM-08 | Als Auditor arbeiten wollen | Auditor | Alle Bereiche sind sichtbar, aber keine einzige Schaltfläche ändert etwas — mit dem Satz, warum | AP-9 | erfüllt |
+| V-ADM-09 | Als Prozess-Umsetzer den einen Schreibweg finden | Prozess-Umsetzer | Nur die lokale Abweichung ist bearbeitbar; alles Übrige ist gesperrt und erklärt | AP-9 | erfüllt |
 
 ## V-INT — Integration und Nachweis
 

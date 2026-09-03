@@ -33,6 +33,7 @@ function datenobjekt(ueberschreibungen: Partial<DatenObjekt> = {}): DatenObjekt 
     status: 'bestaetigt',
     metadaten: {},
     schreibgeschuetzte_felder: [],
+    rechte: { bearbeiten: true, bestaetigen: true },
     ...ueberschreibungen,
   };
 }

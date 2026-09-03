@@ -157,8 +157,7 @@ export function ToolDetail() {
     if (token === null || id === undefined || !alleBeantwortet) return;
     await fuehreAus(() =>
       api.toolAttestieren(token, id, {
-        attest_entscheidung_ueber_personen:
-          antworten.attest_entscheidung_ueber_personen === 'ja',
+        attest_entscheidung_ueber_personen: antworten.attest_entscheidung_ueber_personen === 'ja',
         attest_mensch_dazwischen: antworten.attest_mensch_dazwischen === 'ja',
         attest_undeklarierte_quellen: antworten.attest_undeklarierte_quellen === 'ja',
       }),
@@ -191,7 +190,10 @@ export function ToolDetail() {
     void fuehreAus(() => api.toolAendern(token, id, { [feld]: wert === '' ? null : wert }));
   };
 
-  const personen = nutzer.map((person) => ({ wert: person.id, text: person.name }));
+  const personen = nutzer.map((person) => ({
+    wert: person.id,
+    text: person.name,
+  }));
 
   return (
     <>
@@ -220,6 +222,7 @@ export function ToolDetail() {
       />
 
       {fehler !== null && <Hinweis art="fehler">{fehler}</Hinweis>}
+      {!tool.rechte.bearbeiten && <Hinweis art="information">{t('rechte.tool.nurLesen')}</Hinweis>}
       {tool.schreibgeschuetzte_felder.length > 0 && (
         <Hinweis art="information">{t('asset.importHinweis')}</Hinweis>
       )}
@@ -227,12 +230,14 @@ export function ToolDetail() {
       {unbestaetigt && (
         <Karte>
           <Hinweis art="warnung">{t('asset.bestaetigenHinweis')}</Hinweis>
-          <Knopf
-            art="gefuellt"
-            onClick={() => fuehreAus(() => api.toolBestaetigen(token as string, tool.id))}
-          >
-            {t('asset.bestaetigen')}
-          </Knopf>
+          {tool.rechte.bestaetigen && (
+            <Knopf
+              art="gefuellt"
+              onClick={() => fuehreAus(() => api.toolBestaetigen(token as string, tool.id))}
+            >
+              {t('asset.bestaetigen')}
+            </Knopf>
+          )}
         </Karte>
       )}
 
@@ -267,12 +272,16 @@ export function ToolDetail() {
                   beschriftung={t(frage.text)}
                   wert={antworten[frage.feld] ?? ''}
                   aendern={(wert) =>
-                    setAntworten((bisher) => ({ ...bisher, [frage.feld]: wert }))
+                    setAntworten((bisher) => ({
+                      ...bisher,
+                      [frage.feld]: wert,
+                    }))
                   }
                   optionen={[
                     { wert: 'ja', text: t('ja') },
                     { wert: 'nein', text: t('nein') },
                   ]}
+                  gesperrt={!tool.rechte.attestieren}
                 />
               }
             />
@@ -294,11 +303,15 @@ export function ToolDetail() {
             ]}
           />
         )}
-        <div className="formularfuss">
-          <Knopf art="gefuellt" disabled={!alleBeantwortet} onClick={attestieren}>
-            {tool.attestierung_vollstaendig ? t('tool.attest.erneuern') : t('tool.attest.abgeben')}
-          </Knopf>
-        </div>
+        {tool.rechte.attestieren && (
+          <div className="formularfuss">
+            <Knopf art="gefuellt" disabled={!alleBeantwortet} onClick={attestieren}>
+              {tool.attestierung_vollstaendig
+                ? t('tool.attest.erneuern')
+                : t('tool.attest.abgeben')}
+            </Knopf>
+          </div>
+        )}
       </Karte>
 
       {/* --- Wirkungsart (A.6) ------------------------------------------ */}
@@ -340,6 +353,7 @@ export function ToolDetail() {
           leertext="—"
           optionen={personen}
           hilfe={t('tool.owner.hilfe')}
+          gesperrt={!tool.rechte.bearbeiten}
         />
         <Auswahl
           beschriftung={t('tool.feld.stellvertretung')}
@@ -347,6 +361,7 @@ export function ToolDetail() {
           aendern={(wert) => stammdatenAendern('stellvertretung_user_id', wert)}
           leertext="—"
           optionen={personen}
+          gesperrt={!tool.rechte.bearbeiten}
         />
         <Auswahl
           beschriftung={t('asset.feld.technologie')}
@@ -357,6 +372,7 @@ export function ToolDetail() {
             technologien.map((o) => ({ wert: o.schluessel, text: o.name })),
             tool.technologie,
           )}
+          gesperrt={!tool.rechte.bearbeiten}
         />
         <Auswahl
           beschriftung={t('tool.feld.organisationseinheit')}
@@ -367,6 +383,7 @@ export function ToolDetail() {
             wert: einheit.id,
             text: orgBezeichnung(einheit, fachbereiche),
           }))}
+          gesperrt={!tool.rechte.bearbeiten}
         />
         <Auswahl
           beschriftung={t('tool.feld.lauftyp')}
@@ -378,6 +395,7 @@ export function ToolDetail() {
             text: t(`tool.lauftyp.${typ}` as never),
           }))}
           hilfe={t('tool.lauftyp.hilfe')}
+          gesperrt={!tool.rechte.bearbeiten}
         />
         {/* --- Gemessene Seite des Rahmens (A.13.2 Schicht 1) ------------- */}
         <Auswahl
@@ -390,6 +408,7 @@ export function ToolDetail() {
             text: t(`rahmen.identitaet.${art}` as never),
           }))}
           hilfe={t('tool.identitaet.hilfe')}
+          gesperrt={!tool.rechte.bearbeiten}
         />
         <Umschalter
           beschriftung={t('tool.feld.statischeZugangsdaten')}
@@ -397,9 +416,12 @@ export function ToolDetail() {
           an={tool.statische_zugangsdaten === true}
           aendern={(an) =>
             fuehreAus(() =>
-              api.toolAendern(token as string, tool.id, { statische_zugangsdaten: an }),
+              api.toolAendern(token as string, tool.id, {
+                statische_zugangsdaten: an,
+              }),
             )
           }
+          gesperrt={!tool.rechte.bearbeiten}
         />
       </Karte>
 
@@ -416,6 +438,7 @@ export function ToolDetail() {
                 haupt={ziel}
                 wert={
                   <Knopf
+                    disabled={!tool.rechte.bearbeiten}
                     aria-label={`${ziel} — ${t('prozess.ziele.entfernen')}`}
                     onClick={() =>
                       fuehreAus(() =>
@@ -437,16 +460,23 @@ export function ToolDetail() {
           wert={neuesZiel}
           aendern={setNeuesZiel}
           platzhalter="sftp.partner.example"
+          disabled={!tool.rechte.bearbeiten}
         />
         <div className="k-knopfreihe">
           <Knopf
             art="getoent"
-            disabled={neuesZiel.trim() === '' || tool.externe_ziele.includes(neuesZiel.trim())}
+            disabled={
+              !tool.rechte.bearbeiten ||
+              neuesZiel.trim() === '' ||
+              tool.externe_ziele.includes(neuesZiel.trim())
+            }
             onClick={() => {
               const ergaenzt = [...tool.externe_ziele, neuesZiel.trim()];
               setNeuesZiel('');
               void fuehreAus(() =>
-                api.toolAendern(token as string, tool.id, { externe_ziele: ergaenzt }),
+                api.toolAendern(token as string, tool.id, {
+                  externe_ziele: ergaenzt,
+                }),
               );
             }}
             data-testid="tool-ziel-hinzufuegen"
@@ -462,6 +492,8 @@ export function ToolDetail() {
           <Hinweis art="information">
             {unbestaetigt ? t('asset.bestaetigenHinweis') : t('tool.attest.offenHinweis')}
           </Hinweis>
+        ) : !tool.rechte.verknuepfen ? (
+          <Hinweis art="information">{t('rechte.tool.nurLesen')}</Hinweis>
         ) : (
           <ReferenzWaehler
             beschriftung={t('asset.prozesse.verknuepfen')}
@@ -565,26 +597,29 @@ export function ToolDetail() {
             wert: art,
             text: t(`zugriffsart.${art}` as never),
           }))}
+          gesperrt={!tool.rechte.verknuepfen}
         />
-        <ReferenzWaehler
-          beschriftung={t('tool.daten.hinzufuegen')}
-          pruefkennung="waehler-datenobjekte"
-          bestand={datenobjekte
-            .filter((objekt) => !nutzung.some((kante) => kante.datenobjekt_id === objekt.id))
-            .map((objekt) => ({
-              id: objekt.id,
-              name: objekt.name,
-              zusatz: objekt.quellsystem ?? undefined,
-              abzeichen:
-                objekt.kategorie === null
-                  ? undefined
-                  : t(`kategorie.${objekt.kategorie}` as never),
-              ton: objekt.kategorie === null ? undefined : KATEGORIE_TON[objekt.kategorie],
-            }))}
-          gewaehlt={[]}
-          aendern={datenobjektVerknuepfen}
-          keineTreffer={t('asset.verwendung.keineTools')}
-        />
+        {tool.rechte.verknuepfen && (
+          <ReferenzWaehler
+            beschriftung={t('tool.daten.hinzufuegen')}
+            pruefkennung="waehler-datenobjekte"
+            bestand={datenobjekte
+              .filter((objekt) => !nutzung.some((kante) => kante.datenobjekt_id === objekt.id))
+              .map((objekt) => ({
+                id: objekt.id,
+                name: objekt.name,
+                zusatz: objekt.quellsystem ?? undefined,
+                abzeichen:
+                  objekt.kategorie === null
+                    ? undefined
+                    : t(`kategorie.${objekt.kategorie}` as never),
+                ton: objekt.kategorie === null ? undefined : KATEGORIE_TON[objekt.kategorie],
+              }))}
+            gewaehlt={[]}
+            aendern={datenobjektVerknuepfen}
+            keineTreffer={t('asset.verwendung.keineTools')}
+          />
+        )}
 
         {nutzung.length === 0 ? (
           <p className="leerhinweis">{t('tool.daten.leer')}</p>
@@ -629,8 +664,10 @@ export function ToolDetail() {
                         wert: art,
                         text: t(`zugriffsart.${art}` as never),
                       }))}
+                      gesperrt={!tool.rechte.verknuepfen}
                     />
                     <Knopf
+                      disabled={!tool.rechte.verknuepfen}
                       aria-label={`${kante.name} — ${t('tool.daten.entfernen')}`}
                       onClick={() =>
                         fuehreAus(() =>

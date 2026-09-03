@@ -62,6 +62,41 @@ export interface Umsetzung {
   lokale_abweichung: string | null;
 }
 
+/**
+ * Was der Angemeldete mit **diesem** Objekt tun darf.
+ *
+ * Der Server rechnet es aus und schreibt es an die Antwort; die Oberfläche
+ * baut die Regeln nicht nach. Eine Auskunft, keine Sicherung — jede
+ * schreibende Route prüft unabhängig noch einmal (Architektur 10.2).
+ */
+export interface Prozessrechte {
+  bearbeiten: boolean;
+  bewerten: boolean;
+  selbstverpflichten: boolean;
+  gate_einreichen: boolean;
+  umsetzung_pflegen: boolean;
+}
+
+export interface Toolrechte {
+  bearbeiten: boolean;
+  attestieren: boolean;
+  verknuepfen: boolean;
+  zustand_melden: boolean;
+  kompensieren: boolean;
+  selbstverpflichten: boolean;
+  bestaetigen: boolean;
+}
+
+export interface Datenobjektrechte {
+  bearbeiten: boolean;
+  bestaetigen: boolean;
+}
+
+export interface Lenkungsrechte {
+  aufloesen: boolean;
+  abbrechen: boolean;
+}
+
 export interface Prozess {
   id: string;
   name: string;
@@ -89,6 +124,7 @@ export interface Prozess {
   tier: number | null;
   ausgeloeste_k_klassen: string[];
   bewertung_gueltig_bis: string | null;
+  rechte: Prozessrechte;
 }
 
 export interface ProzessEingabe {
@@ -264,6 +300,7 @@ export interface ToolObjekt {
   wirkungsart: Wirkungsart | null;
   wirkungsart_grund: 'schreibzugriff' | 'kein_mensch' | 'nur_lesend' | 'offen';
   schreibgeschuetzte_felder: string[];
+  rechte: Toolrechte;
 }
 
 /** Was die Oberfläche beim Anlegen und Ändern eines Tool-Objekts schickt. */
@@ -312,6 +349,7 @@ export interface DatenObjekt {
   status: AssetStatus;
   metadaten: Record<string, unknown>;
   schreibgeschuetzte_felder: string[];
+  rechte: Datenobjektrechte;
 }
 
 // --- Selbstverpflichtung und Gates (Phase 4) -------------------------------
@@ -551,6 +589,7 @@ export interface Lenkungsvorgang {
   aufgeloest_am: string | null;
   beschreibung: string;
   erstellt_am: string;
+  rechte: Lenkungsrechte;
 }
 
 export interface Meldung {

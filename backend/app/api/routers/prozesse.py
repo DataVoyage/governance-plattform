@@ -13,13 +13,22 @@ from app.schemas.prozess import (
     ProzessAendern,
     ProzessAnlegen,
     ProzessAus,
+    ProzessrechteAus,
     UmsetzungAendern,
     UmsetzungAnlegen,
     UmsetzungAus,
 )
 from app.services import prozess as prozess_service
+from app.services import rechte as rechte_service
 
 router = APIRouter(prefix="/prozesse", tags=["Prozesse"])
+
+
+def _aus(db, principal, prozess) -> ProzessAus:
+    """Ein Prozessobjekt samt dem, was der Anfragende damit tun darf."""
+    return prozess_service.zu_schema(
+        prozess, ProzessrechteAus(**vars(rechte_service.fuer_prozess(db, principal, prozess)))
+    )
 
 
 @router.get("", response_model=list[ProzessAus])
@@ -32,17 +41,17 @@ def liste(
     treffer = prozess_service.liste(
         db, principal, fachbereich_id=fachbereich_id, status=status_filter
     )
-    return [prozess_service.zu_schema(p) for p in treffer]
+    return [_aus(db, principal, p) for p in treffer]
 
 
 @router.post("", response_model=ProzessAus, status_code=status.HTTP_201_CREATED)
 def anlegen(daten: ProzessAnlegen, principal: AktuellerNutzer, db: DbSession) -> ProzessAus:
-    return prozess_service.zu_schema(prozess_service.anlegen(db, principal, daten))
+    return _aus(db, principal, prozess_service.anlegen(db, principal, daten))
 
 
 @router.get("/{prozess_id}", response_model=ProzessAus)
 def detail(prozess_id: uuid.UUID, principal: AktuellerNutzer, db: DbSession) -> ProzessAus:
-    return prozess_service.zu_schema(prozess_service.hole_sichtbar(db, principal, prozess_id))
+    return _aus(db, principal, prozess_service.hole_sichtbar(db, principal, prozess_id))
 
 
 @router.patch("/{prozess_id}", response_model=ProzessAus)
@@ -50,7 +59,7 @@ def aendern(
     prozess_id: uuid.UUID, daten: ProzessAendern, principal: AktuellerNutzer, db: DbSession
 ) -> ProzessAus:
     prozess = prozess_service.hole_sichtbar(db, principal, prozess_id)
-    return prozess_service.zu_schema(prozess_service.aendern(db, principal, prozess, daten))
+    return _aus(db, principal, prozess_service.aendern(db, principal, prozess, daten))
 
 
 @router.post(
