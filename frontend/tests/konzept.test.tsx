@@ -33,7 +33,9 @@ describe('Zerleger', () => {
   });
 
   it('lässt gewöhnlichen Text unangetastet', () => {
-    expect(zerlege('Nichts ausgezeichnet')).toEqual([{ art: 'text', text: 'Nichts ausgezeichnet' }]);
+    expect(zerlege('Nichts ausgezeichnet')).toEqual([
+      { art: 'text', text: 'Nichts ausgezeichnet' },
+    ]);
   });
 
   it('meldet eine unbekannte Auszeichnung, statt sie zu verschlucken', () => {
@@ -141,11 +143,15 @@ describe('Konzeptseite', () => {
     ]);
   }
 
+  // Aus der Quelle gelesen statt fest eingetragen: der Vortrag wächst, und
+  // eine Zahl im Test würde bei jeder neuen Folie brechen, ohne etwas zu sagen.
+  const ANZAHL = liesVortrag(quelle).length;
+
   it('zeigt die erste Folie und blättert vorwärts', async () => {
     attrappe();
     zeichne('/de/konzept');
     expect(await screen.findByTestId('folie-1')).toBeInTheDocument();
-    expect(screen.getByText('1 / 52')).toBeInTheDocument();
+    expect(screen.getByText(`1 / ${ANZAHL}`)).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Weiter' }));
     expect(await screen.findByTestId('folie-2')).toBeInTheDocument();
@@ -161,7 +167,7 @@ describe('Konzeptseite', () => {
   it('begrenzt eine Nummer außerhalb des Vortrags', async () => {
     attrappe();
     zeichne('/de/konzept?folie=999');
-    expect(await screen.findByTestId('folie-52')).toBeInTheDocument();
+    expect(await screen.findByTestId(`folie-${ANZAHL}`)).toBeInTheDocument();
   });
 
   it('blättert mit den Pfeiltasten', async () => {
@@ -173,7 +179,7 @@ describe('Konzeptseite', () => {
     await userEvent.keyboard('{ArrowLeft}');
     expect(await screen.findByTestId('folie-1')).toBeInTheDocument();
     await userEvent.keyboard('{End}');
-    expect(await screen.findByTestId('folie-52')).toBeInTheDocument();
+    expect(await screen.findByTestId(`folie-${ANZAHL}`)).toBeInTheDocument();
     await userEvent.keyboard('{Home}');
     expect(await screen.findByTestId('folie-1')).toBeInTheDocument();
   });

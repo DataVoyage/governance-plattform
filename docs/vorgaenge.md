@@ -62,6 +62,7 @@ ihn zu hinterlegen, bekommt einen roten Test — und umgekehrt.
 | V-ANM-06 | Auf einem dunkel gestellten Gerät „Hell" wählen | alle | Alle Texte bleiben lesbar — auch die vom Browser gemalten Flächen | AP-0 | erfüllt |
 | V-ANM-07 | Einen geteilten Link öffnen, ohne angemeldet zu sein | alle | Nach der Anmeldung erscheint die verlangte Ansicht samt ihrem Filter — nicht die Prozessliste | AP-0 | erfüllt |
 | V-ANM-08 | Das Konzept als Vortrag durchgehen | alle | Der Vortrag erscheint in der Anwendung, lässt sich blättern, und die Foliennummer steht in der Adresse | AP-0 | erfüllt |
+| V-ANM-09 | Jede Folie des Vortrags passt in die Darstellung | alle | Keine Folie ist unten abgeschnitten — geprüft wird jede einzelne, nicht die erste | AP-12 | erfüllt |
 
 ## V-PRO — Prozessobjekt
 

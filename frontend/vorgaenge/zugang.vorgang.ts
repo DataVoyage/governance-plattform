@@ -142,3 +142,31 @@ vorgang('V-ANM-06', async ({ page }) => {
     ).toBeGreaterThan(60);
   }
 });
+
+vorgang('V-ANM-09', async ({ page }) => {
+  // Eine Folie, die unten abgeschnitten ist, merkt niemand beim Schreiben —
+  // sie fällt erst vor Publikum auf. Deshalb wird jede einzelne vermessen:
+  // passt ihr Inhalt in die Fläche, in der sie gezeigt wird?
+  await anmelden(page);
+  await page.goto('/de/konzept');
+  await expect(page.getByTestId('folie-1')).toBeVisible();
+  const zaehler = (await page.locator('.zaehler').textContent()) ?? '';
+  const anzahl = Number(zaehler.split('/')[1].trim());
+  expect(anzahl).toBeGreaterThan(30);
+
+  const zuLang: string[] = [];
+  for (let nummer = 1; nummer <= anzahl; nummer += 1) {
+    await page.goto(`/de/konzept?folie=${nummer}`);
+    const folie = page.getByTestId(`folie-${nummer}`);
+    await expect(folie).toBeVisible();
+    const masse = await folie.evaluate((element) => {
+      const rahmen = element.parentElement as HTMLElement;
+      return { inhalt: element.scrollHeight, flaeche: rahmen.clientHeight };
+    });
+    if (masse.inhalt > masse.flaeche) {
+      const titel = (await folie.getByRole('heading').first().textContent()) ?? '';
+      zuLang.push(`${nummer}: ${titel.trim()} (${masse.inhalt} > ${masse.flaeche})`);
+    }
+  }
+  expect(zuLang, `Diese Folien laufen über:\n${zuLang.join('\n')}`).toEqual([]);
+});

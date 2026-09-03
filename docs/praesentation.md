@@ -389,6 +389,103 @@ entschieden, und wann?*
 
 ---
 
+# Wer darf was
+
+---
+
+## Eine Berechtigung ist immer **Rolle mal Bereich**
+
+Keine der beiden Hälften genügt allein. Die Rolle sagt, *was* jemand tun darf;
+der Bereich sagt, *woran*.
+
+Drei Bereichsstufen, mehr gibt es nicht:
+
+| Bereich | Reichweite | Wer ihn trägt |
+|---|---|---|
+| **global** | das ganze Unternehmen | Governance, Plattform, Auditor, App-Administrator |
+| **Fachbereich** | ein Fachbereich mit allen Einheiten darunter | Prozess-Owner, technischer Owner, Datenobjekt-Owner |
+| **Einheit** | genau eine Einheit — INT oder ein Land | Prozess-Owner, Prozess-Umsetzer, technischer Owner |
+
+**Ein Bereich gehört einer Rolle, nicht einer Person.** Wer als Prozess-Umsetzer
+in Vertrieb DE eingetragen ist, hat dort *nicht* die Sicht eines technischen
+Owners. Zwei Zuweisungen an dieselbe Person ergeben zwei getrennte
+Berechtigungen — sie addieren sich nicht zu einer breiten.
+
+---
+
+<!-- _class: eng -->
+
+## Die acht Rollen: Aufgabe, Bereich, Aufwand
+
+| Rolle | Wofür sie da ist | Bereich | Aufwand |
+|---|---|---|---|
+| **Prozess-Owner** | Prozessobjekt anlegen und aktuell halten, bewerten, Selbstverpflichtung abgeben, Gates einreichen | Fachbereich oder Einheit | ~1 h Ersterfassung, danach jährlich bestätigen |
+| **Prozess-Umsetzer** | Pflegt die lokale Abweichung einer Umsetzung — und nur diese | eine Landes-Einheit | Minuten je Umsetzung |
+| **Technischer Owner** | Tool-Objekt, die drei Attestierungen, Anforderungsklassen umsetzen, Compliance melden | Fachbereich oder Einheit | Minuten je Werkzeug |
+| **Datenobjekt-Owner** | Klassifiziert die Quellen seines Fachbereichs — die Kategorie setzt er allein | nur Fachbereich | einmalig je Quelle |
+| **Governance** | Gates entscheiden, Technologiematrix, Einstellungen, Lenkungsvorgänge | global | skaliert mit Tier 3, nicht mit dem Bestand |
+| **Plattform** | Betreibt die Adapter: Import, Telemetrie, Bestätigung vorgefundener Objekte | global | Betrieb |
+| **Auditor** | Liest bereichsübergreifend mit, einschließlich Nachweis. Ändert **nichts** | global | Prüfungsanlass |
+| **App-Administrator** | Verwaltet Nutzer und Rollen — und sonst nichts | global | selten |
+
+---
+
+<!-- _class: eng -->
+
+## Was jede Rolle mit welchem Objekt darf
+
+**S** eigener Bereich · **R** über eine Referenz · **G** überall · **–** nicht
+
+| Rolle | Prozessobjekt | Tool-Objekt | Datenobjekt | Übriges |
+|---|---|---|---|---|
+| **Prozess-Owner** | S, schreibt | R lesen, Kante setzen | R lesen, als Output anlegen | – |
+| **Prozess-Umsetzer** | S lesen, nur die lokale Abweichung | R lesen | R lesen | – |
+| **Technischer Owner** | R lesen | S, schreibt und attestiert | R lesen | – |
+| **Datenobjekt-Owner** | – | – | S, setzt die Kategorie | – |
+| **Governance** | G, schreibt | G, schreibt | G, schreibt | Gates, Matrix, Einstellungen |
+| **Plattform** | G lesen | G lesen, bestätigt Importe | G lesen, bestätigt Importe | Import |
+| **Auditor** | G lesen | G lesen | G lesen | Nachweis |
+| **App-Administrator** | – | – | – | Nutzer, Rollen, Nachweis |
+
+Der App-Administrator vergibt jeden Zugriff — **genau deshalb** hat er selbst
+keinen fachlichen. Und die Attestierung eines Werkzeugs kann niemand außer
+seinem technischen Owner abgeben: eine Erklärung, die ein anderer abgeben
+kann, ist keine.
+
+---
+
+<!-- _class: eng -->
+
+## Nicht ausgeblendet — nicht vorhanden
+
+Was jemand nicht sehen darf, liefert der Server **nicht**. Nicht ausgegraut,
+nicht gefiltert in der Anzeige: die Antwort enthält es nicht. Das gilt für
+Listen, für den Direktaufruf über die Kennung, für Auswertungen und für die
+Auswahllisten in Formularen.
+
+Umgekehrt rechnet der Server zu jedem Objekt aus, was der Anfragende damit tun
+darf, und schreibt es an die Antwort. Die Oberfläche baut die Regeln nicht
+nach — sie liest sie und blendet aus, was nicht geht, mit einem Satz dazu, wer
+es dürfte.
+
+Sechs der zehn Zugänge des gezeigten Bestands, unverändert abgefragt:
+
+| Zugang | Prozesse | Werkzeuge | Datenobjekte | Katalog | Nachweis |
+|---|---|---|---|---|---|
+| Governance | 56 | 73 | 93 | 87 | ja |
+| Prozess-Owner Vertrieb | 11 | 14 | 19 | 87 | nein |
+| Prozess-Umsetzer | 5 | 9 | 10 | 87 | nein |
+| Datenobjekt-Owner | 0 | 0 | 12 | 87 | nein |
+| App-Administrator | 0 | 0 | 0 | 87 | ja |
+| ohne Rolle | 0 | 0 | 0 | – | nein |
+
+Der **Katalog** ist die eine, bewusste Ausnahme: Name, Fachbereich, Kategorie
+und Quellsystem jeder Quelle, damit ein Prozess im Vertrieb die
+Personalstammdaten überhaupt als Eingang benennen kann. Vier Felder, mehr
+nicht — und ohne Rolle auch die nicht.
+
+---
+
 # Für den Betriebsrat
 
 ---
