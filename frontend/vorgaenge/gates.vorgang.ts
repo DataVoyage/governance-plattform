@@ -55,7 +55,9 @@ vorgang('V-GAT-01', async ({ page, request }) => {
   await anmelden(page);
 
   await page.goto(`/de/prozesse/${prozess.id}`);
-  await expect(page.getByText('Für diesen Prozess gibt es noch keinen Gate-Vorgang.')).toBeVisible();
+  await expect(
+    page.getByText('Für diesen Prozess gibt es noch keinen Gate-Vorgang.'),
+  ).toBeVisible();
 
   await einreichen(page, prozess.id, '1');
   const zeile = page.locator('.k-zeile[data-testid^="gate-"]');
@@ -129,7 +131,9 @@ vorgang('V-GAT-04', async ({ page, request }) => {
 
   // Das Einreichen ist nicht möglich.
   await expect(page.getByTestId('gate-einreichen')).toBeDisabled();
-  await expect(page.getByText('Für diesen Prozess gibt es noch keinen Gate-Vorgang.')).toBeVisible();
+  await expect(
+    page.getByText('Für diesen Prozess gibt es noch keinen Gate-Vorgang.'),
+  ).toBeVisible();
 });
 
 vorgang('V-GAT-05', async ({ page, request }) => {

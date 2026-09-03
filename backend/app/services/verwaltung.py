@@ -383,22 +383,6 @@ def rollen_eines_nutzers(db: Session, user_id: uuid.UUID) -> list[Rollenzuweisun
 # deshalb keinen Prozess anlegen.
 
 
-def _scopes_der_rolle(principal: Principal, rolle: Rolle) -> tuple[bool, set, set]:
-    zuweisungen = [z for z in principal.zuweisungen if z.rolle == rolle]
-    global_ = any(z.scope_typ == ScopeTyp.GLOBAL for z in zuweisungen)
-    org_ids = {
-        z.scope_id
-        for z in zuweisungen
-        if z.scope_typ == ScopeTyp.ORGANISATIONSEINHEIT and z.scope_id is not None
-    }
-    fb_ids = {
-        z.scope_id
-        for z in zuweisungen
-        if z.scope_typ == ScopeTyp.FACHBEREICH and z.scope_id is not None
-    }
-    return global_, org_ids, fb_ids
-
-
 def einheiten_fuer_rolle(
     db: Session, principal: Principal, rolle: Rolle
 ) -> list[Organisationseinheit]:
@@ -408,9 +392,10 @@ def einheiten_fuer_rolle(
     ohne Owner (A.16) und traegt die Handlung im Nachweis unter ihrem Namen.
     """
     stmt = select(Organisationseinheit)
-    global_, org_ids, fb_ids = _scopes_der_rolle(principal, rolle)
-    if not (principal.ist_governance or global_):
-        if not org_ids and not fb_ids:
+    bereiche = principal.bereiche_fuer(rolle)
+    org_ids, fb_ids = bereiche.organisationseinheiten, bereiche.fachbereiche
+    if not (principal.ist_governance or bereiche.ueberall):
+        if not bereiche:
             return []
         stmt = stmt.where(
             or_(
@@ -424,8 +409,9 @@ def einheiten_fuer_rolle(
 def fachbereiche_fuer_rolle(db: Session, principal: Principal, rolle: Rolle) -> list[Fachbereich]:
     """Dasselbe eine Ebene hoeher — fuer Rollen, die je Fachbereich vergeben werden."""
     stmt = select(Fachbereich).order_by(Fachbereich.name)
-    global_, org_ids, fb_ids = _scopes_der_rolle(principal, rolle)
-    if not (principal.ist_governance or global_):
+    bereiche = principal.bereiche_fuer(rolle)
+    org_ids, fb_ids = bereiche.organisationseinheiten, bereiche.fachbereiche
+    if not (principal.ist_governance or bereiche.ueberall):
         ids = set(fb_ids)
         if org_ids:
             ids.update(
@@ -464,10 +450,11 @@ def personen_mit_rolle(
         ).scalar_one_or_none()
         if fachbereich_id is None:
             raise NichtGefunden("Organisationseinheit nicht gefunden")
-    global_, org_ids, fb_ids = _scopes_der_rolle(principal, rolle)
+    bereiche = principal.bereiche_fuer(rolle)
+    org_ids, fb_ids = bereiche.organisationseinheiten, bereiche.fachbereiche
     darf = (
         principal.ist_governance
-        or global_
+        or bereiche.ueberall
         or (organisationseinheit_id is not None and organisationseinheit_id in org_ids)
         or (fachbereich_id is not None and fachbereich_id in fb_ids)
     )

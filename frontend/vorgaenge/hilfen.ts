@@ -296,6 +296,20 @@ export async function anwenderMitRolle(
 }
 
 /**
+ * Ein Zugang mit der Plattform-Rolle. Adapter betreibt ausschließlich sie
+ * (docs/rollen-und-scopes.md, Abschnitt 3) — der Vorgangs-Administrator darf
+ * seit E-57 nicht mehr importieren, und das ist Absicht: so steht im Nachweis,
+ * unter welcher Rolle ein Import lief.
+ */
+export async function plattformKopf(anfrage: APIRequestContext): Promise<Record<string, string>> {
+  const marke = kennzeichen();
+  const subject = `plattform-${marke}`;
+  const name = `Plattform ${marke}`;
+  await anwenderMitRolle(anfrage, subject, name, 'plattform', 'global');
+  return kopf(anfrage, subject, name);
+}
+
+/**
  * Einen der geplanten Läufe anstoßen — denselben Befehl, den im Betrieb der
  * Zeitplan ausführt (`app.jobs`).
  *

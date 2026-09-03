@@ -18,12 +18,17 @@ import {
   kopf,
   organisation,
   prozessAnlegen,
+  toolAnlegen,
   vorgang,
   type Organisation,
 } from './hilfen';
 
 /** Einen Anwender ohne Rolle anlegen; liefert seine Kennung. */
-async function anwender(anfrage: APIRequestContext, subject: string, name: string): Promise<string> {
+async function anwender(
+  anfrage: APIRequestContext,
+  subject: string,
+  name: string,
+): Promise<string> {
   const h = await kopf(anfrage, subject, name);
   const ich = await (await anfrage.get(`${API}/api/v1/auth/me`, { headers: h })).json();
   return ich.id;
@@ -165,9 +170,9 @@ vorgang('V-ADM-06', async ({ page, request }) => {
   await anmelden(page, `ohne-${marke}`, `Ohne Rolle ${marke}`);
 
   // Nicht verlinkt …
-  await expect(
-    page.getByRole('navigation').getByRole('link', { name: 'Verwaltung' }),
-  ).toHaveCount(0);
+  await expect(page.getByRole('navigation').getByRole('link', { name: 'Verwaltung' })).toHaveCount(
+    0,
+  );
 
   // … und über die Adresse ohne Inhalt: der Server weist ab, die Seite sagt
   // warum (Architektur 10.2).
@@ -236,13 +241,7 @@ vorgang('V-ADM-09', async ({ page, request }) => {
 
 vorgang('V-ADM-07', async ({ page, request }) => {
   const marke = kennzeichen();
-  await anwenderMitRolle(
-    request,
-    `konf-${marke}`,
-    `Governance ${marke}`,
-    'governance',
-    'global',
-  );
+  await anwenderMitRolle(request, `konf-${marke}`, `Governance ${marke}`, 'governance', 'global');
   await anmelden(page, `konf-${marke}`, `Governance ${marke}`);
 
   await page.goto('/de/konfiguration');
@@ -262,9 +261,9 @@ vorgang('V-ADM-07', async ({ page, request }) => {
   await expect(page.getByTestId('sichern-asset_inaktiv_tage')).toHaveText('Gesichert');
 
   await page.reload();
-  await expect(
-    page.getByTestId('einstellung-asset_inaktiv_tage').getByRole('textbox'),
-  ).toHaveValue('200');
+  await expect(page.getByTestId('einstellung-asset_inaktiv_tage').getByRole('textbox')).toHaveValue(
+    '200',
+  );
 
   // Zurückstellen: die Einstellung wirkt global, und der nächste Vorgang soll
   // sie so vorfinden, wie sie gemeint ist (siehe E-35).
@@ -302,7 +301,9 @@ vorgang('V-ADM-10', async ({ request }) => {
   const liste = await (await request.get(`${API}/api/v1/datenobjekte`, { headers: fremd })).json();
   expect(liste.map((eintrag: { id: string }) => eintrag.id)).not.toContain(datenobjekt.id);
   expect(
-    (await request.get(`${API}/api/v1/datenobjekte/${datenobjekt.id}`, { headers: fremd })).status(),
+    (
+      await request.get(`${API}/api/v1/datenobjekte/${datenobjekt.id}`, { headers: fremd })
+    ).status(),
   ).toBe(403);
   expect(
     (
@@ -329,6 +330,63 @@ vorgang('V-ADM-10', async ({ request }) => {
   );
   const eigen = await kopf(request, `eigen-${marke}`, `Im Bereich ${marke}`);
   expect(
-    (await request.get(`${API}/api/v1/datenobjekte/${datenobjekt.id}`, { headers: eigen })).status(),
+    (
+      await request.get(`${API}/api/v1/datenobjekte/${datenobjekt.id}`, { headers: eigen })
+    ).status(),
   ).toBe(200);
+});
+
+vorgang('V-ADM-11', async ({ page, request }) => {
+  // Ein Bereich gehört einer Rolle, nicht der Person (P-App-3). Wer als
+  // Prozess-Umsetzer in einer Einheit steht, sieht dort deshalb *nicht*, was
+  // einem technischen Owner zusteht — bis AP-12 tat er genau das, weil die
+  // Anwendung die Bereiche aller Rollen zusammenwarf (R-7).
+  const marke = kennzeichen();
+  const org: Organisation = await organisation(request, marke);
+  const prozess = await prozessAnlegen(request, org, {
+    name: `Fremd gefuehrt ${marke}`,
+    umsetzung_land_org_ids: [org.deId],
+  });
+  const tool = await toolAnlegen(request, {
+    name: `Nur fuer Technik ${marke}`,
+    organisationseinheit_id: org.deId,
+  });
+  const quelle = await datenobjektAnlegen(request, {
+    name: `Nur fuer Daten ${marke}`,
+    fachbereich_id: org.fachbereichId,
+  });
+
+  // Derselbe Bereich, eine andere Rolle: der Umsetzer der Einheit DE.
+  await anwenderMitRolle(
+    request,
+    `umsetzer-${marke}`,
+    `Umsetzer ${marke}`,
+    'prozess_umsetzer',
+    'organisationseinheit',
+    org.deId,
+  );
+  await anmelden(page, `umsetzer-${marke}`, `Umsetzer ${marke}`);
+
+  // Seinen Prozess sieht er — dafür ist er da.
+  await page.goto(`/de/prozesse/${prozess.id}`);
+  await expect(page.getByRole('heading', { name: prozess.name })).toBeVisible();
+
+  // Das Datenobjekt des Fachbereichs geht ihn nichts an: es hängt an keinem
+  // seiner Objekte, und die Rolle dafür hat er nicht.
+  await page.goto('/de/datenobjekte');
+  await expect(page.getByRole('link', { name: new RegExp(quelle.name) })).toHaveCount(0);
+  await page.goto(`/de/datenobjekte/${quelle.id}`);
+  await expect(page.getByRole('alert')).toBeVisible();
+
+  // Das Tool-Objekt steht in *seiner* Einheit DE — und hängt an keinem seiner
+  // Prozesse. Gleiche Einheit, andere Rolle: er sieht es nicht. Genau hier
+  // hätte eine rollenblind gesammelte Bereichsliste ihn durchgelassen.
+  await page.goto('/de/tools');
+  await expect(page.getByRole('link', { name: new RegExp(tool.name) })).toHaveCount(0);
+  await page.goto(`/de/tools/${tool.id}`);
+  await expect(page.getByRole('alert')).toBeVisible();
+
+  // Und anlegen darf er nichts — auch nicht im eigenen Bereich.
+  await page.goto('/de/datenobjekte');
+  await expect(page.getByRole('button', { name: 'Datenobjekt anlegen' })).toHaveCount(0);
 });

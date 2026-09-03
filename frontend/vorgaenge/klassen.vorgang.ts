@@ -50,10 +50,12 @@ async function matrixfeld(
   begruendung: string,
 ): Promise<{ bewertung: string; begruendung: string }> {
   const h = await kopf(anfrage);
-  const matrix = await (await anfrage.get(`${API}/api/v1/technologiematrix`, { headers: h })).json();
-  const vorher = (matrix as { technologie: string; k_klasse: string; bewertung: string; begruendung: string }[]).find(
-    (e) => e.technologie === technologie && e.k_klasse === klasse,
-  );
+  const matrix = await (
+    await anfrage.get(`${API}/api/v1/technologiematrix`, { headers: h })
+  ).json();
+  const vorher = (
+    matrix as { technologie: string; k_klasse: string; bewertung: string; begruendung: string }[]
+  ).find((e) => e.technologie === technologie && e.k_klasse === klasse);
   const antwort = await anfrage.put(`${API}/api/v1/technologiematrix/${technologie}/${klasse}`, {
     headers: h,
     data: { bewertung, begruendung },

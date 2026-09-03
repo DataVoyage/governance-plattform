@@ -95,8 +95,10 @@ Klassifiziert die **Quellen** seines Fachbereichs: Kategorie und Stammdaten
 der Datenobjekte, einmalig je Quelle. Scope: **nur Fachbereich** — eine Quelle
 gehört einer datenhaltenden Stelle, nicht einer Landesorganisation. Er sieht
 die Datenobjekte seines Fachbereichs und, um die Wirkung einer
-Umklassifizierung zu verstehen, die Prozess- und Tool-Objekte, die sie
-referenzieren — lesend, in Kurzform.
+Umklassifizierung zu verstehen, **die Namen** der Prozess- und Tool-Objekte,
+die sie referenzieren — in der Wirkungsvorschau am Datenobjekt, nicht als
+Zugriff auf deren Detailseiten. Er soll wissen, wen eine Umstufung trifft;
+er muss deren Bewertung nicht lesen können.
 
 ### Governance
 
@@ -112,8 +114,13 @@ ihrem Namen.
 
 Betreibt die Adapter: Import, Telemetrie, Bestätigung vorgefundener Objekte.
 Scope: global. Liest alles, schreibt **nur** den Bestätigungsstatus
-importierter Objekte und Telemetriefelder. Fachliche Felder — Kategorie,
-Owner, Attestierungen — nie.
+importierter Objekte, deren Anker (solange sie unbestätigt sind) und
+Telemetriefelder. Fachliche Felder — Kategorie, Attestierungen, Bewertung —
+nie.
+
+Der Import gehört **ihr allein**, auch die Governance hat ihn nicht: ein
+Import ist keine fachliche Entscheidung, sondern ein Betriebsvorgang, und im
+Nachweis soll stehen, unter welcher Rolle er lief.
 
 ### Auditor
 
@@ -177,21 +184,21 @@ nicht. „Eigener Bereich" heißt immer: der Anker des Objekts liegt im Scope
 
 | Aktion | P-Owner | P-Umsetzer | T-Owner | D-Owner | Governance | Plattform | Auditor | Admin |
 |---|---|---|---|---|---|---|---|---|
-| Liste, Detail lesen | S | S (als Umsetzer) | R | R (Kurzform) | G | G | G | – |
+| Liste, Detail lesen | S | S (als Umsetzer) | R (über sein Tool) | – | G | G | G | – |
 | Anlegen | ✓ | – | – | – | G | – | – | – |
 | Stammdaten, Status, Kanten | ✓ | – | – | – | G | – | – | – |
 | Bewerten (A.8) | ✓ | – | – | – | G | – | – | – |
 | Selbstverpflichtung Eigner (A.10.2) | ✓ | – | – | – | G | – | – | – |
 | Gate einreichen | ✓ | – | – | – | G | – | – | – |
 | Gate entscheiden | – | – | – | – | G | – | – | – |
-| Umsetzung: lokale Abweichung | ✓ | ✓ (nur sein Land) | – | – | G | – | – | – |
+| Umsetzung: lokale Abweichung | ✓ (jede Umsetzung seines Prozesses) | ✓ (nur sein Land) | – | – | G | – | – | – |
 
 ### Tool-Objekt
 
 | Aktion | P-Owner | P-Umsetzer | T-Owner | D-Owner | Governance | Plattform | Auditor | Admin |
 |---|---|---|---|---|---|---|---|---|
-| Liste, Detail lesen | R | R | S | R (Kurzform) | G | G | G | – |
-| Anlegen | – | – | ✓ | – | G | Import | – | – |
+| Liste, Detail lesen | R (über seinen Prozess) | R | S | – | G | G | G | – |
+| Anlegen | – | – | ✓ | – | G | – | – | – |
 | Stammdaten, Technologie | – | – | ✓ | – | G | – | – | – |
 | Einheit (Anker) ändern | – | – | – | – | G | – | – | – |
 | Attestierungen (A.6) | – | – | ✓ | – | G | – | – | – |
@@ -199,7 +206,7 @@ nicht. „Eigener Bereich" heißt immer: der Anker des Objekts liegt im Scope
 | Zustand melden (A.13.3) | – | – | ✓ | – | G | – | – | – |
 | Kompensation (A.9.3) | – | – | ✓ | – | G | – | – | – |
 | Selbstverpflichtung Owner (A.10.3) | – | – | ✓ | – | G | – | – | – |
-| Importiertes bestätigen | – | – | ✓ | – | G | G | – | – |
+| Importiertes bestätigen | – | – | ✓ | – | G | ✓ | – | – |
 | Lenkungsvorgang auflösen | – | – | ✓ / zugewiesen | – | G | – | – | – |
 | Lenkungsvorgang abbrechen | – | – | – | – | G | – | – | – |
 
@@ -400,16 +407,22 @@ Stand: 2026-09-03, nach E-54.
 | **R-10** | Bereichs-Dropdowns (Fachbereich, Einheit) zeigen alle Bereiche | Formulare | 6: nur der eigene Scope, bei genau einem vorbelegt und gesperrt |
 | **R-11** | Datenobjekt-Owner kann auf eine Einheit gescoped werden; die Schreibregel prüft dann nie positiv | Rollenvergabe, `darf_datenobjekt_schreiben` | 3: nur Fachbereich; die Vergabe lehnt Einheit ab |
 
-**Stand nach AP-11 (E-55, E-56):** R-1 bis R-6, R-8, R-10 und R-11 sind
-umgesetzt — die Auswahllisten für Prozess-, Tool- und Datenobjektformulare
-laufen über `?fuer_rolle=` und `/personen` und sind damit **rollenscharf**.
+**Stand nach AP-12 (E-55, E-56, E-57): keine offenen Punkte.** R-1 bis R-11
+sind umgesetzt. R-7 zuletzt: es gibt keine Abfrage „alle meine Bereiche" mehr,
+sondern nur `Principal.bereiche_fuer(rolle)`; die rollenblinden Eigenschaften
+sind entfernt, damit niemand wieder danach greift.
 
-Offen bleiben zwei:
+Dabei kamen vier weitere Abweichungen ans Licht, die niemand gemeldet hatte —
+sie standen so im Dokument, aber nicht im Code:
 
-- **R-7** — `Principal.scope_fachbereiche`, `scope_organisationseinheiten` und
-  `prozess.erlaubte_org_ids` sammeln weiterhin die Bereiche *aller* Rollen. Die
-  Auswahllisten und die Datenobjektregeln umgehen das bereits (sie zählen nur
-  die Scopes ihrer Rolle), die **Sichtregeln für Prozess- und Tool-Objekte**
-  noch nicht. Das ist die tiefste Abweichung und ein eigenes Paket.
-- **R-9** — der Anker des Tool-Objekts ist optional und für Fachrollen
-  wechselbar.
+| Nr. | Abweichung | Aufgelöst |
+|---|---|---|
+| **R-12** | Der App-Administrator las bereichsübergreifend mit (`GLOBAL_LESEND`) | Er ist keine Fachrolle mehr; Nutzerliste und Nachweis bleiben ihm ausdrücklich |
+| **R-13** | Der Prozess-Owner einer Kante durfte das Tool-Objekt vollständig schreiben — bis hin zur Attestierung | `darf_tool_schreiben` endet beim technischen Owner; für die Kante gibt es `darf_tool_verknuepfen` |
+| **R-14** | Der Prozess-Owner durfte eine Umsetzung anlegen, ihre lokale Abweichung aber nicht ändern | Beide Wege prüfen jetzt dasselbe |
+| **R-15** | Der App-Administrator durfte Assets importieren, entgegen dem eigenen Docstring | Import ausschließlich Plattform |
+
+Die Matrix aus Abschnitt 5 ist als ausführbare Tabelle hinterlegt:
+`backend/tests/test_rollen_und_scopes.py` fährt **jede Zelle** an — 39
+Handlungen mal 11 Zugänge — und prüft für jede einzeln, ob sie erlaubt oder
+verweigert wird. Ein Recht, das nirgends verweigert wird, fällt dort auf.

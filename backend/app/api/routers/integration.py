@@ -21,11 +21,15 @@ router = APIRouter(tags=["Integration"])
 def import_assets(
     anfrage: ImportAnfrage, principal: AktuellerNutzer, db: DbSession
 ) -> ImportErgebnis:
-    """Eingehender Adapter-Aufruf. Nur die Plattform-Rolle betreibt Adapter."""
-    verlange(
-        principal.ist_plattform or principal.ist_administrator,
-        "Adapter betreibt ausschliesslich die Plattform-Rolle",
-    )
+    """Eingehender Adapter-Aufruf — ausschliesslich die Plattform-Rolle.
+
+    Der App-Administrator stand hier bis AP-12 mit drin, entgegen dem Satz
+    darueber. Er darf sich die Rolle zwar selbst geben; genau deshalb ist der
+    Unterschied wichtig: dann steht die Vergabe im Nachweis, und der Import
+    laeuft unter der Rolle, die ihn verantwortet. Ein zweiter, stiller Weg
+    haette den Nachweis unbrauchbar gemacht.
+    """
+    verlange(principal.ist_plattform, "Adapter betreibt ausschliesslich die Plattform-Rolle")
     return importiere(db, anfrage, akteur_user_id=principal.user_id)
 
 

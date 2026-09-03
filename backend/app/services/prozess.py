@@ -5,12 +5,18 @@ from __future__ import annotations
 import uuid
 from collections.abc import Sequence
 
-from sqlalchemy import ColumnElement, or_, select
+from sqlalchemy import ColumnElement, false, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.permissions import Principal, Verboten, verlange
 from app.models.enums import Ebene, ProzessStatus, Rolle
-from app.models.governance import Datenobjekt, Prozessobjekt, ProzessUmsetzung
+from app.models.governance import (
+    Datenobjekt,
+    Prozessobjekt,
+    ProzessUmsetzung,
+    ToolObjekt,
+    prozess_tool,
+)
 from app.models.organisation import Organisationseinheit
 from app.schemas.prozess import (
     HOECHSTZAHL_SCHRITTE,
@@ -76,51 +82,93 @@ def _pruefe_zyklenfrei(prozess: Prozessobjekt) -> None:
 # --- Sichtbarkeit (Architektur 4.3) --------------------------------------
 
 
-def erlaubte_org_ids(db: Session, principal: Principal) -> set[uuid.UUID]:
-    """Alle Organisationseinheiten im Bereich des Nutzers.
+def erlaubte_org_ids(db: Session, principal: Principal, *rollen: Rolle) -> set[uuid.UUID]:
+    """Die Organisationseinheiten, in denen der Principal diese Rollen traegt.
 
     Ein Scope auf einen Fachbereich schliesst dessen INT- und LAND-Einheiten
-    ein; ein Scope auf eine Einheit nur diese.
+    ein; ein Scope auf eine Einheit nur diese. Die Rollen sind Pflicht — es
+    gibt keine Menge „alle meine Einheiten" (R-7).
     """
-    ids = set(principal.scope_organisationseinheiten)
-    fachbereiche = principal.scope_fachbereiche
-    if fachbereiche:
-        treffer = db.execute(
-            select(Organisationseinheit.id).where(
-                Organisationseinheit.fachbereich_id.in_(fachbereiche)
-            )
-        ).scalars()
-        ids.update(treffer)
+    bereiche = principal.bereiche_fuer(*rollen)
+    if bereiche.ueberall:
+        return set(db.execute(select(Organisationseinheit.id)).scalars())
+    ids = set(bereiche.organisationseinheiten)
+    if bereiche.fachbereiche:
+        ids.update(
+            db.execute(
+                select(Organisationseinheit.id).where(
+                    Organisationseinheit.fachbereich_id.in_(bereiche.fachbereiche)
+                )
+            ).scalars()
+        )
     return ids
 
 
-def sichtbarkeitsbedingung(db: Session, principal: Principal) -> ColumnElement[bool] | None:
-    """SQL-Bedingung fuer die sichtbaren Prozessobjekte, oder None fuer alle."""
-    if principal.sieht_global:
-        return None
-    org_ids = erlaubte_org_ids(db, principal)
-    umsetzung_ids = (
-        select(ProzessUmsetzung.prozessobjekt_id).where(ProzessUmsetzung.land_org_id.in_(org_ids))
-        if org_ids
-        else select(ProzessUmsetzung.prozessobjekt_id).where(False)
+def eigene_prozess_bedingung(db: Session, principal: Principal) -> ColumnElement[bool]:
+    """Die Prozessobjekte, die jemand **selbst** verantwortet.
+
+    Drei Wege, und nur diese drei: er ist Prozess-Owner am Prozessgeber, er
+    setzt den Prozess in seiner Landesorganisation um, oder er steht
+    persoenlich als Eigner beziehungsweise Stellvertretung daran (A.5).
+    Bewusst ohne die Wege ueber Tool- und Datenobjekt — die kommen in
+    ``sichtbarkeitsbedingung`` dazu und wuerden hier eine Schleife bauen.
+    """
+    geber_ids = erlaubte_org_ids(db, principal, Rolle.PROZESS_OWNER)
+    umsetzer_ids = erlaubte_org_ids(db, principal, Rolle.PROZESS_UMSETZER, Rolle.PROZESS_OWNER)
+    umsetzungen = (
+        select(ProzessUmsetzung.prozessobjekt_id).where(
+            ProzessUmsetzung.land_org_id.in_(umsetzer_ids)
+        )
+        if umsetzer_ids
+        else select(ProzessUmsetzung.prozessobjekt_id).where(false())
     )
     return or_(
-        Prozessobjekt.prozessgeber_org_id.in_(org_ids) if org_ids else False,
-        Prozessobjekt.id.in_(umsetzung_ids),
+        Prozessobjekt.prozessgeber_org_id.in_(geber_ids) if geber_ids else false(),
+        Prozessobjekt.id.in_(umsetzungen),
         Prozessobjekt.owner_user_id == principal.user_id,
         Prozessobjekt.stellvertretung_user_id == principal.user_id,
     )
 
 
-def darf_lesen(db: Session, principal: Principal, prozess: Prozessobjekt) -> bool:
+def sichtbarkeitsbedingung(db: Session, principal: Principal) -> ColumnElement[bool] | None:
+    """Die sichtbaren Prozessobjekte, oder ``None`` fuer alle.
+
+    Zur eigenen Verantwortung kommt ein Weg ueber die Referenz: der technische
+    Owner muss den Prozess sehen, aus dem sein Tool-Objekt seine Einstufung
+    erbt (A.4.4) — ohne ihn steht am Tool eine Zahl ohne Begruendung.
+    """
     if principal.sieht_global:
+        return None
+    tool_ids = erlaubte_org_ids(db, principal, Rolle.TECHNISCHER_OWNER)
+    eigene_tools = select(ToolObjekt.id).where(
+        or_(
+            ToolObjekt.organisationseinheit_id.in_(tool_ids) if tool_ids else false(),
+            ToolObjekt.technischer_owner_user_id == principal.user_id,
+            ToolObjekt.stellvertretung_user_id == principal.user_id,
+        )
+    )
+    ueber_tool = select(prozess_tool.c.prozessobjekt_id).where(
+        prozess_tool.c.tool_objekt_id.in_(eigene_tools)
+    )
+    return or_(eigene_prozess_bedingung(db, principal), Prozessobjekt.id.in_(ueber_tool))
+
+
+def darf_lesen(db: Session, principal: Principal, prozess: Prozessobjekt) -> bool:
+    """Dieselbe Bedingung wie die Liste, am Einzelstueck — buchstaeblich dieselbe.
+
+    Zwei Fassungen derselben Regel laufen auseinander, und die eine, die
+    zaehlt, ist immer die andere (E-54). Deshalb wird hier nicht nachgebaut,
+    sondern gefragt.
+    """
+    bedingung = sichtbarkeitsbedingung(db, principal)
+    if bedingung is None:
         return True
-    if principal.user_id in (prozess.owner_user_id, prozess.stellvertretung_user_id):
-        return True
-    org_ids = erlaubte_org_ids(db, principal)
-    if prozess.prozessgeber_org_id in org_ids:
-        return True
-    return any(u.land_org_id in org_ids for u in prozess.umsetzungen)
+    return (
+        db.execute(
+            select(Prozessobjekt.id).where(Prozessobjekt.id == prozess.id, bedingung)
+        ).scalar_one_or_none()
+        is not None
+    )
 
 
 def _fachbereich_von_org(db: Session, org_id: uuid.UUID) -> uuid.UUID | None:
@@ -435,10 +483,19 @@ def umsetzung_aendern(
     umsetzung: ProzessUmsetzung,
     lokale_abweichung: str | None,
 ) -> ProzessUmsetzung:
-    """Der Prozess-Umsetzer darf hier — und nur hier — schreiben (Matrix 5.3)."""
+    """Der Prozess-Umsetzer darf hier — und nur hier — schreiben (Matrix 5.3).
+
+    Der Prozess-Owner darf es auch: die Umsetzung gehoert zu seinem Prozess.
+    Das Anlegen einer Umsetzung liess ihn bereits zu; ihre Abweichung dann
+    nicht mehr aendern zu duerfen, waere ein Widerspruch — und traf ausgerechnet
+    den Owner, dessen Scope auf der INT-Einheit liegt und nicht auf dem Land.
+    """
+    prozess = hole(db, umsetzung.prozessobjekt_id)
     verlange(
-        darf_umsetzung_bearbeiten(db, principal, umsetzung.land_org_id),
-        "Nur der Umsetzer dieser Landesorganisation pflegt die lokale Abweichung",
+        darf_schreiben(db, principal, prozess.prozessgeber_org_id)
+        or darf_umsetzung_bearbeiten(db, principal, umsetzung.land_org_id),
+        "Die lokale Abweichung pflegt der Umsetzer dieser Landesorganisation "
+        "oder der Prozess-Owner",
     )
     vorher = snapshot(umsetzung)
     umsetzung.lokale_abweichung = lokale_abweichung

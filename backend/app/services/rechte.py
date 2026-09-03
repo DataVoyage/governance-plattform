@@ -95,9 +95,14 @@ class Lenkungsrechte:
 
 def fuer_prozess(db: Session, principal: Principal, prozess: Prozessobjekt) -> Prozessrechte:
     schreiben = prozess_service.darf_schreiben(db, principal, prozess.prozessgeber_org_id)
-    umsetzung = any(
-        prozess_service.darf_umsetzung_bearbeiten(db, principal, u.land_org_id)
-        for u in prozess.umsetzungen
+    # Der Prozess-Owner darf jede Umsetzung seines Prozesses, der Umsetzer nur
+    # die seiner Landesorganisation — dieselbe Regel wie ``umsetzung_aendern``.
+    umsetzung = bool(prozess.umsetzungen) and (
+        schreiben
+        or any(
+            prozess_service.darf_umsetzung_bearbeiten(db, principal, u.land_org_id)
+            for u in prozess.umsetzungen
+        )
     )
     return Prozessrechte(
         bearbeiten=schreiben,
@@ -113,7 +118,8 @@ def fuer_tool(db: Session, principal: Principal, tool: ToolObjekt) -> Toolrechte
     return Toolrechte(
         bearbeiten=schreiben,
         attestieren=schreiben,
-        verknuepfen=schreiben,
+        # Die Kante hat zwei Enden: auch der Prozess-Owner darf sie knüpfen.
+        verknuepfen=asset_service.darf_tool_verknuepfen(db, principal, tool),
         zustand_melden=schreiben,
         kompensieren=schreiben,
         selbstverpflichten=schreiben,

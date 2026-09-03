@@ -1645,3 +1645,71 @@ Alleinstellung bei der Kategorie. Und im Leitdokument stand in A.7 „Name,
 Kategorie, **Owner**, Quellsystem" — zweideutig, obwohl A.3 im Objektmodell
 schon „Owner: datenhaltende Stelle" schreibt. A.7 sagt es jetzt genauso; das
 ist eine Klarstellung, keine Änderung der Sache.
+
+## E-57 — Rollen und Rechte vollständig durchgeprüft, positiv wie negativ
+
+*Datum: 2026-09-03 — Status: umgesetzt (AP-12)*
+
+Rollen und Rechte sind nichts Zufälliges: an ihnen hängt, ob man der Anwendung
+glauben kann. Nach E-55 und E-56 stand die Regel geschrieben, aber sie war
+stichprobenartig geprüft — jeder Test belegte eine Stelle, keiner das Ganze.
+Deshalb dieses Paket: die Matrix aus `docs/rollen-und-scopes.md` wird zur
+**ausführbaren Tabelle**.
+
+**Der Aufbau ist die Aussage.** `backend/tests/test_rollen_und_scopes.py` baut
+zwei Fachbereiche mit je einem Prozess-, Tool- und Datenobjekt und elf
+Zugängen: die acht Rollen aus A.15, dazu dieselbe Rolle mit engerem Bereich,
+dieselbe Rolle im fremden Bereich, und einen Zugang ganz ohne Rolle. Dann
+läuft **jede Handlung mit jedem Zugang** — 39 mal 11 — und für jede einzelne
+Kombination steht in der Tabelle, ob sie gelingen oder mit 403 enden muss.
+
+Das ist der Unterschied zu einer Sammlung von Einzeltests: der negative Fall
+ist nicht mehr die Ausnahme, die jemand daran denken muss zu schreiben, sondern
+die Voreinstellung. Wer eine Handlung ergänzt, muss für alle elf Zugänge sagen,
+was gilt; wer eine Rolle vergisst, fällt beim Aufbau der Tabelle durch. Ein
+neues Recht, das nirgends verweigert wird, fällt auf.
+
+**R-7 zuletzt und am tiefsten.** Die Bereiche wurden rollenblind gesammelt:
+`scope_fachbereiche` lieferte die Scopes *aller* Rollen. Damit machte eine
+schmale Zuweisung stillschweigend eine breite Sicht — ein Prozess-Umsetzer in
+Vertrieb DE sah dort die Tool- und Datenobjekte, die einem technischen Owner
+zustehen. Es gibt jetzt nur noch `Principal.bereiche_fuer(rolle)`; die
+rollenblinden Eigenschaften sind **entfernt**, nicht bloß ergänzt, damit
+niemand wieder danach greift. Die Sichtregeln für Prozess- und Tool-Objekte
+sind entsprechend neu gefasst und laufen über zwei benannte Wege: die eigene
+Verantwortung und die Referenz (der technische Owner muss den Prozess sehen,
+aus dem sein Tool erbt — A.4.4).
+
+**Vier Abweichungen, die niemand gemeldet hatte.** Sie kamen erst heraus, als
+die Erwartung für jede Zelle ausgeschrieben werden musste:
+
+* **R-12** — der App-Administrator stand in `GLOBAL_LESEND` und las damit
+  jedes Prozess-, Tool- und Datenobjekt. Er vergibt jeden Zugriff; genau
+  deshalb bekommt er selbst keinen fachlichen. Nutzerliste und Nachweis
+  behält er ausdrücklich — beides prüft ohnehin `ist_administrator`.
+* **R-13** — `darf_tool_schreiben` bejahte auch den Prozess-Owner einer Kante.
+  Damit hätte er attestieren können, und A.10.3 verlangt die Erklärung
+  persönlich vom Entwickler: eine Erklärung, die ein anderer abgeben kann, ist
+  keine. Die Kante darf er weiterhin knüpfen — sie hat zwei Enden (A.4.4) —,
+  dafür gibt es jetzt `darf_tool_verknuepfen`.
+* **R-14** — der Prozess-Owner durfte eine Umsetzung *anlegen*, ihre lokale
+  Abweichung aber nicht *ändern*: das Ändern prüfte nur den Scope am Land. Wer
+  seinen Scope auf der INT-Einheit hatte, stand vor seiner eigenen Umsetzung.
+* **R-15** — `POST /import/assets` ließ den App-Administrator zu, obwohl der
+  Satz darüber „Nur die Plattform-Rolle betreibt Adapter" lautet. Er darf sich
+  die Rolle geben; genau deshalb ist der Unterschied wichtig, denn dann steht
+  die Vergabe im Nachweis und der Import läuft unter der Rolle, die ihn
+  verantwortet.
+
+**Was das Dokument gelernt hat.** Zwei Zeilen der Matrix waren zu großzügig
+formuliert: der Datenobjekt-Owner hatte dort „R (Kurzform)" auf Prozess- und
+Tool-Objekten stehen. Gemeint war immer die Wirkungsvorschau am Datenobjekt,
+die Namen nennt — nicht ein Zugriff auf deren Detailseiten. Jetzt steht es so
+da, und die Tabelle prüft es so.
+
+**Der Prüfstein bleibt.** Vier Fragen an jede neue Route: Welcher Anker
+entscheidet? Welche Rolle mit welchem Scope trifft ihn? Steht die Regel genau
+einmal? Bekommt der Anfragende weniger Daten oder nur weniger Anzeige? Wer sie
+beantworten kann, trägt die Antwort in die Tabelle ein — und erst dann in den
+Code.
+

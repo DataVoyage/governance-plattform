@@ -76,7 +76,10 @@ test.describe('Vorgangskatalog', () => {
     }
     for (const [bereich, nummern] of Object.entries(je)) {
       const erwartet = nummern.map((_, i) => i + 1);
-      expect([...nummern].sort((a, b) => a - b), `Lücke in V-${bereich}`).toEqual(erwartet);
+      expect(
+        [...nummern].sort((a, b) => a - b),
+        `Lücke in V-${bereich}`,
+      ).toEqual(erwartet);
     }
   });
 

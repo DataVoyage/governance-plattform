@@ -104,7 +104,10 @@ vorgang('V-ANM-05', async ({ page }) => {
 vorgang('V-ANM-06', async ({ page }) => {
   await page.emulateMedia({ colorScheme: 'dark' });
   await anmelden(page);
-  await page.getByRole('group', { name: 'Darstellung' }).getByRole('button', { name: 'Hell' }).click();
+  await page
+    .getByRole('group', { name: 'Darstellung' })
+    .getByRole('button', { name: 'Hell' })
+    .click();
 
   // Der Browser malt seine eigenen Flächen — sie müssen der Wahl folgen (E-27).
   expect(await page.evaluate(() => getComputedStyle(document.documentElement).colorScheme)).toBe(
@@ -115,7 +118,9 @@ vorgang('V-ANM-06', async ({ page }) => {
   const waehler = page.getByTestId('waehler-stilprobe');
   await waehler.getByRole('combobox').click();
   const farben = await page.evaluate(() => {
-    const flaeche = getComputedStyle(document.querySelector('.k-referenz .treffer')!).backgroundColor;
+    const flaeche = getComputedStyle(
+      document.querySelector('.k-referenz .treffer')!,
+    ).backgroundColor;
     return [...document.querySelectorAll('.k-referenz .treffer li button')].map((knopf) => ({
       name: knopf.querySelector('.haupt')?.firstChild?.textContent ?? '',
       schrift: getComputedStyle(knopf).color,

@@ -154,8 +154,21 @@ def test_principal_scopes_und_kurzformen() -> None:
             Zuweisung(Rolle.TECHNISCHER_OWNER, ScopeTyp.FACHBEREICH, fb),
         ],
     )
-    assert principal.scope_organisationseinheiten == {org}
-    assert principal.scope_fachbereiche == {fb}
+    # Ein Bereich gehoert einer Rolle, nicht der Person (P-App-3, R-7).
+    prozess = principal.bereiche_fuer(Rolle.PROZESS_OWNER)
+    assert prozess.organisationseinheiten == {org}
+    assert prozess.fachbereiche == set()  # der FB-Scope gehoert der anderen Rolle
+    technik = principal.bereiche_fuer(Rolle.TECHNISCHER_OWNER)
+    assert technik.fachbereiche == {fb}
+    assert technik.organisationseinheiten == set()
+    # Rollen ohne Zuweisung liefern nichts — und nicht etwa alles.
+    leer = principal.bereiche_fuer(Rolle.DATENOBJEKT_OWNER)
+    assert not leer
+    assert leer.organisationseinheiten == set() and leer.fachbereiche == set()
+    # Mehrere Rollen zusammen: die Vereinigung, aber nur dieser Rollen.
+    beide = principal.bereiche_fuer(Rolle.PROZESS_OWNER, Rolle.TECHNISCHER_OWNER)
+    assert beide.organisationseinheiten == {org} and beide.fachbereiche == {fb}
+    assert not beide.ueberall
     assert principal.hat_rolle(Rolle.PROZESS_OWNER, organisationseinheit_id=org)
     assert not principal.hat_rolle(Rolle.PROZESS_OWNER, organisationseinheit_id=uuid.uuid4())
     assert principal.hat_rolle(Rolle.TECHNISCHER_OWNER, fachbereich_id=fb)

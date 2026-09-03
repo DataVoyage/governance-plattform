@@ -19,7 +19,7 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any
 
-from sqlalchemy import ColumnElement, or_, select
+from sqlalchemy import ColumnElement, false, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.permissions import Principal, Verboten, verlange
@@ -56,11 +56,9 @@ from app.services.changelog import (
 from app.services.prozess import (
     NichtGefunden,
     Ungueltig,
+    eigene_prozess_bedingung,
     erlaubte_org_ids,
     neueste_bewertung,
-)
-from app.services.prozess import (
-    darf_lesen as darf_prozess_lesen,
 )
 from app.services.prozess import (
     darf_schreiben as darf_prozess_schreiben,
@@ -239,38 +237,58 @@ def attestiere(
 
 
 def tool_sichtbarkeitsbedingung(db: Session, principal: Principal) -> ColumnElement[bool] | None:
+    """Eigene Tool-Objekte, plus die an einem selbst verantworteten Prozess.
+
+    „Eigen" heisst: technischer Owner an der Einheit des Tools, oder
+    persoenlich als Owner beziehungsweise Stellvertretung eingetragen. Der
+    zweite Weg ist die Prozesskante — der Prozess-Owner muss sehen, womit sein
+    Prozess umgesetzt wird, sonst kann er den Erlaubnisrahmen nicht beurteilen
+    (A.13.2). Beide Wege sind rollenscharf (R-7).
+    """
     if principal.sieht_global:
         return None
-    org_ids = erlaubte_org_ids(db, principal)
-    ueber_prozess = select(prozess_tool.c.tool_objekt_id).join(
-        Prozessobjekt, Prozessobjekt.id == prozess_tool.c.prozessobjekt_id
+    org_ids = erlaubte_org_ids(db, principal, Rolle.TECHNISCHER_OWNER)
+    ueber_prozess = select(prozess_tool.c.tool_objekt_id).where(
+        prozess_tool.c.prozessobjekt_id.in_(
+            select(Prozessobjekt.id).where(eigene_prozess_bedingung(db, principal))
+        )
     )
-    if org_ids:
-        ueber_prozess = ueber_prozess.where(Prozessobjekt.prozessgeber_org_id.in_(org_ids))
-    else:
-        ueber_prozess = ueber_prozess.where(Prozessobjekt.owner_user_id == principal.user_id)
     return or_(
-        ToolObjekt.organisationseinheit_id.in_(org_ids) if org_ids else False,
+        ToolObjekt.organisationseinheit_id.in_(org_ids) if org_ids else false(),
         ToolObjekt.technischer_owner_user_id == principal.user_id,
+        ToolObjekt.stellvertretung_user_id == principal.user_id,
         ToolObjekt.id.in_(ueber_prozess),
     )
 
 
 def darf_tool_lesen(db: Session, principal: Principal, tool: ToolObjekt) -> bool:
-    if principal.sieht_global:
+    """Dieselbe Bedingung wie die Liste, am Einzelstueck (E-54)."""
+    bedingung = tool_sichtbarkeitsbedingung(db, principal)
+    if bedingung is None:
         return True
-    if tool.technischer_owner_user_id == principal.user_id:
-        return True
-    if tool.organisationseinheit_id in erlaubte_org_ids(db, principal):
-        return True
-    return any(darf_prozess_lesen(db, principal, p) for p in tool.prozessobjekte)
+    return (
+        db.execute(
+            select(ToolObjekt.id).where(ToolObjekt.id == tool.id, bedingung)
+        ).scalar_one_or_none()
+        is not None
+    )
 
 
 def darf_tool_schreiben(db: Session, principal: Principal, tool: ToolObjekt) -> bool:
-    """Technischer Owner des Tools, Prozess-Owner einer Kante, oder Governance."""
+    """Technischer Owner des Tools, seine Stellvertretung, oder die Governance.
+
+    Der Prozess-Owner einer Kante steht hier bewusst **nicht**: das Tool gehoert
+    ihm nicht. Er darf die Kante an seinem Prozess setzen und loesen — dafuer
+    gibt es ``darf_tool_verknuepfen`` —, aber nicht die Technologie aendern und
+    erst recht nicht attestieren: A.10.3 verlangt die Erklaerung persoenlich
+    vom Entwickler, und eine Erklaerung, die ein anderer abgeben kann, ist
+    keine (docs/rollen-und-scopes.md, Abschnitt 5).
+    """
     if principal.ist_governance:
         return True
     if tool.technischer_owner_user_id == principal.user_id:
+        return True
+    if tool.stellvertretung_user_id == principal.user_id:
         return True
     if tool.organisationseinheit_id is not None:
         fachbereich_id = db.execute(
@@ -284,6 +302,18 @@ def darf_tool_schreiben(db: Session, principal: Principal, tool: ToolObjekt) -> 
             fachbereich_id=fachbereich_id,
         ):
             return True
+    return False
+
+
+def darf_tool_verknuepfen(db: Session, principal: Principal, tool: ToolObjekt) -> bool:
+    """Kanten setzen und loesen — beide Enden zaehlen.
+
+    Eine Verknuepfung hat zwei Seiten: den Prozess und das Tool. Wer eine davon
+    verantwortet, darf sie knuepfen (A.4.4). Deshalb hier zusaetzlich der
+    Prozess-Owner eines bereits verknuepften Prozesses — und nur hier.
+    """
+    if darf_tool_schreiben(db, principal, tool):
+        return True
     return any(
         darf_prozess_schreiben(db, principal, p.prozessgeber_org_id) for p in tool.prozessobjekte
     )
@@ -761,7 +791,7 @@ def verknuepfe_tool_mit_datenobjekt(
     zugriffsart: Zugriffsart,
 ) -> ToolDatenobjekt:
     verlange(
-        darf_tool_schreiben(db, principal, tool),
+        darf_tool_verknuepfen(db, principal, tool),
         "Keine Schreibberechtigung fuer dieses Tool-Objekt",
     )
     bestehend = db.get(ToolDatenobjekt, (tool.id, datenobjekt.id))
@@ -797,7 +827,7 @@ def aendere_zugriffsart(
     kein Loeschen mit Neuanlage.
     """
     verlange(
-        darf_tool_schreiben(db, principal, tool),
+        darf_tool_verknuepfen(db, principal, tool),
         "Keine Schreibberechtigung fuer dieses Tool-Objekt",
     )
     kante = db.get(ToolDatenobjekt, (tool.id, datenobjekt_id))
@@ -821,7 +851,7 @@ def loese_tool_von_datenobjekt(
     db: Session, principal: Principal, tool: ToolObjekt, datenobjekt_id: uuid.UUID
 ) -> None:
     verlange(
-        darf_tool_schreiben(db, principal, tool),
+        darf_tool_verknuepfen(db, principal, tool),
         "Keine Schreibberechtigung fuer dieses Tool-Objekt",
     )
     kante = db.get(ToolDatenobjekt, (tool.id, datenobjekt_id))

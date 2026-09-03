@@ -176,7 +176,10 @@ vorgang('V-RAH-05', async ({ page, request }) => {
 
   await page.reload();
   await expect(
-    page.locator('.k-karte').filter({ hasText: `Werkzeug ${marke}` }).getByText('Stufe 2'),
+    page
+      .locator('.k-karte')
+      .filter({ hasText: `Werkzeug ${marke}` })
+      .getByText('Stufe 2'),
   ).toBeVisible();
 });
 
@@ -285,7 +288,9 @@ vorgang('V-RAH-10', async ({ page, request }) => {
     .innerText();
 
   await page.goto('/de/konfiguration');
-  await expect(page.getByText(/Eine Änderung wirkt auf neue Vorgänge, nicht rückwirkend/)).toBeVisible();
+  await expect(
+    page.getByText(/Eine Änderung wirkt auf neue Vorgänge, nicht rückwirkend/),
+  ).toBeVisible();
   const zeile = page.getByTestId('einstellung-lenkung_frist_tage_tier3');
   await zeile.getByLabel('Stufe 1 bei Tier 3').fill('12');
   await page.getByTestId('sichern-lenkung_frist_tage_tier3').click();
@@ -296,7 +301,10 @@ vorgang('V-RAH-10', async ({ page, request }) => {
     // gerechnet und gespeichert.
     await page.goto('/de/lenkung');
     await expect(
-      page.locator('.k-karte').filter({ hasText: `Werkzeug ${marke}` }).locator('.k-countdown .datum'),
+      page
+        .locator('.k-karte')
+        .filter({ hasText: `Werkzeug ${marke}` })
+        .locator('.k-countdown .datum'),
     ).toHaveText(vorher);
 
     // Ein neuer Vorgang bekommt die neue Frist.

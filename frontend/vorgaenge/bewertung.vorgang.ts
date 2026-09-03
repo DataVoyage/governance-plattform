@@ -205,7 +205,9 @@ vorgang('V-BEW-04', async ({ page, request }) => {
 
   // Vorschlag und Antwort werden beide festgehalten.
   const [ruf] = await Promise.all([
-    page.waitForResponse((r) => r.url().endsWith('/bewertungen') && r.request().method() === 'POST'),
+    page.waitForResponse(
+      (r) => r.url().endsWith('/bewertungen') && r.request().method() === 'POST',
+    ),
     page.getByTestId('bewertung-speichern').click(),
   ]);
   const gespeichert = (await ruf.json()).bewertung;
@@ -236,13 +238,10 @@ vorgang('V-BEW-05', async ({ page, request }) => {
   await expect(page.getByRole('button', { name: 'Weiter' })).toBeDisabled();
 
   // Auch die API weist den Schritt ab — die Sperre liegt nicht nur im Browser.
-  const direkt = await request.post(
-    `${API}/api/v1/prozesse/${prozess.id}/bewertung/wizard`,
-    {
-      headers: org.kopfzeilen,
-      data: { modus: 'vollstaendig', antworten: { '1a': false, '2a': false }, begruendungen: {} },
-    },
-  );
+  const direkt = await request.post(`${API}/api/v1/prozesse/${prozess.id}/bewertung/wizard`, {
+    headers: org.kopfzeilen,
+    data: { modus: 'vollstaendig', antworten: { '1a': false, '2a': false }, begruendungen: {} },
+  });
   expect(direkt.status()).toBe(422);
   expect(await direkt.text()).toContain('2a');
 });

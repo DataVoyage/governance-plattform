@@ -16,6 +16,7 @@ import {
   kennzeichen,
   kopf,
   organisation,
+  plattformKopf,
   prozessAnlegen,
   toolAnlegen,
   toolMitProzess,
@@ -343,7 +344,7 @@ vorgang('V-TOO-13', async ({ page, request }) => {
 
 vorgang('V-TOO-14', async ({ page, request }) => {
   const marke = kennzeichen();
-  const h = await kopf(request);
+  const h = await plattformKopf(request); // Adapter betreibt nur die Plattform
   await request.post(`${API}/api/v1/import/assets`, {
     headers: h,
     data: {
@@ -373,7 +374,7 @@ vorgang('V-TOO-14', async ({ page, request }) => {
 
 vorgang('V-TOO-15', async ({ page, request }) => {
   const marke = kennzeichen();
-  const h = await kopf(request);
+  const h = await plattformKopf(request); // Adapter betreibt nur die Plattform
   await request.post(`${API}/api/v1/import/assets`, {
     headers: h,
     data: {

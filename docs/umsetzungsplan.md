@@ -484,6 +484,21 @@ zeigten fremde Bereiche und alle Nutzernamen; wer sich selbst als Owner eintrug,
 - [ ] R-7 (Sichtregeln zählen Scopes rollenblind) und R-9 (Tool-Anker optional) — benannt,
       folgen als eigenes Paket
 
+### AP-12 — Rollen und Scopes vollständig nachgewiesen *(E-57)*
+
+**Anwendervorgänge:** keine neuen; V-ADM-11 belegt die Rollenschärfe über die Oberfläche.
+
+- [x] R-7 geschlossen: `Principal.bereiche_fuer(rolle)` ersetzt die rollenblinden
+      Scope-Eigenschaften; Sicht auf Prozess- und Tool-Objekte über eigene Verantwortung
+      und benannte Referenz
+- [x] Die Matrix aus `docs/rollen-und-scopes.md` als ausführbare Tabelle:
+      `test_rollen_und_scopes.py`, 39 Handlungen mal 11 Zugänge, jede Zelle positiv oder
+      negativ belegt
+- [x] Vier dabei gefundene Abweichungen behoben (R-12 bis R-15): App-Administrator ohne
+      fachliche Sicht und ohne Import, Tool-Schreibrecht beim technischen Owner, Umsetzung
+      für den Prozess-Owner durchgängig
+- [x] `docs/rollen-und-scopes.md` Abschnitt 9 ohne offene Punkte
+
 ---
 
 ## 3. Reihenfolge und Meilensteine
@@ -497,6 +512,7 @@ zeigten fremde Bereiche und alle Nutzernamen; wer sich selbst als Owner eintrug,
 | **M5 — Steuerung** | AP-8, AP-9 | Cockpit vollständig, Anwendung selbsttragend |
 | **M6 — Abgenommen** | AP-10 | Nachweise über den Nutzerweg statt über die API |
 | **M7 — Konsistent** | AP-11 | Berechtigungen aus einem geschriebenen Sollzustand, nicht aus Einzelfällen |
+| **M8 — Nachgewiesen** | AP-12 | Jede Zelle der Rollenmatrix belegt — positiv wie negativ |
 
 Zwischen den Meilensteinen bleibt die Anwendung jederzeit lauffähig und nutzbar — kein Paket
 hinterlässt einen halben Zustand.

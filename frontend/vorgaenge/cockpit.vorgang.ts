@@ -17,6 +17,7 @@ import {
   kennzeichen,
   kopf,
   organisation,
+  plattformKopf,
   prozessAnlegen,
   toolAnlegen,
   toolMitProzess,
@@ -241,7 +242,7 @@ vorgang('V-COC-09', async ({ page, request }) => {
 
 vorgang('V-COC-10', async ({ page, request }) => {
   const marke = kennzeichen();
-  const h = await kopf(request);
+  const h = await plattformKopf(request); // Adapter betreibt nur die Plattform
   const org = await organisation(request, marke);
   // Eine vorgefundene Anwendung, wie sie der Sync anlegt: importiert und
   // unbestätigt. Über die Oberfläche entsteht so etwas nicht — deshalb hier
@@ -250,9 +251,7 @@ vorgang('V-COC-10', async ({ page, request }) => {
     headers: h,
     data: {
       quelle: `sync-${marke}`,
-      datensaetze: [
-        { typ: 'tool', externe_id: `alt-${marke}`, name: `Altanwendung ${marke}` },
-      ],
+      datensaetze: [{ typ: 'tool', externe_id: `alt-${marke}`, name: `Altanwendung ${marke}` }],
     },
   });
   expect(antwort.status()).toBe(200);

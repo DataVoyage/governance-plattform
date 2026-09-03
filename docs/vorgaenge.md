@@ -231,6 +231,7 @@ ihn zu hinterlegen, bekommt einen roten Test — und umgekehrt.
 | V-ADM-08 | Als Auditor arbeiten wollen | Auditor | Alle Bereiche sind sichtbar, aber keine einzige Schaltfläche ändert etwas — mit dem Satz, warum | AP-9 | erfüllt |
 | V-ADM-09 | Als Prozess-Umsetzer den einen Schreibweg finden | Prozess-Umsetzer | Nur die lokale Abweichung ist bearbeitbar; alles Übrige ist gesperrt und erklärt | AP-9 | erfüllt |
 | V-ADM-10 | Ein fremdes Objekt über die API direkt abrufen | jede Rolle | Liste, Detail und Wirkung antworten gleich: außerhalb des eigenen Bereichs kommen keine Daten, nicht nur keine Anzeige | AP-9 | erfüllt |
+| V-ADM-11 | Als Prozess-Umsetzer im eigenen Bereich an fremde Objekte geraten | Prozess-Umsetzer | Der eigene Prozess ist sichtbar; das Datenobjekt desselben Fachbereichs nicht, und anlegen darf er dort nichts — ein Bereich gehört einer Rolle | AP-12 | erfüllt |
 
 ## V-INT — Integration und Nachweis
 

@@ -36,6 +36,19 @@ async function kopf(anfrage: APIRequestContext, subject = ADMIN, name = 'E2E Adm
   return { Authorization: `Bearer ${(await antwort.json()).access_token}` };
 }
 
+/** Ein Zugang mit der Plattform-Rolle — nur sie betreibt Adapter (E-57). */
+async function plattformKopf(anfrage: APIRequestContext) {
+  const marke = Math.random().toString(36).slice(2, 8);
+  const subject = `plattform-${marke}`;
+  const h = await kopf(anfrage, subject, `Plattform ${marke}`);
+  const ich = await (await anfrage.get(`${API}/api/v1/auth/me`, { headers: h })).json();
+  await anfrage.post(`${API}/api/v1/admin/rollenzuweisungen`, {
+    headers: await kopf(anfrage),
+    data: { user_id: ich.id, rolle: 'plattform', scope_typ: 'global' },
+  });
+  return h;
+}
+
 async function anmelden(seite: Page, subject = ADMIN, name = 'E2E Administrator') {
   await seite.goto('/de/anmeldung');
   await seite.getByLabel('Kennung').fill(subject);
@@ -96,7 +109,7 @@ test.describe('Phase 6 in der Oberflaeche', () => {
   });
 
   test('ein Nutzer ohne Rolle sieht ein leeres Cockpit', async ({ page, request }) => {
-    const h = await kopf(request);
+    const h = await plattformKopf(request); // Adapter betreibt nur die Plattform
     const kennung = Math.random().toString(36).slice(2, 8);
     // Ein vorgefundenes Datenobjekt ohne Fachbereich — nur global sichtbar.
     await request.post(`${API}/api/v1/import/assets`, {

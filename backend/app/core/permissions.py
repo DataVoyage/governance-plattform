@@ -14,12 +14,29 @@ from dataclasses import dataclass, field
 from app.models.enums import Rolle, ScopeTyp
 
 #: Rollen, die bereichsuebergreifend lesen duerfen (Architektur 4.3).
-GLOBAL_LESEND: frozenset[Rolle] = frozenset(
-    {Rolle.GOVERNANCE, Rolle.AUDITOR, Rolle.PLATTFORM, Rolle.APP_ADMINISTRATOR}
-)
+#:
+#: Der App-Administrator steht bewusst **nicht** hier. Er verwaltet Nutzer und
+#: Rollen und vergibt damit jeden anderen Zugriff — genau deshalb bekommt er
+#: selbst keinen fachlichen. Was er fuer seine Arbeit braucht, hat er
+#: ausdruecklich: die Nutzerliste und den Nachweis, um eine Vergabe
+#: wiederzufinden. Die Prozess-, Tool- und Datenobjekte gehen ihn nichts an
+#: (docs/rollen-und-scopes.md, Abschnitt 3).
+GLOBAL_LESEND: frozenset[Rolle] = frozenset({Rolle.GOVERNANCE, Rolle.AUDITOR, Rolle.PLATTFORM})
 
 #: Ausschliesslich lesende Rollen — nie schreibberechtigt.
 NUR_LESEND: frozenset[Rolle] = frozenset({Rolle.AUDITOR})
+
+
+@dataclass(frozen=True)
+class Bereiche:
+    """Wo eine bestimmte Rolle gilt — global, je Einheit, je Fachbereich."""
+
+    ueberall: bool = False
+    organisationseinheiten: frozenset[uuid.UUID] | set[uuid.UUID] = frozenset()
+    fachbereiche: frozenset[uuid.UUID] | set[uuid.UUID] = frozenset()
+
+    def __bool__(self) -> bool:
+        return bool(self.ueberall or self.organisationseinheiten or self.fachbereiche)
 
 
 @dataclass(frozen=True)
@@ -105,21 +122,31 @@ class Principal:
         """Governance- und Auditor-Rollen sehen bereichsuebergreifend (4.3)."""
         return bool(self.rollen & GLOBAL_LESEND)
 
-    @property
-    def scope_organisationseinheiten(self) -> set[uuid.UUID]:
-        return {
-            z.scope_id
-            for z in self.zuweisungen
-            if z.scope_typ == ScopeTyp.ORGANISATIONSEINHEIT and z.scope_id is not None
-        }
+    def bereiche_fuer(self, *rollen: Rolle) -> Bereiche:
+        """Die Bereiche, in denen der Principal **genau diese** Rollen traegt.
 
-    @property
-    def scope_fachbereiche(self) -> set[uuid.UUID]:
-        return {
-            z.scope_id
-            for z in self.zuweisungen
-            if z.scope_typ == ScopeTyp.FACHBEREICH and z.scope_id is not None
-        }
+        Es gibt bewusst keine Abfrage „alle meine Bereiche". Ein Bereich ist
+        an eine Rolle gebunden, nie an die Person (P-App-3): wer als
+        Prozess-Umsetzer in Vertrieb DE steht, hat dort *nicht* die Sicht eines
+        technischen Owners. Eine rollenblinde Sammlung war genau der Fehler,
+        den ``docs/rollen-und-scopes.md`` als R-7 fuehrte — sie machte aus
+        einer schmalen Zuweisung stillschweigend eine breite.
+        """
+        gesucht = set(rollen)
+        passend = [z for z in self.zuweisungen if z.rolle in gesucht]
+        return Bereiche(
+            ueberall=any(z.scope_typ == ScopeTyp.GLOBAL for z in passend),
+            organisationseinheiten={
+                z.scope_id
+                for z in passend
+                if z.scope_typ == ScopeTyp.ORGANISATIONSEINHEIT and z.scope_id is not None
+            },
+            fachbereiche={
+                z.scope_id
+                for z in passend
+                if z.scope_typ == ScopeTyp.FACHBEREICH and z.scope_id is not None
+            },
+        )
 
 
 class Verboten(Exception):

@@ -66,6 +66,22 @@ async function prozessAnlegen(
   return { id: prozess.id, name: prozess.name };
 }
 
+/** Ein Zugang mit der Plattform-Rolle — nur sie betreibt Adapter (E-57). */
+async function plattformKopf(anfrage: APIRequestContext) {
+  const marke = Math.random().toString(36).slice(2, 8);
+  const subject = `plattform-${marke}`;
+  const antwort = await anfrage.post(`${API}/api/v1/auth/dev-token`, {
+    data: { subject, email: `${subject}@beispiel-ag.de`, name: `Plattform ${marke}` },
+  });
+  const h = { Authorization: `Bearer ${(await antwort.json()).access_token}` };
+  const ich = await (await anfrage.get(`${API}/api/v1/auth/me`, { headers: h })).json();
+  await anfrage.post(`${API}/api/v1/admin/rollenzuweisungen`, {
+    headers: await kopf(anfrage),
+    data: { user_id: ich.id, rolle: 'plattform', scope_typ: 'global' },
+  });
+  return h;
+}
+
 async function anmelden(seite: Page) {
   await seite.goto('/de/anmeldung');
   await seite.getByLabel('Kennung').fill(ADMIN);
@@ -116,7 +132,7 @@ test.describe('Phase 3 in der Oberflaeche', () => {
     page,
     request,
   }) => {
-    const h = await kopf(request);
+    const h = await plattformKopf(request); // Adapter betreibt nur die Plattform
     const externeId = `TOOL-${Math.random().toString(36).slice(2, 8)}`;
     const toolName = `Importiertes Tool ${externeId}`;
     await request.post(`${API}/api/v1/import/assets`, {

@@ -16,6 +16,7 @@ import {
   kennzeichen,
   kopf,
   organisation,
+  plattformKopf,
   prozessAnlegen,
   toolAnlegen,
   toolMitProzess,
@@ -221,7 +222,7 @@ vorgang('V-DAT-09', async ({ page, request }) => {
 
 vorgang('V-DAT-10', async ({ page, request }) => {
   const marke = kennzeichen();
-  const h = await kopf(request);
+  const h = await plattformKopf(request); // Adapter betreibt nur die Plattform
   await request.post(`${API}/api/v1/import/assets`, {
     headers: h,
     data: {
@@ -270,7 +271,7 @@ vorgang('V-DAT-12', async ({ page, request }) => {
   // es gefunden, niemand hat es zugeordnet. Es ist nur global lesenden Rollen
   // sichtbar (7.2) — und bestaetigen heisst zuordnen.
   const marke = kennzeichen();
-  const h = await kopf(request);
+  const h = await plattformKopf(request); // Adapter betreibt nur die Plattform
   await request.post(`${API}/api/v1/import/assets`, {
     headers: h,
     data: {

@@ -16,6 +16,7 @@ import {
   kennzeichen,
   kopf,
   organisation,
+  plattformKopf,
   prozessAnlegen,
   toolAnlegen,
   toolMitProzess,
@@ -26,7 +27,7 @@ const dienst = { 'X-Service-Token': SERVICE_TOKEN };
 
 vorgang('V-INT-01', async ({ request }) => {
   const marke = kennzeichen();
-  const h = await kopf(request);
+  const h = await plattformKopf(request); // Adapter betreibt nur die Plattform
   const antwort = await request.post(`${API}/api/v1/import/assets`, {
     headers: h,
     data: {
@@ -48,8 +49,11 @@ vorgang('V-INT-01', async ({ request }) => {
   // bevor jemand geprüft hat, ob es das gemeinte Objekt ist.
   const org = await organisation(request, marke);
   const prozess = await prozessAnlegen(request, org, { name: `Ziel ${marke}` });
+  // Verknüpfen ist keine Sache der Plattform: sie importiert und bestätigt,
+  // mehr nicht (E-57). Deshalb hier der Zugang, der es dürfte — und der
+  // trotzdem abgewiesen wird, weil das Objekt unbestätigt ist.
   const kante = await request.post(`${API}/api/v1/tools/${tool.id}/prozesse`, {
-    headers: h,
+    headers: await kopf(request),
     data: { prozessobjekt_id: prozess.id },
   });
   expect(kante.status()).toBe(422);
@@ -57,7 +61,7 @@ vorgang('V-INT-01', async ({ request }) => {
 
 vorgang('V-INT-02', async ({ request }) => {
   const marke = kennzeichen();
-  const h = await kopf(request);
+  const h = await plattformKopf(request); // Adapter betreibt nur die Plattform
   const importieren = (name: string, umgebung: string) =>
     request.post(`${API}/api/v1/import/assets`, {
       headers: h,
@@ -76,10 +80,12 @@ vorgang('V-INT-02', async ({ request }) => {
   await importieren(`Alter Name ${marke}`, 'alt');
   const tools = await (await request.get(`${API}/api/v1/tools`, { headers: h })).json();
   const tool = tools.find((t: { name: string }) => t.name === `Alter Name ${marke}`);
-  await request.patch(`${API}/api/v1/tools/${tool.id}`, {
-    headers: h,
+  // Die Kategorie ist ein Governance-Feld — die Plattform setzt sie nie (E-57).
+  const gesetzt = await request.patch(`${API}/api/v1/tools/${tool.id}`, {
+    headers: await kopf(request),
     data: { kategorie: 'kernanwendung' },
   });
+  expect(gesetzt.status()).toBe(200);
 
   await importieren(`Neuer Name ${marke}`, 'neu');
   const danach = await (await request.get(`${API}/api/v1/tools/${tool.id}`, { headers: h })).json();
@@ -163,9 +169,11 @@ vorgang('V-INT-06', async ({ page, request }) => {
   await expect(page.getByRole('heading', { name: `Umbenannt ${marke}` })).toBeVisible();
 
   await page.goto('/de/nachweis?art=prozessobjekte');
-  const zeile = page.locator('.k-zeile').filter({ hasText: `Umbenannt ${marke}` }).first();
+  const zeile = page
+    .locator('.k-zeile')
+    .filter({ hasText: `Umbenannt ${marke}` })
+    .first();
   await expect(zeile).toContainText('Geändert');
   await expect(zeile).toContainText('Vorgangs-Administrator');
   await expect(zeile).toContainText(`name: Nachweisbar ${marke} → Umbenannt ${marke}`);
 });
-
