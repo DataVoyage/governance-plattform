@@ -54,6 +54,8 @@ export function DatenobjektListe() {
   const { token, profil, hatRolle } = useSitzung();
   const [datenobjekte, setDatenobjekte] = useState<DatenObjekt[] | null>(null);
   const [fachbereiche, setFachbereiche] = useState<Fachbereich[]>([]);
+  /** Die Bereiche, in denen der Angemeldete Datenobjekt-Owner ist — vom Server. */
+  const [eigeneFachbereiche, setEigeneFachbereiche] = useState<Fachbereich[]>([]);
   const [prozesse, setProzesse] = useState<Prozess[]>([]);
   const [suche, setSuche] = useState('');
   const [blattOffen, setBlattOffen] = useState(false);
@@ -70,27 +72,19 @@ export function DatenobjektListe() {
     Promise.all([
       api.datenobjekte(token),
       api.fachbereiche(token).catch(() => [] as Fachbereich[]),
+      // Nicht aus dem Profil ableiten: welche Bereiche wählbar sind, rechnet
+      // der Server — sonst stünde die Regel zweimal da (E-53).
+      api.fachbereiche(token, 'datenobjekt_owner').catch(() => [] as Fachbereich[]),
       api.prozesse(token).catch(() => [] as Prozess[]),
     ])
-      .then(([alle, bereiche, eigene]) => {
+      .then(([alle, bereiche, meine, eigene]) => {
         setDatenobjekte(alle);
         setFachbereiche(bereiche);
+        setEigeneFachbereiche(meine);
         setProzesse(eigene);
       })
       .catch(() => setFehler(t('app.fehler')));
   }, [token, t]);
-
-  /** Die Fachbereiche, für die der Angemeldete Datenobjekt-Owner ist — Governance alle.
-   *  Nur eine Vorauswahl; die Regel steht auf dem Server (E-53). */
-  const eigeneFachbereiche = useMemo(() => {
-    if (hatRolle('governance')) return fachbereiche;
-    const kennungen = new Set(
-      (profil?.rollen ?? [])
-        .filter((z) => z.rolle === 'datenobjekt_owner' && z.scope_typ === 'fachbereich')
-        .map((z) => z.scope_id),
-    );
-    return fachbereiche.filter((f) => kennungen.has(f.id));
-  }, [fachbereiche, profil, hatRolle]);
 
   /** Prozesse, die der Angemeldete schreiben darf — nur die geben Output. */
   const gebendeProzesse = useMemo(() => prozesse.filter((p) => p.rechte.bearbeiten), [prozesse]);

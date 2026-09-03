@@ -16,6 +16,7 @@ from app.api.deps import AktuellerNutzer, DbSession
 from app.core.permissions import Principal
 from app.models.enums import AssetStatus, Datenkategorie, Herkunft
 from app.models.governance import Datenobjekt, ToolObjekt
+from app.models.organisation import User
 from app.schemas.asset import (
     AttestierungAendern,
     DatennutzungAus,
@@ -43,6 +44,13 @@ from app.services import rahmen as rahmen_service
 from app.services import rechte as rechte_service
 
 router = APIRouter(tags=["Assets"])
+
+
+def _name_von(db: Session, user_id: uuid.UUID | None) -> str | None:
+    if user_id is None:
+        return None
+    nutzer = db.get(User, user_id)
+    return nutzer.name if nutzer is not None else None
 
 
 def _tool_aus(db: Session, principal: Principal, tool: ToolObjekt) -> ToolAus:
@@ -79,6 +87,7 @@ def _tool_aus(db: Session, principal: Principal, tool: ToolObjekt) -> ToolAus:
         attest_undeklarierte_quellen=tool.attest_undeklarierte_quellen,
         attestiert_am=tool.attestiert_am,
         attestiert_von_user_id=tool.attestiert_von_user_id,
+        attestiert_von_name=_name_von(db, tool.attestiert_von_user_id),
         attestierung_vollstaendig=asset_service.attestierung_vollstaendig(tool),
         wirkungsart=befund.art,
         wirkungsart_grund=befund.grund,

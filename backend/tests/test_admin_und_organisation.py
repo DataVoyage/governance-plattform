@@ -307,3 +307,81 @@ def test_datenobjekt_owner_wird_je_fachbereich_vergeben(
         ).status_code
         == 201
     )
+
+
+# --- Auswahllisten fuer Formulare (docs/rollen-und-scopes.md, 6) ------------
+
+
+def test_bereichsauswahl_endet_am_eigenen_scope(
+    client: TestClient, anmelden, rolle_geben, organisation
+) -> None:
+    """Ein Formular fragt nie „alle Bereiche", sondern „welche darf ich belegen"."""
+    owner = anmelden("Prozess-Owner Finance")
+    rolle_geben(owner.user_id, "prozess_owner", "fachbereich", organisation["fachbereich_finance"])
+
+    alle = client.get("/api/v1/organisationseinheiten", headers=owner.kopf).json()
+    assert len(alle) == 4  # die Struktur bleibt sichtbar, sie benennt Objekte
+
+    waehlbar = client.get(
+        "/api/v1/organisationseinheiten?fuer_rolle=prozess_owner", headers=owner.kopf
+    ).json()
+    assert {e["id"] for e in waehlbar} == {
+        organisation["fin_int"],
+        organisation["fin_de"],
+        organisation["fin_fr"],
+    }
+    assert organisation["hr_int"] not in {e["id"] for e in waehlbar}
+
+    # Rollenscharf: derselbe Bereich, andere Rolle — keine Auswahl.
+    assert (
+        client.get(
+            "/api/v1/organisationseinheiten?fuer_rolle=technischer_owner", headers=owner.kopf
+        ).json()
+        == []
+    )
+    assert [
+        f["id"]
+        for f in client.get(
+            "/api/v1/fachbereiche?fuer_rolle=prozess_owner", headers=owner.kopf
+        ).json()
+    ] == [organisation["fachbereich_finance"]]
+
+
+def test_personen_liefern_kennung_und_name_im_eigenen_bereich(
+    client: TestClient, anmelden, rolle_geben, organisation
+) -> None:
+    """Die Vertretung muss waehlbar sein — ohne die Nutzerverwaltung zu oeffnen."""
+    owner = anmelden("Prozess-Owner")
+    rolle_geben(owner.user_id, "prozess_owner", "fachbereich", organisation["fachbereich_finance"])
+    kollege = anmelden("Kollegin im Bereich", subject="sub-kollegin")
+    rolle_geben(kollege.user_id, "prozess_owner", "organisationseinheit", organisation["fin_de"])
+    fremd = anmelden("Prozess-Owner HR", subject="sub-hr")
+    rolle_geben(fremd.user_id, "prozess_owner", "fachbereich", organisation["fachbereich_hr"])
+    techniker = anmelden("Technikerin", subject="sub-technikerin")
+    rolle_geben(
+        techniker.user_id, "technischer_owner", "fachbereich", organisation["fachbereich_finance"]
+    )
+
+    # Die Nutzerverwaltung bleibt zu — sie traegt E-Mail, Status, Fuehrungskraft.
+    assert client.get("/api/v1/admin/users", headers=owner.kopf).status_code == 403
+
+    treffer = client.get(
+        f"/api/v1/personen?rolle=prozess_owner&organisationseinheit_id={organisation['fin_de']}",
+        headers=owner.kopf,
+    )
+    assert treffer.status_code == 200, treffer.text
+    namen = {p["name"] for p in treffer.json()}
+    assert namen == {"Prozess-Owner", "Kollegin im Bereich"}
+    assert "Prozess-Owner HR" not in namen  # anderer Fachbereich
+    assert "Technikerin" not in namen  # andere Rolle
+    assert set(treffer.json()[0]) == {"id", "name"}  # keine E-Mail, kein Status
+
+    # Nach einem fremden Bereich fragt man nicht.
+    assert (
+        client.get(
+            f"/api/v1/personen?rolle=prozess_owner&fachbereich_id={organisation['fachbereich_hr']}",
+            headers=owner.kopf,
+        ).status_code
+        == 403
+    )
+    assert client.get("/api/v1/personen?rolle=prozess_owner", headers=owner.kopf).status_code == 422

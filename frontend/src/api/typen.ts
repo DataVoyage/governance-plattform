@@ -26,6 +26,12 @@ export interface Rollenzuweisung {
   scope_id: string | null;
 }
 
+/** Wer eine Rolle in einem Bereich trägt — Kennung und Name, sonst nichts. */
+export interface Person {
+  id: string;
+  name: string;
+}
+
 export interface Profil {
   id: string;
   email: string;
@@ -297,6 +303,8 @@ export interface ToolObjekt {
   attest_undeklarierte_quellen: boolean | null;
   attestiert_am: string | null;
   attestiert_von_user_id: string | null;
+  /** Wer erklärt hat, im Klartext — A.6 verlangt die Erklärung mit Namen. */
+  attestiert_von_name: string | null;
   attestierung_vollstaendig: boolean;
   wirkungsart: Wirkungsart | null;
   wirkungsart_grund: 'schreibzugriff' | 'kein_mensch' | 'nur_lesend' | 'offen';

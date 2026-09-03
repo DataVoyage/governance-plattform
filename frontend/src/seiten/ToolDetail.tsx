@@ -9,7 +9,7 @@ import type {
   Deckung,
   Fachbereich,
   Lauftyp,
-  Nutzer,
+  Person,
   Organisationseinheit,
   Prozess,
   Technologie,
@@ -87,8 +87,8 @@ export function ToolDetail() {
   const [prozesse, setProzesse] = useState<Prozess[]>([]);
   const [nutzung, setNutzung] = useState<Datennutzung[]>([]);
   const [datenobjekte, setDatenobjekte] = useState<DatenobjektKatalog[]>([]);
-  const [nutzer, setNutzer] = useState<Nutzer[]>([]);
-  const [einheiten, setEinheiten] = useState<Organisationseinheit[]>([]);
+  const [waehlbar, setWaehlbar] = useState<Organisationseinheit[]>([]);
+  const [nutzer, setNutzer] = useState<Person[]>([]);
   const [fachbereiche, setFachbereiche] = useState<Fachbereich[]>([]);
   const [technologien, setTechnologien] = useState<Technologie[]>([]);
   const [antworten, setAntworten] = useState<Record<string, Antwort>>({});
@@ -105,19 +105,19 @@ export function ToolDetail() {
       api.prozesse(token),
       api.toolDatennutzung(token, id).catch(() => [] as Datennutzung[]),
       api.datenobjektKatalog(token).catch(() => [] as DatenobjektKatalog[]),
-      api.nutzer(token).catch(() => [] as Nutzer[]),
-      api.organisationseinheiten(token).catch(() => [] as Organisationseinheit[]),
+      api
+        .organisationseinheiten(token, 'technischer_owner')
+        .catch(() => [] as Organisationseinheit[]),
       api.fachbereiche(token).catch(() => [] as Fachbereich[]),
       api.toolDeckung(token, id).catch(() => null),
       api.technologien(token).catch(() => [] as Technologie[]),
     ])
-      .then(([geladen, alle, kanten, objekte, personen, orgs, bereiche, deckungsstand, techs]) => {
+      .then(([geladen, alle, kanten, objekte, meine, bereiche, deckungsstand, techs]) => {
         setTool(geladen);
         setProzesse(alle);
         setNutzung(kanten);
         setDatenobjekte(objekte);
-        setNutzer(personen);
-        setEinheiten(orgs);
+        setWaehlbar(meine);
         setFachbereiche(bereiche);
         setDeckung(deckungsstand);
         setTechnologien(techs);
@@ -144,6 +144,20 @@ export function ToolDetail() {
       setFehler(ausnahme instanceof ApiFehler ? ausnahme.message : t('app.fehler'));
     }
   }
+
+  /* Wählbar ist, wer *an der Einheit dieses Tools* technischer Owner ist.
+   * Zuvor lud die Seite die Nutzerverwaltung — für jede Fachrolle 403. */
+  useEffect(() => {
+    const anker = tool?.organisationseinheit_id;
+    if (token === null || anker === null || anker === undefined) {
+      setNutzer([]);
+      return;
+    }
+    api
+      .personen(token, 'technischer_owner', { organisationseinheitId: anker })
+      .then(setNutzer)
+      .catch(() => setNutzer([]));
+  }, [token, tool?.organisationseinheit_id]);
 
   if (fehler !== null && tool === null) return <Hinweis art="fehler">{fehler}</Hinweis>;
   if (tool === null) return <Ladeschimmer beschriftung={t('app.laden')} zeilen={5} />;
@@ -292,9 +306,10 @@ export function ToolDetail() {
             eintraege={[
               {
                 beschriftung: t('tool.attest.erklaertVon'),
-                wert:
-                  nutzer.find((person) => person.id === tool.attestiert_von_user_id)?.name ??
-                  t('tool.attest.unbekannt'),
+                // Aus der Antwort, nicht aus der Auswahlliste: wer attestiert
+                // hat, muss dort nicht stehen — attestieren kann auch die
+                // Governance, die an dieser Einheit keine Rolle trägt.
+                wert: tool.attestiert_von_name ?? t('tool.attest.unbekannt'),
               },
               {
                 beschriftung: t('tool.attest.erklaertAm'),
@@ -379,7 +394,7 @@ export function ToolDetail() {
           wert={tool.organisationseinheit_id ?? ''}
           aendern={(wert) => stammdatenAendern('organisationseinheit_id', wert)}
           leertext="—"
-          optionen={einheiten.map((einheit) => ({
+          optionen={waehlbar.map((einheit) => ({
             wert: einheit.id,
             text: orgBezeichnung(einheit, fachbereiche),
           }))}

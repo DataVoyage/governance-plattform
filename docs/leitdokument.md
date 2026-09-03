@@ -324,7 +324,7 @@ Nicht Tools klassifizieren, sondern **Quellen**. Tools erben.
 
 | Stufe | Inhalt | Aufwand | Wann verlangt |
 |---|---|---|---|
-| **1 — Datenobjekt** | Name, Kategorie, Owner, Quellsystem | ~30 Sekunden | Immer |
+| **1 — Datenobjekt** | Name, Kategorie, datenhaltende Stelle (Fachbereich), Quellsystem | ~30 Sekunden | Immer |
 | **2 — Datenprodukt** | + Schema, Feldebene | Stunden | Sobald geteilt genutzt |
 | **3 — ODCS-Kontrakt** | + Qualität, SLA, Konsumenten, Feldklassifikation | Tage | Nur bei echten Produkten mit Abnehmern |
 
@@ -856,7 +856,7 @@ Was das Cockpit zeigen muss, damit Steuerung möglich ist – jede Zeile ist ein
 | **Prozess-Owner** (Fachbereich) | Prozessobjekt aktuell halten, Bewertung der sechs Dimensionen, Selbstverpflichtung (A.10.2) | ~1h Ersterfassung, danach jährliche Bestätigung |
 | **Prozess-Umsetzer** | Pflegt die lokale Abweichung an einer Umsetzung — und nur diese. Der Prozess selbst gehört ihm nicht | Minuten je Umsetzung |
 | **Technischer Owner** | Tool-Zuordnung, Attestierungen nach A.6, Umsetzung der Anforderungsklassen, Selbstverpflichtung (A.10.3), Compliance-Meldungen | Minuten je Tool |
-| **Datenobjekt-Owner** | Kategorie und Klassifikation der Quelle | Einmalig je Quelle |
+| **Datenobjekt-Owner** (je Fachbereich) | Kategorie und Klassifikation der Quellen seines Fachbereichs | Einmalig je Quelle |
 | **Governance** | Gate 1 und 2, Cockpit, Technologiematrix, Einstellungen, Lenkungsvorgänge | Skaliert mit Tier-3-Menge, nicht mit Gesamtbestand |
 | **Plattform** | Provisionierung, Pipeline, Telemetrie — **eine Instanz für alle drei Technologiedomänen** (Apps Script, Python/Kubernetes, GCP-Datendienste), kein getrenntes Team je Technologie | Betrieb |
 | **Auditor** | Liest bereichsübergreifend mit, einschließlich des Nachweises. Ändert nichts | Prüfungsanlass |

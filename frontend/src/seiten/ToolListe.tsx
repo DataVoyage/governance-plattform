@@ -4,7 +4,7 @@ import { ApiFehler, api } from '@/api/client';
 import type {
   Fachbereich,
   Lauftyp,
-  Nutzer,
+  Person,
   Organisationseinheit,
   Technologie,
   ToolObjekt,
@@ -55,9 +55,9 @@ export function mitBestandswert(
  */
 export function ToolListe() {
   const { t, pfad } = useSprache();
-  const { token } = useSitzung();
+  const { token, profil } = useSitzung();
   const [tools, setTools] = useState<ToolObjekt[] | null>(null);
-  const [nutzer, setNutzer] = useState<Nutzer[]>([]);
+  const [nutzer, setNutzer] = useState<Person[]>([]);
   const [einheiten, setEinheiten] = useState<Organisationseinheit[]>([]);
   const [fachbereiche, setFachbereiche] = useState<Fachbereich[]>([]);
   const [suche, setSuche] = useState('');
@@ -76,17 +76,17 @@ export function ToolListe() {
     if (token === null) return;
     Promise.all([
       api.tools(token),
-      api.nutzer(token).catch(() => [] as Nutzer[]),
-      api.organisationseinheiten(token).catch(() => [] as Organisationseinheit[]),
+      api
+        .organisationseinheiten(token, 'technischer_owner')
+        .catch(() => [] as Organisationseinheit[]),
       api.fachbereiche(token).catch(() => [] as Fachbereich[]),
       // Die Technologien kommen vom Server: Tool-Auswahl und
       // Technologiematrix müssen dieselbe Liste benutzen, sonst zeigt die
       // eine einen Namen und die andere einen Schlüssel.
       api.technologien(token).catch(() => [] as Technologie[]),
     ])
-      .then(([alle, personen, orgs, bereiche, techs]) => {
+      .then(([alle, orgs, bereiche, techs]) => {
         setTools(alle);
-        setNutzer(personen);
         setEinheiten(orgs);
         setFachbereiche(bereiche);
         setTechnologien(techs);
@@ -116,6 +116,23 @@ export function ToolListe() {
     }
   }
 
+  useEffect(() => {
+    if (organisationseinheit === '' && einheiten.length === 1) {
+      setOrganisationseinheit(einheiten[0].id);
+    }
+  }, [einheiten, organisationseinheit]);
+
+  useEffect(() => {
+    if (token === null || organisationseinheit === '') {
+      setNutzer([]);
+      return;
+    }
+    api
+      .personen(token, 'technischer_owner', { organisationseinheitId: organisationseinheit })
+      .then(setNutzer)
+      .catch(() => setNutzer([]));
+  }, [token, organisationseinheit]);
+
   if (fehler !== null && tools === null) return <Hinweis art="fehler">{fehler}</Hinweis>;
   if (tools === null) return <Ladeschimmer beschriftung={t('app.laden')} zeilen={4} />;
 
@@ -132,7 +149,11 @@ export function ToolListe() {
     </Knopf>
   );
 
-  const personen = nutzer.map((n) => ({ wert: n.id, text: n.name }));
+  /* Wählbar ist, wer an der gewählten Einheit technischer Owner ist — deshalb
+   * erst die Einheit, dann die Personen (rollen-und-scopes.md, 6). */
+  const auswahl =
+    profil !== null && !nutzer.some((n) => n.id === profil.id) ? [profil, ...nutzer] : nutzer;
+  const personen = auswahl.map((n) => ({ wert: n.id, text: n.name }));
 
   return (
     <>

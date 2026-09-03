@@ -113,10 +113,6 @@ describe('Tool-Liste', () => {
   it('legt ein Tool mit Owner, Technologie und Lauftyp an', async () => {
     const { aufrufe } = fetchAttrappe([
       ...grundrouten(),
-      {
-        pfad: '/api/v1/admin/users',
-        koerper: [{ id: 'user-9', name: 'Tina Technik', email: 't@x', ist_aktiv: true }],
-      },
       { pfad: '/api/v1/tools', koerper: [] },
       {
         pfad: '/api/v1/tools',
@@ -129,10 +125,13 @@ describe('Tool-Liste', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Tool-Objekt anlegen' }));
     const blatt = screen.getByRole('dialog');
     await userEvent.type(within(blatt).getByLabelText('Name'), 'Neues Tool');
+    // Erst die Einheit, dann die Personen: wählbar ist, wer *dort* technischer
+    // Owner ist (docs/rollen-und-scopes.md, 6). Vorher stand die Auswahl in der
+    // Nutzerverwaltung — die jeder Fachrolle mit 403 antwortet.
+    await userEvent.selectOptions(within(blatt).getByLabelText('Organisationseinheit'), 'org-de');
     await userEvent.selectOptions(within(blatt).getByLabelText('Technischer Owner'), 'user-9');
     await userEvent.selectOptions(within(blatt).getByLabelText('Stellvertretung'), 'user-9');
     await userEvent.selectOptions(within(blatt).getByLabelText('Technologie'), 'appsheet');
-    await userEvent.selectOptions(within(blatt).getByLabelText('Organisationseinheit'), 'org-de');
     await userEvent.selectOptions(within(blatt).getByLabelText('Lauftyp'), 'geplant');
     await userEvent.click(within(blatt).getByRole('button', { name: 'Speichern' }));
 
@@ -772,21 +771,8 @@ describe('Datenobjekte', () => {
 
   it('belegt fuer den Datenobjekt-Owner den einen Fachbereich vor und sperrt ihn', async () => {
     const { aufrufe } = fetchAttrappe([
-      {
-        pfad: '/api/v1/auth/me',
-        koerper: {
-          ...PROFIL,
-          rollen: [
-            {
-              id: 'rz-9',
-              user_id: 'user-1',
-              rolle: 'datenobjekt_owner',
-              scope_typ: 'fachbereich',
-              scope_id: 'fb-1',
-            },
-          ],
-        },
-      },
+      // Welche Bereiche wählbar sind, sagt der Server — nicht das Profil.
+      { pfad: /\/fachbereiche\?fuer_rolle=datenobjekt_owner/, koerper: FACHBEREICHE },
       ...grundrouten(),
       { pfad: '/api/v1/fachbereiche', koerper: FACHBEREICHE },
       { pfad: '/api/v1/datenobjekte', koerper: [] },

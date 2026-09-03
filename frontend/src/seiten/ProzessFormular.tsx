@@ -7,7 +7,7 @@ import type {
   DatenobjektKatalog,
   Fachbereich,
   Kundenkreis,
-  Nutzer,
+  Person,
   Organisationseinheit,
   Prozess,
   ProzessEingabe,
@@ -72,9 +72,13 @@ export function ProzessFormular() {
   const { token, profil } = useSitzung();
   const navigiere = useNavigate();
 
-  const [nutzer, setNutzer] = useState<Nutzer[]>([]);
+  const [nutzer, setNutzer] = useState<Person[]>([]);
   const [fachbereiche, setFachbereiche] = useState<Fachbereich[]>([]);
+  // Zwei Listen mit verschiedenem Zweck: ``einheiten`` benennt Bereiche in
+  // Anzeigen, ``waehlbar`` sind die, in denen der Angemeldete Prozess-Owner ist
+  // — nur die darf er als Prozessgeber belegen (rollen-und-scopes.md, 6).
   const [einheiten, setEinheiten] = useState<Organisationseinheit[]>([]);
+  const [waehlbar, setWaehlbar] = useState<Organisationseinheit[]>([]);
   const [datenobjekte, setDatenobjekte] = useState<DatenobjektKatalog[]>([]);
   const [prozesse, setProzesse] = useState<Prozess[]>([]);
   const [laedt, setLaedt] = useState(true);
@@ -104,16 +108,16 @@ export function ProzessFormular() {
     if (token === null) return;
     Promise.all([
       api.organisationseinheiten(token),
+      api.organisationseinheiten(token, 'prozess_owner').catch(() => [] as Organisationseinheit[]),
       api.fachbereiche(token),
-      api.nutzer(token).catch(() => [] as Nutzer[]),
       api.datenobjektKatalog(token).catch(() => [] as DatenobjektKatalog[]),
       api.prozesse(token).catch(() => [] as Prozess[]),
       bearbeiten ? api.prozess(token, id as string) : Promise.resolve(null),
     ])
-      .then(([orgs, bereiche, personen, daten, alle, vorhanden]) => {
+      .then(([orgs, meine, bereiche, daten, alle, vorhanden]) => {
         setEinheiten(orgs);
+        setWaehlbar(meine);
         setFachbereiche(bereiche);
-        setNutzer(personen);
         setDatenobjekte(daten);
         setProzesse(alle);
         if (vorhanden !== null) {
@@ -149,6 +153,22 @@ export function ProzessFormular() {
   useEffect(() => {
     if (owner === '' && profil !== null && !bearbeiten) setOwner(profil.id);
   }, [profil, owner, bearbeiten]);
+
+  /* Owner und Stellvertretung hängen am Prozessgeber: wählbar ist, wer *dort*
+   * Prozess-Owner ist. Deshalb erst der Bereich, dann die Personen — und bei
+   * jedem Wechsel neu. Zuvor lud das Formular die Nutzerverwaltung, die jeder
+   * Fachrolle mit 403 antwortet; die Stellvertretung, ein Pflichtfeld, blieb
+   * dann leer. */
+  useEffect(() => {
+    if (token === null || prozessgeber === '') {
+      setNutzer([]);
+      return;
+    }
+    api
+      .personen(token, 'prozess_owner', { organisationseinheitId: prozessgeber })
+      .then(setNutzer)
+      .catch(() => setNutzer([]));
+  }, [token, prozessgeber]);
 
   const datenbestand: Referenz[] = useMemo(
     () =>
@@ -186,8 +206,12 @@ export function ProzessFormular() {
     [prozesse, einheiten, fachbereiche, id],
   );
 
-  const intEinheiten = einheiten.filter((e) => e.ebene === 'INT');
-  const landEinheiten = einheiten.filter((e) => e.ebene === 'LAND');
+  const intEinheiten = waehlbar.filter((e) => e.ebene === 'INT');
+  // Gibt es genau einen Bereich, ist er keine Frage.
+  useEffect(() => {
+    if (prozessgeber === '' && intEinheiten.length === 1) setProzessgeber(intEinheiten[0].id);
+  }, [intEinheiten, prozessgeber]);
+  const landEinheiten = waehlbar.filter((e) => e.ebene === 'LAND');
   const schrittzahl = zaehleSchritte(schritte);
 
   async function absenden(ereignis: FormEvent) {
@@ -261,7 +285,9 @@ export function ProzessFormular() {
 
   if (laedt) return <Ladeschimmer beschriftung={t('app.laden')} zeilen={6} />;
 
-  const nutzerAuswahl = nutzer.length > 0 ? nutzer : profil ? [profil as unknown as Nutzer] : [];
+  // Sich selbst kann man immer eintragen — auch bevor ein Bereich gewählt ist.
+  const nutzerAuswahl =
+    profil !== null && !nutzer.some((n) => n.id === profil.id) ? [profil, ...nutzer] : nutzer;
   const personen = nutzerAuswahl.map((n) => ({ wert: n.id, text: n.name }));
 
   return (

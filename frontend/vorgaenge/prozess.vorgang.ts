@@ -9,6 +9,7 @@ import { expect, type Page } from '@playwright/test';
 
 import {
   anmelden,
+  anwenderMitRolle,
   bewerten,
   datenobjektAnlegen,
   kennzeichen,
@@ -20,13 +21,12 @@ import {
 } from './hilfen';
 
 /** Das Formular mit den Pflichtangaben füllen — der gemeinsame Anfang. */
+/** Erst der Bereich, dann die Personen: wählbar ist, wer *dort* die Rolle trägt. */
 async function pflichtangaben(seite: Page, name: string, fachbereich: string) {
   await seite.getByLabel('Name').fill(name);
+  await seite.getByLabel('Prozessgeber (INT)').selectOption({ label: `${fachbereich} — INT` });
   await seite.getByLabel('Prozess-Owner').selectOption({ label: 'Vorgangs-Administrator' });
   await seite.getByLabel('Stellvertretung').selectOption({ label: 'Vorgangs-Administrator' });
-  await seite
-    .getByLabel('Prozessgeber (INT)')
-    .selectOption({ label: `${fachbereich} — INT` });
 }
 
 async function neuerProzess(seite: Page) {
@@ -77,9 +77,9 @@ vorgang('V-PRO-03', async ({ page, request }) => {
 
   // Der Treffer zeigt seine Einstufung, bevor gewählt wird (Leitdokument P5).
   const waehler = await suchen(page, 'waehler-input', objekt.name);
-  await expect(
-    waehler.getByRole('option').filter({ hasText: objekt.name }),
-  ).toContainText('Personenbezogen — besonders');
+  await expect(waehler.getByRole('option').filter({ hasText: objekt.name })).toContainText(
+    'Personenbezogen — besonders',
+  );
   await waehler.getByRole('button', { name: new RegExp(objekt.name) }).click();
   await expect(waehler.locator('.k-chip')).toContainText(objekt.name);
 
@@ -140,9 +140,9 @@ vorgang('V-PRO-06', async ({ page, request }) => {
   await page.getByLabel('Lieferant').fill('Externes Rechenzentrum');
   await page.getByRole('button', { name: 'Speichern' }).click();
 
-  await expect(
-    page.locator('.k-zeile', { hasText: 'Lieferant' }),
-  ).toContainText('Externes Rechenzentrum');
+  await expect(page.locator('.k-zeile', { hasText: 'Lieferant' })).toContainText(
+    'Externes Rechenzentrum',
+  );
 });
 
 vorgang('V-PRO-07', async ({ page, request }) => {
@@ -439,4 +439,54 @@ vorgang('V-PRO-23', async ({ page, request }) => {
   await expect(zeile).toContainText('Gate 2');
   await expect(zeile).toContainText('Neues externes Ziel');
   await expect(zeile).toContainText('sftp.partner.example');
+});
+
+vorgang('V-PRO-24', async ({ page, request }) => {
+  // Das Anlageformular bot bis hierher jede Einheit des Unternehmens als
+  // Prozessgeber an und lud die Personen aus der Nutzerverwaltung — die jeder
+  // Fachrolle mit 403 antwortet. Die Stellvertretung ist Pflicht; das Formular
+  // war damit für einen Prozess-Owner nicht absendbar.
+  const marke = kennzeichen();
+  const eigene = await organisation(request, marke);
+  const fremde = await organisation(request, `${marke}f`);
+  await anwenderMitRolle(
+    request,
+    `geber-${marke}`,
+    `Prozess-Owner ${marke}`,
+    'prozess_owner',
+    'organisationseinheit',
+    eigene.intId,
+  );
+  const kollege = `kollege-${marke}`;
+  await anwenderMitRolle(
+    request,
+    kollege,
+    `Kollege ${marke}`,
+    'prozess_owner',
+    'organisationseinheit',
+    eigene.intId,
+  );
+  await anmelden(page, `geber-${marke}`, `Prozess-Owner ${marke}`);
+  await neuerProzess(page);
+
+  // Genau ein Bereich: er steht fest, statt zur Wahl.
+  const geber = page.getByLabel('Prozessgeber (INT)');
+  await expect(geber).toHaveValue(eigene.intId);
+  const bereiche = await geber.locator('option').allTextContents();
+  expect(bereiche.join(' ')).not.toContain(fremde.fachbereichName);
+
+  // Und die Vertretung ist wählbar: wer dort dieselbe Rolle trägt.
+  const vertretung = page.getByLabel('Stellvertretung');
+  const namen = await vertretung.locator('option').allTextContents();
+  expect(namen).toContain(`Kollege ${marke}`);
+
+  await page.getByLabel('Name').fill(`Mit Vertretung ${marke}`);
+  await page.getByLabel('Prozess-Owner').selectOption({ label: `Prozess-Owner ${marke}` });
+  await vertretung.selectOption({ label: `Kollege ${marke}` });
+  await page.getByLabel('Lieferant').fill('Kreditorenbuchhaltung');
+  await page.getByLabel('Prozessschritte').fill('Prüfen; freigeben; buchen');
+  await page.getByLabel('Ergebnis').fill('Freigegebene Rechnung');
+  await page.getByRole('button', { name: 'Speichern' }).click();
+
+  await expect(page.getByRole('heading', { name: `Mit Vertretung ${marke}` })).toBeVisible();
 });

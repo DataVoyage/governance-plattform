@@ -246,15 +246,24 @@ kommen**: die Nutzer mit einer passenden Rolle im Bereich des Objekts. Ein
 Prozess-Owner in Vertrieb sieht als Stellvertretung nur Prozess-Owner des
 Vertriebs. Governance sieht alle.
 
-Dafür gibt es einen eigenen Endpunkt (`/personen?rolle=&fachbereich_id=` bzw.
-`organisationseinheit_id=`), der nur Kennung, Name und Rolle liefert. Die
-Nutzerverwaltung (`/admin/users`, mit E-Mail, Status, Führungskraft) bleibt den
-globalen Rollen vorbehalten. Ein leeres Dropdown, weil die Nutzerliste 403
-liefert, ist ein Fehler — kein Hinweis auf fehlende Rechte.
+Dafür gibt es `GET /personen?rolle=&fachbereich_id=` bzw.
+`&organisationseinheit_id=`. Er liefert Kennung und Name, sonst nichts, und
+fragen darf, wer die Rolle dort selbst trägt — „wer kann hier außer mir Owner
+sein" ist eine Frage unter Zuständigen. Die Nutzerverwaltung
+(`/admin/users`, mit E-Mail, Status, Führungskraft) bleibt den globalen Rollen
+vorbehalten. Ein leeres Dropdown, weil die Nutzerliste 403 liefert, ist ein
+Fehler — kein Hinweis auf fehlende Rechte.
 
 Wo ein Formular einen **Bereich** verlangt (Fachbereich, Einheit), zeigt es
-nur die Bereiche im Scope der handelnden Rolle. Hat sie genau einen, ist er
-vorbelegt und gesperrt. Governance sieht alle.
+nur die Bereiche im Scope der handelnden Rolle:
+`GET /organisationseinheiten?fuer_rolle=` bzw. `GET /fachbereiche?fuer_rolle=`.
+Hat sie genau einen, ist er vorbelegt und gesperrt. Ohne `fuer_rolle` liefern
+beide weiter die ganze Gliederung — sie ist Kontext und benennt Objekte in
+Anzeigen (Abschnitt 5).
+
+Daraus folgt eine Reihenfolge im Formular: **erst der Bereich, dann die
+Personen.** Wer als Owner oder Vertretung in Frage kommt, hängt am Anker des
+Objekts; solange der nicht steht, gibt es nichts zu wählen als sich selbst.
 
 ---
 
@@ -391,8 +400,16 @@ Stand: 2026-09-03, nach E-54.
 | **R-10** | Bereichs-Dropdowns (Fachbereich, Einheit) zeigen alle Bereiche | Formulare | 6: nur der eigene Scope, bei genau einem vorbelegt und gesperrt |
 | **R-11** | Datenobjekt-Owner kann auf eine Einheit gescoped werden; die Schreibregel prüft dann nie positiv | Rollenvergabe, `darf_datenobjekt_schreiben` | 3: nur Fachbereich; die Vergabe lehnt Einheit ab |
 
-**Stand nach AP-11 (E-55):** R-1 bis R-6 und R-11 sind umgesetzt; R-8 und
-R-10 für die Datenobjekt-Formulare ebenfalls. Offen bleiben R-7 (Scopes zählen
-rollenblind — die tiefste, weil sie jede Sichtregel berührt), R-9 (Tool-Anker
-optional und wechselbar) und R-8/R-10 für Prozess- und Tool-Formulare. Sie
-sind benannt, damit sie nicht wieder als Einzelfall auftauchen.
+**Stand nach AP-11 (E-55, E-56):** R-1 bis R-6, R-8, R-10 und R-11 sind
+umgesetzt — die Auswahllisten für Prozess-, Tool- und Datenobjektformulare
+laufen über `?fuer_rolle=` und `/personen` und sind damit **rollenscharf**.
+
+Offen bleiben zwei:
+
+- **R-7** — `Principal.scope_fachbereiche`, `scope_organisationseinheiten` und
+  `prozess.erlaubte_org_ids` sammeln weiterhin die Bereiche *aller* Rollen. Die
+  Auswahllisten und die Datenobjektregeln umgehen das bereits (sie zählen nur
+  die Scopes ihrer Rolle), die **Sichtregeln für Prozess- und Tool-Objekte**
+  noch nicht. Das ist die tiefste Abweichung und ein eigenes Paket.
+- **R-9** — der Anker des Tool-Objekts ist optional und für Fachrollen
+  wechselbar.

@@ -56,6 +56,19 @@ class UserAus(BaseModel):
     fuehrungskraft_user_id: uuid.UUID | None = None
 
 
+class PersonAus(BaseModel):
+    """Wer eine Rolle in einem Bereich traegt — fuer Auswahllisten.
+
+    Bewusst schmaler als ``UserAus``: ein Formular braucht Kennung und Name,
+    nicht E-Mail, Status und Fuehrungskraft (docs/rollen-und-scopes.md, 6).
+    """
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    name: str
+
+
 class UserAnlegen(BaseModel):
     """Vorabanlage eines Nutzers, etwa um ihm vor der ersten Anmeldung
     eine Rolle oder eine Fuehrungskraft zuzuordnen."""

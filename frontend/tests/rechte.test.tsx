@@ -14,6 +14,7 @@ import { screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import {
+  ALLE_DATENOBJEKTRECHTE,
   ALLE_PROZESSRECHTE,
   ALLE_TOOLRECHTE,
   EINHEITEN,
@@ -40,6 +41,13 @@ const OHNE_TOOLRECHTE = {
   zustand_melden: false,
   kompensieren: false,
   selbstverpflichten: false,
+  bestaetigen: false,
+};
+
+const OHNE_DATENOBJEKTRECHTE = {
+  bearbeiten: false,
+  kategorisieren: false,
+  anker_aendern: false,
   bestaetigen: false,
 };
 
@@ -78,7 +86,9 @@ describe('Prozessobjekt', () => {
   it('nennt dem Umsetzer den einen Weg, den er hat', async () => {
     prozessAttrappe({ ...OHNE_PROZESSRECHTE, umsetzung_pflegen: true });
     zeichne('/de/prozesse/p-1');
-    expect(await screen.findByText(/lokale Abweichung Ihrer Landesorganisation/)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/lokale Abweichung Ihrer Landesorganisation/),
+    ).toBeInTheDocument();
   });
 
   it('bietet die Bewertung nur an, wer sie durchlaufen darf', async () => {
@@ -133,5 +143,79 @@ describe('Tool-Objekt', () => {
     zeichne('/de/tools/t-1');
     expect(await screen.findByLabelText('Technologie')).not.toBeDisabled();
     expect(screen.queryByText(/dürfen es aber nicht ändern/)).not.toBeInTheDocument();
+  });
+});
+
+describe('Datenobjekt', () => {
+  /* Das Datenobjekt trägt die feinsten Rechte: Stammdaten pflegt auch der Owner
+   * des gebenden Prozesses, die Kategorie nur der Datenobjekt-Owner des
+   * Fachbereichs, den Anker nur die Governance (rollen-und-scopes.md, 7.4).
+   * Drei Rollen an einem Objekt — deshalb drei Fälle. */
+  function datenobjektAttrappe(rechte: typeof ALLE_DATENOBJEKTRECHTE) {
+    fetchAttrappe([
+      { pfad: '/api/v1/auth/me', koerper: PROFIL },
+      {
+        pfad: '/api/v1/datenobjekte/do-1',
+        koerper: {
+          id: 'do-1',
+          name: 'Kreditorenstamm',
+          beschreibung: '',
+          kategorie: 'intern',
+          fachbereich_id: 'fb-1',
+          quellsystem: 'SAP FI',
+          herkunft: 'manuell',
+          quelle: null,
+          externe_id: null,
+          status: 'bestaetigt',
+          metadaten: {},
+          schreibgeschuetzte_felder: [],
+          rechte,
+        },
+      },
+      {
+        pfad: '/api/v1/datenobjekte/do-1/wirkung',
+        koerper: {
+          kategorie_alt: 'intern',
+          kategorie_neu: null,
+          prozesse: [],
+          tools: [],
+          mitbestimmung_neu: 0,
+        },
+      },
+    ]);
+  }
+
+  it('lässt den Datenobjekt-Owner klassifizieren', async () => {
+    datenobjektAttrappe(ALLE_DATENOBJEKTRECHTE);
+    zeichne('/de/datenobjekte/do-1');
+    expect(await screen.findByLabelText('Kategorie')).not.toBeDisabled();
+    expect(screen.getByLabelText('Quellsystem')).not.toBeDisabled();
+    expect(screen.queryByText(/dürfen es aber nicht ändern/)).not.toBeInTheDocument();
+  });
+
+  it('trennt Stammdaten von der Kategorie', async () => {
+    // Der Owner des gebenden Prozesses: er pflegt, was er erzeugt — aber die
+    // Kategorie wirkt in jeden fremden Prozess, der die Quelle nutzt.
+    datenobjektAttrappe({ ...OHNE_DATENOBJEKTRECHTE, bearbeiten: true });
+    zeichne('/de/datenobjekte/do-1');
+    expect(await screen.findByLabelText('Quellsystem')).not.toBeDisabled();
+    expect(screen.getByLabelText('Kategorie')).toBeDisabled();
+    expect(screen.getByText(/Kategorie setzt der Datenobjekt-Owner/)).toBeInTheDocument();
+  });
+
+  it('sperrt alles, wo nichts erlaubt ist — und sagt warum', async () => {
+    datenobjektAttrappe(OHNE_DATENOBJEKTRECHTE);
+    zeichne('/de/datenobjekte/do-1');
+    expect(await screen.findByLabelText('Kategorie')).toBeDisabled();
+    expect(screen.getByLabelText('Quellsystem')).toBeDisabled();
+    expect(screen.getByText(/dürfen es aber nicht ändern/)).toBeInTheDocument();
+  });
+
+  it('zeigt den Anker als Text, wo er nicht wandern darf', async () => {
+    datenobjektAttrappe({ ...ALLE_DATENOBJEKTRECHTE, anker_aendern: false });
+    zeichne('/de/datenobjekte/do-1');
+    const fachbereich = await screen.findByLabelText('Fachbereich');
+    expect(fachbereich).toBeDisabled();
+    expect(fachbereich.tagName).toBe('INPUT'); // kein Dropdown: nichts zu wählen
   });
 });

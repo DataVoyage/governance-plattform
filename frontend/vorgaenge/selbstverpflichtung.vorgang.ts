@@ -35,7 +35,15 @@ async function erklaere(seite: Page, prozessId: string, auslassen: string[] = []
     if (auslassen.includes(kennung)) continue;
     await schalter.nth(i).check();
   }
+  // Der Klick stößt einen POST an. Wer danach sofort die API fragt, liest an
+  // ihm vorbei — deshalb auf die Antwort warten und nicht auf einen Text: der
+  // fällt je nach Vollständigkeit der Erklärung anders aus.
+  const gespeichert = seite.waitForResponse(
+    (antwort) =>
+      antwort.url().includes('selbstverpflichtung') && antwort.request().method() === 'POST',
+  );
   await seite.getByTestId('sv-abgeben').click();
+  await gespeichert;
 }
 
 /** Ein Tier-3-Prozess: erst ab Tier 3 ist die Erklärung Aktivierungsbedingung. */
@@ -163,9 +171,26 @@ vorgang('V-SEL-06', async ({ page, request }) => {
   // Neu bewerten — die Erklärung war an die alte Bewertung gebunden.
   const h = await kopf(request);
   const antworten: Record<string, boolean> = Object.fromEntries(
-    ['1a', '1b', '1c', '2a', '2b', '2c', '3a', '3b', '3c', '4a', '4b', '4c', '5a', '5b', '5c', '6a', '6b', '6c'].map(
-      (frage) => [frage, frage === '2a' || frage === '3a'],
-    ),
+    [
+      '1a',
+      '1b',
+      '1c',
+      '2a',
+      '2b',
+      '2c',
+      '3a',
+      '3b',
+      '3c',
+      '4a',
+      '4b',
+      '4c',
+      '5a',
+      '5b',
+      '5c',
+      '6a',
+      '6b',
+      '6c',
+    ].map((frage) => [frage, frage === '2a' || frage === '3a']),
   );
   const neu = await request.post(`${API}/api/v1/prozesse/${prozess.id}/bewertungen`, {
     headers: h,

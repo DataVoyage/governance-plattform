@@ -29,6 +29,7 @@ import type {
   Katalog,
   Nutzer,
   Organisationseinheit,
+  Person,
   Profil,
   Prozess,
   ProzessEingabe,
@@ -111,9 +112,33 @@ export const api = {
       koerper: { subject, email, name },
     }),
   profil: (token: string) => anfrage<Profil>('/api/v1/auth/me', { token }),
-  fachbereiche: (token: string) => anfrage<Fachbereich[]>('/api/v1/fachbereiche', { token }),
-  organisationseinheiten: (token: string) =>
-    anfrage<Organisationseinheit[]>('/api/v1/organisationseinheiten', { token }),
+  /** Ohne `fuerRolle` die ganze Gliederung (Kontext), mit ihr die eigene Auswahl. */
+  fachbereiche: (token: string, fuerRolle?: Rolle) =>
+    anfrage<Fachbereich[]>(
+      `/api/v1/fachbereiche${fuerRolle === undefined ? '' : `?fuer_rolle=${fuerRolle}`}`,
+      { token },
+    ),
+  organisationseinheiten: (token: string, fuerRolle?: Rolle) =>
+    anfrage<Organisationseinheit[]>(
+      `/api/v1/organisationseinheiten${fuerRolle === undefined ? '' : `?fuer_rolle=${fuerRolle}`}`,
+      { token },
+    ),
+  /**
+   * Wer diese Rolle in diesem Bereich trägt — für Owner- und Vertretungsfelder.
+   * Nicht `nutzer`: das ist die Nutzerverwaltung und bleibt global.
+   */
+  personen: (
+    token: string,
+    rolle: Rolle,
+    bereich: { fachbereichId?: string; organisationseinheitId?: string },
+  ) => {
+    const abfrage = new URLSearchParams({ rolle });
+    if (bereich.fachbereichId !== undefined) abfrage.set('fachbereich_id', bereich.fachbereichId);
+    if (bereich.organisationseinheitId !== undefined) {
+      abfrage.set('organisationseinheit_id', bereich.organisationseinheitId);
+    }
+    return anfrage<Person[]>(`/api/v1/personen?${abfrage}`, { token });
+  },
   nutzer: (token: string) => anfrage<Nutzer[]>('/api/v1/admin/users', { token }),
   prozesse: (token: string) => anfrage<Prozess[]>('/api/v1/prozesse', { token }),
   prozess: (token: string, id: string) => anfrage<Prozess>(`/api/v1/prozesse/${id}`, { token }),

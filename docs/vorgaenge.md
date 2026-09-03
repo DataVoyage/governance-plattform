@@ -90,6 +90,7 @@ ihn zu hinterlegen, bekommt einen roten Test — und umgekehrt.
 | V-PRO-21 | Die Prozessliste durchsuchen | alle | Die Liste zeigt nur die Treffer, mit Tier- und Mitbestimmungsabzeichen | AP-1 | erfüllt |
 | V-PRO-22 | Einen Prozess außerhalb des eigenen Bereichs aufrufen | Prozess-Owner | Er ist weder in der Liste noch über seine Adresse erreichbar | AP-1 | erfüllt |
 | V-PRO-23 | Erlaubte externe Ziele am Prozess erklären | Prozess-Owner | Die Ziele stehen als Rahmen am Prozess; ein neues Ziel löst Gate 2 aus | AP-6 | erfüllt |
+| V-PRO-24 | Prozessgeber und Vertretung im eigenen Bereich wählen | Prozess-Owner | Als Prozessgeber stehen nur die Einheiten zur Wahl, in denen man Prozess-Owner ist — bei genau einer steht sie fest; als Vertretung nur, wer dort dieselbe Rolle trägt | AP-11 | erfüllt |
 
 ## V-DAT — Datenobjekt
 
@@ -132,6 +133,7 @@ ihn zu hinterlegen, bekommt einen roten Test — und umgekehrt.
 | V-TOO-16 | Die Tool-Liste durchsuchen und Zustände erkennen | alle | Fehlende Attestierung, Wirkungsart und geerbtes Tier sind je Zeile sichtbar | AP-3 | erfüllt |
 | V-TOO-17 | Einen Compliance-Zustand melden | technischer Owner | Der Zustand steht oben in der Zeitreihe; ältere bleiben stehen | AP-3 | erfüllt |
 | V-TOO-18 | Den Erlaubnisrahmen des Tools ansehen | technischer Owner | Erlaubt, gemessen und Abweichung stehen nebeneinander | AP-6 | erfüllt |
+| V-TOO-19 | Einheit und technischen Owner im eigenen Bereich wählen | technischer Owner | Die Einheitenauswahl endet am eigenen Bereich; die Personen dazu kommen aus dem Bereich, nicht aus der Nutzerverwaltung | AP-11 | erfüllt |
 
 ## V-BEW — Bewertung
 

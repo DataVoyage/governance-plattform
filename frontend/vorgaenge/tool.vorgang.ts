@@ -11,6 +11,7 @@ import { expect, type Page } from '@playwright/test';
 import {
   API,
   anmelden,
+  anwenderMitRolle,
   datenobjektAnlegen,
   kennzeichen,
   kopf,
@@ -46,12 +47,14 @@ vorgang('V-TOO-01', async ({ page, request }) => {
 
   const blatt = page.getByRole('dialog');
   await blatt.getByLabel('Name').fill(name);
-  await blatt.getByLabel('Technischer Owner').selectOption({ label: 'Vorgangs-Administrator' });
-  await blatt.getByLabel('Stellvertretung').selectOption({ label: 'Vorgangs-Administrator' });
-  await blatt.getByLabel('Technologie').selectOption('apps-script');
+  // Erst die Einheit, dann die Personen: wählbar ist, wer dort technischer
+  // Owner ist (docs/rollen-und-scopes.md, 6).
   await blatt
     .getByLabel('Organisationseinheit')
     .selectOption({ label: `${org.fachbereichName} — Land DE` });
+  await blatt.getByLabel('Technischer Owner').selectOption({ label: 'Vorgangs-Administrator' });
+  await blatt.getByLabel('Stellvertretung').selectOption({ label: 'Vorgangs-Administrator' });
+  await blatt.getByLabel('Technologie').selectOption('apps-script');
   await blatt.getByLabel('Lauftyp').selectOption('geplant');
   await blatt.getByRole('button', { name: 'Speichern' }).click();
 
@@ -69,7 +72,9 @@ vorgang('V-TOO-02', async ({ page, request }) => {
   await attestieren(page, UNAUFFAELLIG);
 
   // Mit Namen, nicht als Formularfeld (A.6).
-  const karte = page.getByRole('heading', { name: 'Attestierungen' }).locator('xpath=ancestor::section[1]');
+  const karte = page
+    .getByRole('heading', { name: 'Attestierungen' })
+    .locator('xpath=ancestor::section[1]');
   await expect(karte).toContainText('Vorgangs-Administrator');
   await expect(karte.locator('.k-werte')).toContainText(new Date().getFullYear().toString());
 });
@@ -225,10 +230,7 @@ vorgang('V-TOO-09', async ({ page, request }) => {
   await page.goto(`/de/tools/${tool.id}`);
   await expect(page.getByTestId('wirkungsart')).toContainText('Gestaltend');
 
-  await page
-    .getByTestId(`nutzung-${objekt.id}`)
-    .getByRole('combobox')
-    .selectOption('schreiben');
+  await page.getByTestId(`nutzung-${objekt.id}`).getByRole('combobox').selectOption('schreiben');
 
   // Schreibzugriff macht ein Tool verändernd — immer prüfpflichtig (A.6).
   await expect(page.getByTestId('wirkungsart')).toContainText('Verändernd');
@@ -419,7 +421,9 @@ vorgang('V-TOO-17', async ({ page, request }) => {
   const tool = await toolAnlegen(request, { name: `Zu melden ${kennzeichen()}` });
   await anmelden(page);
   await page.goto(`/de/tools/${tool.id}`);
-  await expect(page.getByText('Für dieses Tool-Objekt ist noch kein Zustand erfasst.')).toBeVisible();
+  await expect(
+    page.getByText('Für dieses Tool-Objekt ist noch kein Zustand erfasst.'),
+  ).toBeVisible();
 
   await page.getByLabel('Zustand melden').selectOption('gelb');
   await page.getByLabel('Begründung').fill('Externes Ziel nicht im Rahmen');
@@ -459,4 +463,37 @@ vorgang('V-TOO-18', async ({ page, request }) => {
   await expect(page.getByTestId('abweichung-datenkategorie')).toContainText(
     'höhere Kategorie, als der Rahmen deckt',
   );
+});
+
+vorgang('V-TOO-19', async ({ page, request }) => {
+  // Dieselbe Regel wie am Prozessobjekt: erst der Bereich, dann die Personen
+  // (docs/rollen-und-scopes.md, 6).
+  const marke = kennzeichen();
+  const eigene = await organisation(request, marke);
+  const fremde = await organisation(request, `${marke}f`);
+  await anwenderMitRolle(
+    request,
+    `technik-${marke}`,
+    `Technischer Owner ${marke}`,
+    'technischer_owner',
+    'fachbereich',
+    eigene.fachbereichId,
+  );
+  await anmelden(page, `technik-${marke}`, `Technischer Owner ${marke}`);
+  await page.goto('/de/tools');
+  await page.getByRole('button', { name: 'Tool-Objekt anlegen' }).first().click();
+  const blatt = page.getByRole('dialog');
+
+  const einheiten = await blatt
+    .getByLabel('Organisationseinheit')
+    .locator('option')
+    .allTextContents();
+  expect(einheiten.join(' ')).toContain(eigene.fachbereichName);
+  expect(einheiten.join(' ')).not.toContain(fremde.fachbereichName);
+
+  await blatt
+    .getByLabel('Organisationseinheit')
+    .selectOption({ label: `${eigene.fachbereichName} — Land DE` });
+  const personen = await blatt.getByLabel('Technischer Owner').locator('option').allTextContents();
+  expect(personen).toContain(`Technischer Owner ${marke}`);
 });

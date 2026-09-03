@@ -144,6 +144,14 @@ class ToolAus(BaseModel):
     attest_undeklarierte_quellen: bool | None = None
     attestiert_am: datetime | None = None
     attestiert_von_user_id: uuid.UUID | None = None
+    #: Wer erklaert hat, im Klartext. A.6 verlangt die Attestierung
+    #: ausdruecklich mit Namen; der Name gehoert damit zum Datensatz und nicht
+    #: in eine Auswahlliste, die je nach Rolle anders ausfaellt.
+    attestiert_von_name: str | None = None
+    #: Wer erklaert hat, im Klartext. A.6 verlangt die Attestierung
+    #: ausdruecklich „mit Namen"; der Name gehoert damit zum Datensatz und
+    #: nicht in eine Auswahlliste, die je nach Rolle anders ausfaellt.
+    attestiert_von_name: str | None = None
     attestierung_vollstaendig: bool = False
     #: Triage aus A.6; ``None``, solange Attestierung 2 offen ist.
     wirkungsart: Wirkungsart | None = None

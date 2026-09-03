@@ -478,8 +478,11 @@ zeigten fremde Bereiche und alle Nutzernamen; wer sich selbst als Owner eintrug,
       Input-Auswahl (R-6); Datenobjekt-Owner nur je Fachbereich (R-11)
 - [x] Formulare bieten nur die Wege an, die der Angemeldete hat; Kategorie, Anker und
       Stammdaten mit je eigenem Recht (R-8, R-10 für Datenobjekte)
-- [ ] R-7 (Scopes rollenblind), R-9 (Tool-Anker optional), R-8/R-10 für Prozess- und
-      Tool-Formulare — benannt, folgen als eigenes Paket
+- [x] Auswahllisten rollenscharf statt „alles": `?fuer_rolle=` an Fachbereichen und
+      Einheiten, neuer Endpunkt `/personen` für Owner- und Vertretungsfelder; Prozess-,
+      Tool- und Datenobjektformular hängen daran (R-8, R-10; V-PRO-24, V-TOO-19, E-56)
+- [ ] R-7 (Sichtregeln zählen Scopes rollenblind) und R-9 (Tool-Anker optional) — benannt,
+      folgen als eigenes Paket
 
 ---
 

@@ -39,6 +39,13 @@ export const PROFIL: {
 
 export const FACHBEREICHE = [{ id: 'fb-1', name: 'Finance', code: 'fin' }];
 
+/** Wer eine Rolle in einem Bereich trägt — die Antwort von `/personen`. */
+export const PERSONEN = [
+  { id: 'user-1', name: 'Olivia Owner' },
+  { id: 'user-2', name: 'Viktor Vertretung' },
+  { id: 'user-9', name: 'Tamara Technik' },
+];
+
 export const EINHEITEN = [
   { id: 'org-int', fachbereich_id: 'fb-1', ebene: 'INT' as const, land_code: null },
   { id: 'org-de', fachbereich_id: 'fb-1', ebene: 'LAND' as const, land_code: 'DE' },
@@ -151,6 +158,7 @@ export function tool(ueberschreibungen: Partial<ToolObjekt> = {}): ToolObjekt {
     attest_undeklarierte_quellen: false,
     attestiert_am: '2026-08-01T10:00:00+00:00',
     attestiert_von_user_id: 'user-1',
+    attestiert_von_name: 'Olivia Owner',
     attestierung_vollstaendig: true,
     wirkungsart: 'gestaltend',
     wirkungsart_grund: 'nur_lesend',
@@ -248,6 +256,12 @@ export interface Route {
 const STANDARDROUTEN: Route[] = [
   { pfad: '/api/v1/fachbereiche', koerper: FACHBEREICHE },
   { pfad: '/api/v1/organisationseinheiten', koerper: EINHEITEN },
+  // Auswahllisten der Formulare: nur der eigene Scope, nur passende Personen
+  // (docs/rollen-und-scopes.md, 6). Das Testprofil trägt prozess_owner an
+  // org-int und sonst nichts — deshalb Einheiten ja, Fachbereiche nein.
+  { pfad: /\/organisationseinheiten\?fuer_rolle=/, koerper: EINHEITEN },
+  { pfad: /\/fachbereiche\?fuer_rolle=/, koerper: [] },
+  { pfad: /\/personen\?/, koerper: PERSONEN },
   { pfad: '/api/v1/datenobjekte/katalog', koerper: [] },
   { pfad: '/api/v1/datenobjekte', koerper: [] },
   { pfad: '/api/v1/admin/users', koerper: [] },

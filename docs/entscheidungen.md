@@ -1581,3 +1581,67 @@ R-9 (Tool-Anker) und die Personen-Dropdowns an Prozess und Tool (R-8, R-10).
 Für Datenobjekte ist R-7 bereits umgangen: `datenobjekt_owner_fachbereiche`
 zählt nur die Scopes dieser einen Rolle.
 
+## E-56 — Auswahllisten sind Berechtigungen, keine Bequemlichkeit
+
+*Datum: 2026-09-03 — Status: umgesetzt (AP-11)*
+
+Unmittelbar nach E-55 fiel beim Anlegen eines Prozessobjekts auf, dass die
+Dropdowns nicht stimmen. Die Messung mit dem Demo-Zugang `prozessowner` zeigte
+drei verschiedene Zustände nebeneinander:
+
+| Dropdown | Quelle | prozessowner |
+|---|---|---|
+| Vor-/Nachgelagerte Prozesse | `/prozesse` | 11 von 56 — gefiltert |
+| Prozessgeber, Umsetzungen | `/organisationseinheiten` | 41 von 41 |
+| Fachbereich | `/fachbereiche` | 10 von 10 |
+| Owner, Stellvertretung | `/admin/users` | 403 → leer |
+
+Das waren R-8 und R-10 aus dem Sollzustand — benannt, aber in AP-11 auf die
+Datenobjekte begrenzt. Der Schnitt war zu eng: das Prozessformular ist die
+Stelle, an der ein Fachbereich die Anwendung zum ersten Mal benutzt, und dort
+lag das ganze Organigramm offen. Schlimmer noch war das leere Feld: die
+Stellvertretung ist Pflicht (Architektur 3.2), und ohne wählbare Person war
+das Formular für eine Fachrolle **nicht absendbar**.
+
+**Die Entscheidung: eine Auswahlliste ist Teil der Berechtigung.** Was in einem
+Dropdown steht, sagt „das darfst du belegen". Steht dort das ganze Unternehmen,
+behauptet die Oberfläche eine Befugnis, die der Server danach verweigert — und
+der Anwender erfährt es erst beim Speichern. Deshalb dieselbe Regel wie bei den
+Listen: der Server rechnet, was wählbar ist.
+
+Zwei Endpunkte tragen das. `?fuer_rolle=` an `/organisationseinheiten` und
+`/fachbereiche` liefert die Bereiche, in denen der Anfragende **diese** Rolle
+trägt; ohne den Parameter bleibt die ganze Gliederung abrufbar, denn sie
+benennt Objekte in Anzeigen und ist Kontext, nicht Gegenstand der Governance
+(E-54). Und `/personen?rolle=&…` liefert Kennung und Name derer, die eine Rolle
+in einem Bereich tragen — fragen darf, wer sie dort selbst trägt. Die
+Nutzerverwaltung mit E-Mail, Status und Führungskraft bleibt unberührt und
+global.
+
+**Beides ist rollenscharf** und umgeht damit R-7 an der Stelle, an der es am
+meisten zählt: wer als Prozess-Umsetzer in Vertrieb DE steht, kann dort keinen
+Prozess anlegen, auch wenn er den Bereich „hat".
+
+**Eine Reihenfolge im Formular folgt daraus.** Wer als Owner in Frage kommt,
+hängt am Anker des Objekts — also erst der Bereich, dann die Personen. Bei
+genau einem Bereich steht er fest statt zur Wahl. Sich selbst kann man immer
+eintragen, auch bevor ein Bereich gewählt ist; sonst wäre der erste Prozess
+eines neuen Bereichs nicht anlegbar.
+
+**Ein Regress, den erst der Durchlauf zeigte.** Die Attestierungskarte löste
+den Namen des Erklärenden aus derselben Auswahlliste auf. Sobald die
+rollenscharf wurde, stand dort „unbekannt", wenn die Governance attestiert
+hatte — sie trägt an der Einheit des Tools keine Rolle. A.6 verlangt die
+Erklärung ausdrücklich *mit Namen*: der Name gehört damit zum Datensatz. Die
+Antwort trägt jetzt `attestiert_von_name`, und keine Anzeige hängt mehr an
+einer Liste, die es für die Auswahl gibt.
+
+**Nachgezogen, weil es zur selben Frage gehört.** `tests/rechte.test.tsx` hielt
+bis hierher nur Prozess- und Tool-Objekt fest, obwohl das Datenobjekt seit
+E-55 die feinsten Rechte trägt — vier statt zwei, drei verschiedene Rollen an
+einem Objekt. Vier Fälle stehen jetzt dort. Die Rollenerklärung des
+Datenobjekt-Owners, die in der Anwendung angezeigt wird, nennt Fachbereich und
+Alleinstellung bei der Kategorie. Und im Leitdokument stand in A.7 „Name,
+Kategorie, **Owner**, Quellsystem" — zweideutig, obwohl A.3 im Objektmodell
+schon „Owner: datenhaltende Stelle" schreibt. A.7 sagt es jetzt genauso; das
+ist eine Klarstellung, keine Änderung der Sache.

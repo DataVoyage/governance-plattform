@@ -19,7 +19,7 @@ from __future__ import annotations
 import uuid
 from dataclasses import dataclass, field
 
-from sqlalchemy import select
+from sqlalchemy import and_, false, or_, select
 from sqlalchemy.orm import Session
 
 from app.core.permissions import Principal, Zuweisung, verlange
@@ -51,8 +51,9 @@ ROLLENERKLAERUNG: dict[str, str] = {
         "Attestierungen nach A.6 ab und meldet Compliance-Zustände."
     ),
     Rolle.DATENOBJEKT_OWNER: (
-        "Pflegt Datenobjekte mitsamt ihrer Kategorie. Eine Umklassifizierung "
-        "wirkt in jeden Prozess, der das Objekt referenziert."
+        "Klassifiziert die Quellen eines Fachbereichs — die Kategorie setzt er "
+        "allein, denn sie wirkt in jeden Prozess, der die Quelle nutzt. Wird je "
+        "Fachbereich vergeben, nicht je Einheit."
     ),
     Rolle.GOVERNANCE: (
         "Entscheidet Gates, pflegt Technologiematrix und Einstellungen, bearbeitet "
@@ -368,3 +369,129 @@ def rollen_eines_nutzers(db: Session, user_id: uuid.UUID) -> list[Rollenzuweisun
     return list(
         db.execute(select(Rollenzuweisung).where(Rollenzuweisung.user_id == user_id)).scalars()
     )
+
+
+# --- Auswahllisten fuer Formulare (docs/rollen-und-scopes.md, Abschnitt 6) ---
+#
+# Ein Formular fragt nie „alle Bereiche" oder „alle Personen". Es fragt: welche
+# Bereiche darf ich in dieser Rolle belegen, und wer kommt dort als Owner in
+# Frage. Beides rechnet der Server — die Oberflaeche baut die Regel nicht nach
+# (E-53), und sie bekommt nicht, was sie ausblenden muesste (E-54).
+#
+# Beides ist ausdruecklich **rollenscharf**: gezaehlt werden nur die Scopes
+# genau dieser Rolle. Wer als Prozess-Umsetzer in Vertrieb DE steht, darf dort
+# deshalb keinen Prozess anlegen.
+
+
+def _scopes_der_rolle(principal: Principal, rolle: Rolle) -> tuple[bool, set, set]:
+    zuweisungen = [z for z in principal.zuweisungen if z.rolle == rolle]
+    global_ = any(z.scope_typ == ScopeTyp.GLOBAL for z in zuweisungen)
+    org_ids = {
+        z.scope_id
+        for z in zuweisungen
+        if z.scope_typ == ScopeTyp.ORGANISATIONSEINHEIT and z.scope_id is not None
+    }
+    fb_ids = {
+        z.scope_id
+        for z in zuweisungen
+        if z.scope_typ == ScopeTyp.FACHBEREICH and z.scope_id is not None
+    }
+    return global_, org_ids, fb_ids
+
+
+def einheiten_fuer_rolle(
+    db: Session, principal: Principal, rolle: Rolle
+) -> list[Organisationseinheit]:
+    """Die Einheiten, in denen der Anfragende diese Rolle traegt.
+
+    Die Governance kann jede belegen — sie ist die Rueckfallebene fuer Bereiche
+    ohne Owner (A.16) und traegt die Handlung im Nachweis unter ihrem Namen.
+    """
+    stmt = select(Organisationseinheit)
+    global_, org_ids, fb_ids = _scopes_der_rolle(principal, rolle)
+    if not (principal.ist_governance or global_):
+        if not org_ids and not fb_ids:
+            return []
+        stmt = stmt.where(
+            or_(
+                Organisationseinheit.id.in_(org_ids) if org_ids else false(),
+                Organisationseinheit.fachbereich_id.in_(fb_ids) if fb_ids else false(),
+            )
+        )
+    return list(db.execute(stmt).scalars())
+
+
+def fachbereiche_fuer_rolle(db: Session, principal: Principal, rolle: Rolle) -> list[Fachbereich]:
+    """Dasselbe eine Ebene hoeher — fuer Rollen, die je Fachbereich vergeben werden."""
+    stmt = select(Fachbereich).order_by(Fachbereich.name)
+    global_, org_ids, fb_ids = _scopes_der_rolle(principal, rolle)
+    if not (principal.ist_governance or global_):
+        ids = set(fb_ids)
+        if org_ids:
+            ids.update(
+                db.execute(
+                    select(Organisationseinheit.fachbereich_id).where(
+                        Organisationseinheit.id.in_(org_ids)
+                    )
+                ).scalars()
+            )
+        if not ids:
+            return []
+        stmt = stmt.where(Fachbereich.id.in_(ids))
+    return list(db.execute(stmt).scalars())
+
+
+def personen_mit_rolle(
+    db: Session,
+    principal: Principal,
+    rolle: Rolle,
+    *,
+    fachbereich_id: uuid.UUID | None = None,
+    organisationseinheit_id: uuid.UUID | None = None,
+) -> list[User]:
+    """Wer diese Rolle in diesem Bereich traegt — Kennung und Name, sonst nichts.
+
+    Fragen darf, wer die Rolle dort selbst traegt (oder die Governance): „wer
+    kann hier ausser mir Owner sein" ist eine Frage unter Zustaendigen. Die
+    Nutzerverwaltung mit E-Mail, Status und Fuehrungskraft bleibt davon
+    unberuehrt und den globalen Rollen vorbehalten.
+    """
+    if organisationseinheit_id is not None:
+        fachbereich_id = db.execute(
+            select(Organisationseinheit.fachbereich_id).where(
+                Organisationseinheit.id == organisationseinheit_id
+            )
+        ).scalar_one_or_none()
+        if fachbereich_id is None:
+            raise NichtGefunden("Organisationseinheit nicht gefunden")
+    global_, org_ids, fb_ids = _scopes_der_rolle(principal, rolle)
+    darf = (
+        principal.ist_governance
+        or global_
+        or (organisationseinheit_id is not None and organisationseinheit_id in org_ids)
+        or (fachbereich_id is not None and fachbereich_id in fb_ids)
+    )
+    verlange(darf, "Nach Personen fragt, wer die Rolle in diesem Bereich selbst traegt")
+    passend = [Rollenzuweisung.scope_typ == ScopeTyp.GLOBAL]
+    if organisationseinheit_id is not None:
+        passend.append(
+            and_(
+                Rollenzuweisung.scope_typ == ScopeTyp.ORGANISATIONSEINHEIT,
+                Rollenzuweisung.scope_id == organisationseinheit_id,
+            )
+        )
+    if fachbereich_id is not None:
+        passend.append(
+            and_(
+                Rollenzuweisung.scope_typ == ScopeTyp.FACHBEREICH,
+                Rollenzuweisung.scope_id == fachbereich_id,
+            )
+        )
+    stmt = (
+        select(User)
+        .join(Rollenzuweisung, Rollenzuweisung.user_id == User.id)
+        .where(Rollenzuweisung.rolle == rolle, User.ist_aktiv.is_(True), or_(*passend))
+        .order_by(User.name)
+        .distinct()
+    )
+    return list(db.execute(stmt).scalars())
