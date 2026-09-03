@@ -76,7 +76,8 @@ if [ "$MIT_IMAGES" = "--images" ]; then
     docker build -t "$registry/governance-backend:pruefung" "$WURZEL/backend"
     docker build -f "$WURZEL/backend/Dockerfile.worker" \
       -t "$registry/governance-sync-worker:pruefung" "$WURZEL/backend"
-    docker build -t "$registry/governance-frontend:pruefung" "$WURZEL/frontend"
+    docker build -f "$WURZEL/frontend/Dockerfile" \
+      -t "$registry/governance-frontend:pruefung" "$WURZEL"
   done
 fi
 

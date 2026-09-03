@@ -36,7 +36,7 @@ function leseSchema(): Farbschema {
  */
 const PUNKTE: {
   ziel: string;
-  schluessel: 'nav.cockpit' | 'nav.prozesse' | 'nav.tools' | 'nav.datenobjekte' | 'nav.gates' | 'nav.lenkung' | 'nav.klassen' | 'nav.konfiguration' | 'nav.verwaltung' | 'nav.nachweis';
+  schluessel: 'nav.cockpit' | 'nav.prozesse' | 'nav.tools' | 'nav.datenobjekte' | 'nav.gates' | 'nav.lenkung' | 'nav.klassen' | 'nav.konzept' | 'nav.konfiguration' | 'nav.verwaltung' | 'nav.nachweis';
   zeichen: string;
   rollen?: string[];
 }[] = [
@@ -48,6 +48,7 @@ const PUNKTE: {
   { ziel: '/lenkung', schluessel: 'nav.lenkung', zeichen: '◎' },
   { ziel: '/klassen', schluessel: 'nav.klassen', zeichen: '▦' },
   { ziel: '/konfiguration', schluessel: 'nav.konfiguration', zeichen: '⚙' },
+  { ziel: '/konzept', schluessel: 'nav.konzept', zeichen: '▷' },
   {
     ziel: '/nachweis',
     schluessel: 'nav.nachweis',

@@ -1361,3 +1361,43 @@ bleiben und der längste einen nennenswerten Teil der Breite einnimmt. Ohne die
 Korrektur scheitert genau der schmale Fall. Dafür steht das Diagramm jetzt auch
 in der Stilprobe: dort hat es festen Bestand, und die Prüfung legt keine Daten
 an, die einer Abnahme im Weg stünden.
+
+## E-52 — Der Vortrag steht in der Anwendung und hat genau eine Quelle
+
+**Anlass.** Die Konzeptvorstellung lag als Datei neben der Anwendung. Wer
+wissen wollte, *warum* die Anwendung etwas verlangt, musste das Repository
+öffnen. Das ist die falsche Reihenfolge: das Vorgehen erklärt sich dort, wo
+damit gearbeitet wird.
+
+**Entscheidung.** Der Vortrag bekommt einen eigenen Punkt in der Navigation
+(„Konzept") mit zwei Ansichten — **Vortrag** für den Raum, mit Pfeiltasten,
+Vollbild und der Foliennummer in der Adresse, und **Dokument** zum Lesen und
+Nachschlagen.
+
+**Eine Quelle, nicht zwei.** `docs/praesentation.md` bleibt die einzige
+Fassung: lesbar im Repository, projizierbar über Marp, und dieselbe Datei
+trägt die Ansicht in der Anwendung. Eine gepflegte Kopie im Frontend wäre
+genau die Doppelpflege, die P5 überall sonst verbietet.
+
+**Kein allgemeiner Markdown-Übersetzer.** `nutzen/folien.ts` kennt genau die
+Auszeichnungen, die im Dokument vorkommen, und **meldet jede andere als
+Fehler**, statt sie stillschweigend als Fließtext auszugeben. Ein Test liest
+das vollständige Dokument durch; wer eine neue Auszeichnung benutzt, bekommt
+einen roten Test und keine Folie mit Sternchen darauf. Das ist billiger und
+ehrlicher als eine Abhängigkeit, die tausend Fälle kann und neunhundert davon
+nie sieht.
+
+**Der Preis: der Bau des Frontend-Images läuft jetzt über dem
+Wurzelverzeichnis.** Er braucht `docs/praesentation.md` und `docs/bilder/`, und
+die lagen außerhalb seines Kontexts. Kopiert wird ausdrücklich nur beides und
+nicht das ganze Verzeichnis; ein `.dockerignore` hält den Kontext klein. Die
+Alternative — eine Kopie im Frontend — hätte den Bau einfacher gelassen und
+die Quelle verdoppelt. Das ist der schlechtere Tausch.
+
+**Zum Ton.** Der Vortrag bittet um keine Erlaubnis. Er erklärt ein Vorgehen und
+beschreibt, wie es greift. Frühere Fassungen waren als Entscheidungsvorlage
+geschrieben („die Entscheidung, um die wir bitten", „Abbruchkriterium"); das
+ist umgestellt. Was offen ist — der Zugang des Betriebsrats — steht weiter
+drin, aber als gemeinsam festzulegender Punkt, nicht als Antrag.
+
+Der Vorgangskatalog trägt den Fall als **V-ANM-08**.

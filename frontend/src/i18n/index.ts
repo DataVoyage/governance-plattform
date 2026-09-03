@@ -603,8 +603,22 @@ const de = {
   'nav.cockpit': 'Cockpit',
 
   'nav.klassen': 'Anforderungsklassen',
+  'nav.konzept': 'Konzept',
   'nav.verwaltung': 'Verwaltung',
   'nav.nachweis': 'Nachweis',
+
+  'konzept.titel': 'Konzept und Vorgehen',
+  'konzept.hinweis':
+    'Wie wir mit Citizen Development und Custom Code umgehen — die Begriffe, die Regeln und wie sie ineinandergreifen.',
+  'konzept.ansicht': 'Ansicht',
+  'konzept.ansicht.vortrag': 'Vortrag',
+  'konzept.ansicht.dokument': 'Dokument',
+  'konzept.zurueck': 'Zurück',
+  'konzept.weiter': 'Weiter',
+  'konzept.vollbild': 'Vollbild',
+  'konzept.fortschritt': 'Fortschritt im Vortrag',
+  'konzept.nurDeutsch':
+    'Der Vortrag liegt bislang nur auf Deutsch vor. Die Anwendung selbst ist übersetzt.',
 
   'rolle.prozess_owner': 'Prozess-Owner',
   'rolle.prozess_umsetzer': 'Prozess-Umsetzer',
@@ -1374,8 +1388,22 @@ const fr: Record<Schluessel, string> = {
   'nav.cockpit': 'Cockpit',
 
   'nav.klassen': "Classes d'exigences",
+  'nav.konzept': 'Concept',
   'nav.verwaltung': 'Administration',
   'nav.nachweis': 'Journal',
+
+  'konzept.titel': 'Concept et démarche',
+  'konzept.hinweis':
+    'Comment nous traitons le citizen development et le code sur mesure — les notions, les règles et leur articulation.',
+  'konzept.ansicht': 'Affichage',
+  'konzept.ansicht.vortrag': 'Présentation',
+  'konzept.ansicht.dokument': 'Document',
+  'konzept.zurueck': 'Précédent',
+  'konzept.weiter': 'Suivant',
+  'konzept.vollbild': 'Plein écran',
+  'konzept.fortschritt': 'Progression de la présentation',
+  'konzept.nurDeutsch':
+    "La présentation n'existe pour l'instant qu'en allemand. L'application elle-même est traduite.",
 
   'rolle.prozess_owner': 'Responsable de processus',
   'rolle.prozess_umsetzer': 'Metteur en œuvre',

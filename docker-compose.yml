@@ -42,7 +42,10 @@ services:
 
   frontend:
     build:
-      context: ./frontend
+      # Ueber dem Wurzelverzeichnis, weil der Bau die Konzeptvorstellung aus
+      # `docs/` einliest (siehe frontend/Dockerfile).
+      context: .
+      dockerfile: frontend/Dockerfile
       args:
         VITE_API_BASIS: http://localhost:8000
     image: ${GP_IMAGE_REGISTRY:-localhost:5000}/governance-frontend:${GP_IMAGE_TAG:-dev}

@@ -10,6 +10,7 @@ import { DatenobjektDetail } from '@/seiten/DatenobjektDetail';
 import { DatenobjektListe } from '@/seiten/DatenobjektListe';
 import { Gates } from '@/seiten/Gates';
 import { Klassen } from '@/seiten/Klassen';
+import { Konzept } from '@/seiten/Konzept';
 import { Konfiguration } from '@/seiten/Konfiguration';
 import { Nachweis } from '@/seiten/Nachweis';
 import { Lenkung } from '@/seiten/Lenkung';
@@ -70,6 +71,8 @@ export function App() {
           {/* Nachschlagewerk und Entscheidungsgrundlage in einem: die zehn
               Klassen aus A.9.2 und die Matrix aus Teil C.1. */}
           <Route path="klassen" element={<Klassen />} />
+          {/* Das Vorgehen erklärt sich dort, wo damit gearbeitet wird. */}
+          <Route path="konzept" element={<Konzept />} />
           {/* Fristen, Schwellen und Vorlauf sind Governance-Inhalt, keine
               Betriebsparameter (Architektur 6.6). Der Server prüft die
               Rolle noch einmal — der Pfad steuert die Anzeige, nie die

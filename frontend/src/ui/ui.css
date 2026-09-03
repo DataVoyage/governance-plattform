@@ -1571,3 +1571,179 @@ a.k-chip:hover {
   color: var(--text-tertiaer);
   font-variant-numeric: tabular-nums;
 }
+
+/* --- Vortrag ------------------------------------------------------------
+ *
+ * Der Foliensatz in der Anwendung. Zwei Ansichten teilen sich die Typografie
+ * einer Folie: im Vortrag steht eine davon groß auf der Bühne, im Dokument
+ * stehen alle untereinander. Die Maße liegen deshalb an `.folie` und nicht am
+ * jeweiligen Rahmen.
+ */
+
+.k-vortrag {
+  background: var(--flaeche);
+  border-radius: var(--radius-karte);
+  box-shadow: var(--tiefe-karte);
+  overflow: hidden;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  min-block-size: min(72vh, 40rem);
+}
+
+.k-vortrag:fullscreen {
+  border-radius: 0;
+  min-block-size: 100vh;
+}
+
+.k-vortrag .fortschritt {
+  block-size: 3px;
+  background: var(--trennlinie);
+}
+
+.k-vortrag .fortschritt span {
+  display: block;
+  block-size: 100%;
+  background: var(--farbe-akzent);
+  transition: inline-size var(--dauer-schnell) ease-out;
+}
+
+.k-vortrag .steuerung {
+  display: flex;
+  align-items: center;
+  gap: var(--abstand-3);
+  padding: var(--abstand-3) var(--abstand-5);
+  border-top: 0.5px solid var(--trennlinie);
+}
+
+.k-vortrag .steuerung .zaehler {
+  font: var(--fussnote);
+  color: var(--text-sekundaer);
+  font-variant-numeric: tabular-nums;
+  min-inline-size: 4rem;
+  text-align: center;
+}
+
+.k-vortrag .steuerung .k-knopf--unauffaellig {
+  margin-inline-start: auto;
+}
+
+/* Die Folie selbst — im Vortrag mittig und großzügig, im Dokument ruhig. */
+.folie {
+  padding: var(--abstand-8) var(--abstand-8);
+  display: grid;
+  align-content: center;
+  gap: var(--abstand-4);
+}
+
+.k-vortragsdokument .folie {
+  align-content: start;
+  padding: 0;
+}
+
+.folie > * {
+  margin: 0;
+}
+
+.folie h2 {
+  font: var(--titel-1);
+  line-height: 1.2;
+}
+
+/* Eine Abschnittsfolie trägt nur ihren Titel — sie bekommt mehr Gewicht. */
+.folie h2.leitfolie {
+  font-size: 2em;
+  text-align: center;
+}
+
+.folie p,
+.folie li {
+  font: var(--flies);
+  line-height: 1.5;
+}
+
+.folie ul,
+.folie ol {
+  padding-inline-start: var(--abstand-5);
+  display: grid;
+  gap: var(--abstand-2);
+}
+
+.folie blockquote {
+  margin: 0;
+  padding-inline-start: var(--abstand-4);
+  border-inline-start: 3px solid var(--farbe-akzent-gedaempft);
+  color: var(--text-sekundaer);
+}
+
+.folie pre {
+  margin: 0;
+  padding: var(--abstand-4);
+  background: var(--fuellung-steuerung);
+  border-radius: var(--radius-steuerung);
+  overflow-x: auto;
+}
+
+.folie pre code,
+.folie code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+}
+
+.folie img {
+  max-inline-size: 100%;
+  block-size: auto;
+  justify-self: center;
+  border-radius: var(--radius-steuerung);
+  box-shadow: var(--tiefe-karte);
+}
+
+.folie .k-tabellenrahmen {
+  overflow-x: auto;
+}
+
+.folie table {
+  border-collapse: collapse;
+  inline-size: 100%;
+  font: var(--hinweis-schrift);
+}
+
+.folie th,
+.folie td {
+  padding: var(--abstand-2) var(--abstand-3);
+  text-align: start;
+  border-bottom: 0.5px solid var(--trennlinie);
+  text-transform: none;
+  letter-spacing: normal;
+  vertical-align: top;
+}
+
+.folie th {
+  color: var(--text-sekundaer);
+  font-weight: 600;
+}
+
+/* Dichte Folien — dieselbe Auszeichnung wie im Foliensatz für Marp. */
+.folie.eng p,
+.folie.eng li,
+.folie.eng table {
+  font: var(--hinweis-schrift);
+}
+
+.k-vortragsdokument .nummer {
+  display: block;
+  font: var(--fussnote);
+  color: var(--text-tertiaer);
+  font-variant-numeric: tabular-nums;
+  margin-block-end: var(--abstand-3);
+}
+
+@media (max-width: 40rem) {
+  .folie {
+    padding: var(--abstand-4);
+  }
+
+  .k-vortrag .steuerung {
+    padding: var(--abstand-3);
+    flex-wrap: wrap;
+  }
+}

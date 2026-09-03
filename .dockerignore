@@ -1,0 +1,11 @@
+# Bauumgebungen und Erzeugnisse gehoeren nicht in den Kontext.
+.git/
+**/node_modules/
+**/__pycache__/
+backend/.venv/
+backend/.pytest_cache/
+backend/htmlcov/
+frontend/dist/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/

@@ -1,10 +1,19 @@
 # Frontend als statisch ausgelieferte Single-Page-Application (Architektur 6.1).
+#
+# Der Bau laeuft ueber dem Wurzelverzeichnis des Repositorys, nicht ueber
+# `frontend/`. Grund ist die Konzeptvorstellung: sie liegt als **eine** Quelle
+# in `docs/` — lesbar im Repository, projizierbar ueber Marp, und dieselbe
+# Datei traegt die Ansicht in der Anwendung. Eine Kopie im Frontend waere
+# genau die Doppelpflege, die dieses Vorhaben sonst ueberall vermeidet.
 FROM node:22-bookworm-slim AS build
 
-WORKDIR /app
-COPY package.json package-lock.json ./
+WORKDIR /bau/frontend
+COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
-COPY . .
+COPY frontend/ ./
+# Nur das, was die Anwendung wirklich einliest — nicht das ganze Verzeichnis.
+COPY docs/praesentation.md /bau/docs/praesentation.md
+COPY docs/bilder/ /bau/docs/bilder/
 ARG VITE_API_BASIS=""
 ENV VITE_API_BASIS=$VITE_API_BASIS
 ARG VITE_BASIS_PFAD="/"
@@ -13,6 +22,6 @@ RUN npm run build
 
 
 FROM nginx:1.27-alpine AS runtime
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /bau/frontend/dist /usr/share/nginx/html
+COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
 EXPOSE 8080

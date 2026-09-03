@@ -60,14 +60,25 @@ docker compose run --rm sync-worker \
 
 ## Konzeptvorstellung
 
-[`docs/praesentation.md`](docs/praesentation.md) stellt das Konzept und die
-Anwendung für Fachbereiche, Betriebsrat, zentrale IT und Prozess-Owner vor —
-mit Bildschirmfotos aus dem Beispielbestand und einer Entscheidungsvorlage. Die
-Datei ist zweierlei: ein lesbares Dokument und ein projizierbarer Foliensatz.
+[`docs/praesentation.md`](docs/praesentation.md) erklärt Konzept und Vorgehen
+für Fachbereiche, Betriebsrat, zentrale IT und Prozess-Owner — mit
+Bildschirmfotos aus dem Beispielbestand. Der Vortrag bittet um keine Erlaubnis;
+er beschreibt den Weg, den diese Anwendung durchsetzt.
+
+Die Datei hat **eine** Quelle und drei Wege, sie zu lesen:
+
+* in der Anwendung unter **Konzept** — als Vortrag mit Pfeiltasten und Vollbild
+  oder als durchlaufendes Dokument,
+* im Repository als Markdown,
+* als Foliensatz:
 
 ```bash
 npx @marp-team/marp-cli@latest docs/praesentation.md -o praesentation.pdf
 ```
+
+Deshalb baut das Frontend-Image über dem Wurzelverzeichnis: es liest den
+Vortrag und seine Bilder aus `docs/` ein, statt eine Kopie zu pflegen
+(`docs/entscheidungen.md`, E-52).
 
 Alle Zahlen darin stammen aus dem Beispielbestand und sind in der laufenden
 Anwendung nachzählbar.

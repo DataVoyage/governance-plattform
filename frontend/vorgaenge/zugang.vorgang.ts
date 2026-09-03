@@ -43,6 +43,28 @@ vorgang('V-ANM-07', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Datenobjekte ohne Kategorie' })).toBeVisible();
 });
 
+vorgang('V-ANM-08', async ({ page }) => {
+  // Das Vorgehen erklaert sich dort, wo damit gearbeitet wird — und nicht nur
+  // in einer Datei daneben. Geprueft wird beides: dass der Vortrag traegt und
+  // dass eine einzelne Folie eine teilbare Adresse hat.
+  await anmelden(page);
+  await page.getByRole('link', { name: 'Konzept' }).click();
+  await expect(page.getByRole('heading', { name: 'Konzept und Vorgehen' })).toBeVisible();
+  await expect(page.getByTestId('folie-1')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Weiter' }).click();
+  await expect(page.getByTestId('folie-2')).toBeVisible();
+  await expect(page).toHaveURL(/folie=2/);
+
+  // Dieselbe Adresse, frisch aufgerufen, zeigt dieselbe Folie.
+  await page.goto('/de/konzept?folie=12');
+  await expect(page.getByTestId('folie-12')).toBeVisible();
+
+  // Und die Dokumentansicht setzt alles untereinander.
+  await page.getByRole('button', { name: 'Dokument' }).click();
+  await expect(page.getByRole('heading', { name: 'Zusammengefasst' })).toBeVisible();
+});
+
 vorgang('V-ANM-03', async ({ page }) => {
   await anmelden(page);
   await page.getByRole('button', { name: 'Abmelden' }).click();

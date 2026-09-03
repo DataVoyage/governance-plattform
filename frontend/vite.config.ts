@@ -11,7 +11,10 @@ export default defineConfig({
   resolve: {
     alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
   },
-  server: { port: 5173, host: true },
+  // Der Vortrag und seine Bilder liegen in `docs/`, also oberhalb dieses
+  // Verzeichnisses. Ohne diese Freigabe verweigert der Entwicklungsserver
+  // den Zugriff darauf.
+  server: { port: 5173, host: true, fs: { allow: ['..'] } },
   preview: { port: 4173, host: true },
   test: {
     globals: true,

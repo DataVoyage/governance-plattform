@@ -11,6 +11,10 @@ projizierbarer Foliensatz.
     npx @marp-team/marp-cli@latest docs/praesentation.md -o praesentation.pdf
     npx @marp-team/marp-cli@latest docs/praesentation.md --preview
 
+Dieser Vortrag erklärt ein Vorgehen. Er bittet um keine Erlaubnis: er
+beschreibt den Weg, den wir für Citizen Development und Custom Code vorsehen,
+und zeigt, wie er greift.
+
 Alle Zahlen stammen aus dem Beispielbestand (`python -m app.bestand`) und sind
 in der laufenden Anwendung nachzählbar. Kein Wert ist geschätzt, wo nicht
 ausdrücklich „Schätzung" steht.
@@ -35,15 +39,17 @@ Vorstellung für Fachbereiche · Betriebsrat · Zentrale IT · Prozess-Owner
 
 ---
 
-## Worüber wir heute entscheiden
+## Worum es hier geht
 
-Nicht darüber, **ob** in den Fachbereichen Werkzeuge gebaut werden. Das
-geschieht bereits — in Tabellen mit Makros, in kleinen Skripten, in Apps, die
-jemand an einem Nachmittag zusammengesteckt hat.
+In den Fachbereichen werden Werkzeuge gebaut. Das ist keine Frage, die noch
+offen wäre — es geschieht bereits, in Tabellen mit Makros, in kleinen Skripten,
+in Apps, die jemand an einem Nachmittag zusammengesteckt hat. Und es ist
+richtig so: die Fachlichkeit sitzt im Fachbereich.
 
-Sondern darüber, **ob das künftig in einem Rahmen geschieht, der prüfbar ist.**
+Dieser Vortrag erklärt, **wie wir künftig damit umgehen** — welche Begriffe
+gelten, wer was tut, und woran alle merken, dass etwas aus dem Rahmen läuft.
 
-Am Ende steht eine Frage mit drei Antworten: Pilot, Nachbesserung, oder nicht.
+Er bittet um keine Erlaubnis. Er beschreibt den Weg.
 
 ---
 
@@ -438,21 +444,21 @@ Der Torwächter ist keine Absichtserklärung. Er ist eine Bedingung im Code.
 
 ---
 
-## Was wir vom Betriebsrat brauchen
+## Wie der Betriebsrat eingebunden ist
 
-**Eine Entscheidung, die wir bewusst offen gelassen haben.**
+**Fachlich** über K7: die Beteiligung wird ausgelöst, bevor ein Prozess
+produktiv geht, und der Stand des Verfahrens hängt am Gate.
 
-Die Anwendung kennt acht Rollen — Prozess-Owner, Umsetzer, technischer Owner,
-Datenobjekt-Owner, Governance, Plattform, **Auditor**, Administrator.
+**Technisch** über einen lesenden Zugang. Die Anwendung kennt acht Rollen;
+eine eigene Betriebsratsrolle ist **bewusst nicht** vorweggenommen worden. Die
+Auditor-Rolle liest bereichsübergreifend und schreibt nie — sie ist der
+naheliegende Zugang.
 
-Eine eigene Betriebsratsrolle gibt es **nicht**. Die Auditor-Rolle liest
-bereichsübergreifend und schreibt nie; sie wäre der naheliegende Zugang.
+Drei Punkte, die wir gemeinsam festlegen und nicht einseitig entscheiden:
 
-Wir haben das nicht einseitig entschieden. Zu klären ist:
-
-* Bekommt der Betriebsrat einen eigenen, lesenden Zugang?
-* Auf welchen Umfang — alle Bereiche, oder die mitbestimmungsrelevanten?
-* Wird er bei K7 aktiv benachrichtigt?
+* Umfang des Zugangs — alle Bereiche, oder die mitbestimmungsrelevanten?
+* Aktive Benachrichtigung bei K7, oder Abruf im Cockpit?
+* Eigene Rolle mit eigenem Namen, oder Auditor?
 
 ---
 
@@ -632,9 +638,11 @@ die Anwendung genauso entstehen lassen.
 
 ---
 
-## Die Entscheidung, um die wir bitten
+## Wie wir das einführen
 
-**Ein Pilot mit einem Fachbereich, ein Quartal.**
+Nicht auf einmal, sondern Bereich für Bereich. Den Anfang macht ein Bereich mit
+hoher Werkzeugdichte — damit der Meldepfad trägt, bevor die schwierigen Fälle
+kommen.
 
 | Schritt | Wer |
 |---|---|
@@ -642,27 +650,28 @@ die Anwendung genauso entstehen lassen.
 | 2. Aktive Prozessobjekte erfassen und bewerten | Fachbereich, PO |
 | 3. Zugang und Beteiligung des Betriebsrats festlegen | BR, Governance |
 | 4. Technologiematrix gegen die eigene Landschaft prüfen | Zentrale IT |
-| 5. Auswerten und über das Ausrollen entscheiden | alle |
+| 5. Erfahrungen einarbeiten, nächsten Bereich anschließen | alle |
 
-**Vorschlag für den Piloten:** ein Bereich mit hoher Werkzeugdichte und
-überschaubarer Mitbestimmungslage — damit der Meldepfad trägt, bevor die
-schwierigen Fälle kommen.
+Neue Werkzeuge gehen ab sofort diesen Weg. Für den Bestand gilt der Meldepfad
+aus A.16 — mit Frist, nicht mit Stichtag.
 
 ---
 
-## Woran der Pilot zu messen ist
+## Woran wir merken, ob das Vorgehen trägt
 
-Drei Fragen, die wir nach einem Quartal beantworten können müssen:
+Drei Zahlen, die wir je Bereich mitführen — als Steuerung, nicht als Nachweis
+gegenüber irgendwem:
 
 1. **Vollständigkeit** — Wie viele Werkzeuge sind erfasst, und wie viele
    vermuten wir noch außerhalb?
 2. **Aufwand** — Wie lange braucht ein Prozess-Owner tatsächlich, von der
-   Anlage bis zur Aktivierung?
+   Anlage bis zur Aktivierung? Wird der Weg zu lang, ändern wir den Weg.
 3. **Wirkung** — Wie viele Befunde hat das Cockpit erzeugt, und wie viele
    davon waren vorher unbekannt?
 
-Wenn die dritte Zahl klein ist, brauchen wir dieses Werkzeug nicht. Das ist ein
-ehrliches Abbruchkriterium, und wir schlagen es selbst vor.
+Die dritte Zahl ist die interessanteste. Bleibt sie klein, ist der Bestand
+gesünder als vermutet — auch das wäre ein Ergebnis, und wir würden den Aufwand
+entsprechend zurücknehmen.
 
 ---
 
@@ -676,7 +685,7 @@ ehrliches Abbruchkriterium, und wir schlagen es selbst vor.
 * Jede Entscheidung trägt einen Namen, jede Abweichung eine Frist.
 * Und es ist gebaut, geprüft und vorführbar — nicht konzipiert.
 
-**Ihre Fragen.**
+**So gehen wir mit Citizen Development und Custom Code um.** Ihre Fragen.
 
 ---
 
