@@ -41,11 +41,15 @@ async function mitEntgeltdaten(
   return { entgelt, prozess };
 }
 
-/** Startet den Wizard auf der Bewertungsseite eines Prozesses. */
-async function starte(seite: Page, prozessId: string, modus: 'Schnell' | 'Vollständig') {
+/**
+ * Öffnet den Wizard auf der Bewertungsseite eines Prozesses.
+ *
+ * Kein Vorschaltbildschirm mehr: seit E-64 gibt es nur den vollständigen
+ * Durchlauf, und ein Klick ohne Alternative ist keine Entscheidung.
+ */
+async function starte(seite: Page, prozessId: string) {
   await seite.goto(`/de/prozesse/${prozessId}/bewertung`);
-  await seite.getByRole('button', { name: modus }).click();
-  await seite.getByRole('button', { name: 'Bewertung durchführen' }).click();
+  await expect(seite.getByTestId('frage')).toBeVisible();
 }
 
 /**
@@ -79,13 +83,29 @@ async function antworteAbweichend(seite: Page, antwort: 'Ja' | 'Nein', begruendu
   await seite.getByRole('button', { name: 'Weiter' }).click();
 }
 
+/**
+ * Beantwortet die restlichen Fragen so, wie die Datenlage sie vorschlägt.
+ *
+ * Seit E-64 gibt es nur den vollständigen Durchlauf; ein Vorgang, der nur eine
+ * Dimension prüfen will, muss die übrigen trotzdem zu Ende bringen. Der
+ * Vorschlag ist dafür die richtige Antwort — er braucht keine Begründung.
+ */
+async function beendeDurchlauf(seite: Page) {
+  for (let i = 0; i < 16; i += 1) {
+    if ((await seite.getByTestId('frage').count()) === 0) break;
+    const vorschlag = seite.getByTestId('vorschlag');
+    const wert = (await vorschlag.count()) > 0 ? await vorschlag.getAttribute('data-wert') : null;
+    await antworte(seite, wert === 'true' ? 'Ja' : 'Nein');
+  }
+}
+
 vorgang('V-BEW-01', async ({ page, request }) => {
   const marke = kennzeichen();
   const org = await organisation(request, marke);
   // Ausfallfolge „spuerbar" ergibt UR 2 — das durchgerechnete Beispiel aus A.9.
   const { prozess } = await mitEntgeltdaten(request, org, marke, { ausfallfolge: 'spuerbar' });
   await anmelden(page);
-  await starte(page, prozess.id, 'Vollständig');
+  await starte(page, prozess.id);
 
   // Alle sechs Blöcke in der festgelegten Reihenfolge (A.8.5).
   await expect(page.getByText('Schritt 1 von 6 — Künstliche Intelligenz')).toBeVisible();
@@ -117,21 +137,21 @@ vorgang('V-BEW-01', async ({ page, request }) => {
 });
 
 vorgang('V-BEW-02', async ({ page, request }) => {
+  // E-64: es gibt keine unvollständige Bewertung mehr. Der Wizard beginnt bei
+  // der ersten Frage, und ein Tier-3-Treffer beendet ihn nicht — sonst
+  // stünden am Ende Nullen in Dimensionen, die niemand gefragt hat, und keine
+  // einzige Maßnahmenklasse.
   const marke = kennzeichen();
   const org = await organisation(request, marke);
   const { prozess } = await mitEntgeltdaten(request, org, marke);
   await anmelden(page);
-  await starte(page, prozess.id, 'Schnell');
+  await starte(page, prozess.id);
 
   await antworte(page, 'Nein'); // 1a
-  await antworte(page, 'Ja'); // 2a -> DS 3, Schluss
-
-  await expect(page.getByTestId('tier')).toHaveText('3');
-  // Das Fehlen wird erklärt, nicht verschwiegen.
-  await expect(
-    page.getByText('Der schnelle Durchlauf endet vorzeitig und liefert deshalb keine K-Klassen.'),
-  ).toBeVisible();
-  await expect(page.getByText('Aus diesem Profil folgt keine Maßnahmenklasse.')).toBeVisible();
+  await antworte(page, 'Ja'); // 2a -> DS 3 …
+  // … und es geht weiter: die Mitbestimmungsdimension kommt noch.
+  await expect(page.getByTestId('frage')).toBeVisible();
+  await expect(page.getByTestId('tier')).toHaveCount(0);
 });
 
 vorgang('V-BEW-03', async ({ page, request }) => {
@@ -139,7 +159,7 @@ vorgang('V-BEW-03', async ({ page, request }) => {
   const org = await organisation(request, marke);
   const { prozess } = await mitEntgeltdaten(request, org, marke, { ausfallfolge: 'kritisch' });
   await anmelden(page);
-  await starte(page, prozess.id, 'Vollständig');
+  await starte(page, prozess.id);
 
   // KI ist nach A.8.4 vollständig zu erklären — kein Vorschlag, keine Belege.
   await expect(page.getByTestId('frage')).toHaveAttribute('data-frage-id', '1a');
@@ -180,7 +200,7 @@ vorgang('V-BEW-04', async ({ page, request }) => {
   const org = await organisation(request, marke);
   const { prozess } = await mitEntgeltdaten(request, org, marke);
   await anmelden(page);
-  await starte(page, prozess.id, 'Vollständig');
+  await starte(page, prozess.id);
   await antworte(page, 'Nein'); // 1a
 
   await expect(page.getByTestId('vorschlag')).toHaveAttribute('data-wert', 'true');
@@ -221,7 +241,7 @@ vorgang('V-BEW-05', async ({ page, request }) => {
   const org = await organisation(request, marke);
   const { prozess } = await mitEntgeltdaten(request, org, marke);
   await anmelden(page);
-  await starte(page, prozess.id, 'Vollständig');
+  await starte(page, prozess.id);
   await antworte(page, 'Nein'); // 1a
 
   await expect(page.getByTestId('vorschlag')).toHaveAttribute('data-wert', 'true');
@@ -251,7 +271,7 @@ vorgang('V-BEW-06', async ({ page, request }) => {
   const org = await organisation(request, marke);
   const { prozess } = await mitEntgeltdaten(request, org, marke);
   await anmelden(page);
-  await starte(page, prozess.id, 'Vollständig');
+  await starte(page, prozess.id);
   await antworte(page, 'Nein'); // 1a
   await antworte(page, 'Ja'); // 2a -> DS 3
   await antworte(page, 'Ja'); // 3a -> MB 3
@@ -280,7 +300,7 @@ vorgang('V-BEW-07', async ({ page, request }) => {
   const org = await organisation(request, marke);
   const { prozess } = await mitEntgeltdaten(request, org, marke);
   await anmelden(page);
-  await starte(page, prozess.id, 'Vollständig');
+  await starte(page, prozess.id);
   await antworte(page, 'Nein'); // 1a
   await antworte(page, 'Ja'); // 2a -> DS 3 -> Tier 3
   await antworte(page, 'Ja'); // 3a
@@ -307,7 +327,7 @@ vorgang('V-BEW-08', async ({ page, request }) => {
   const org = await organisation(request, marke);
   const prozess = await prozessAnlegen(request, org, { name: `KI-Vorhaben ${marke}` });
   await anmelden(page);
-  await starte(page, prozess.id, 'Vollständig');
+  await starte(page, prozess.id);
 
   await antworte(page, 'Ja'); // 1a: KI im Einsatz
   await page.getByRole('button', { name: 'Ja', exact: true }).click(); // 1b: verbotene Praxis
@@ -332,7 +352,7 @@ vorgang('V-BEW-09', async ({ page, request }) => {
   const org = await organisation(request, marke);
   const prozess = await prozessAnlegen(request, org, { name: `Abbruch ${marke}` });
   await anmelden(page);
-  await starte(page, prozess.id, 'Vollständig');
+  await starte(page, prozess.id);
   await antworte(page, 'Nein'); // 1a
 
   await page.getByRole('button', { name: 'Bewertung abbrechen' }).click();
@@ -357,7 +377,7 @@ vorgang('V-BEW-10', async ({ page, request }) => {
   const org = await organisation(request, marke);
   const { prozess } = await mitEntgeltdaten(request, org, marke);
   await anmelden(page);
-  await starte(page, prozess.id, 'Vollständig');
+  await starte(page, prozess.id);
   await antworte(page, 'Nein'); // 1a
   await expect(page.getByTestId('frage')).toHaveAttribute('data-frage-id', '2a');
 
@@ -380,25 +400,21 @@ vorgang('V-BEW-11', async ({ page, request }) => {
   const { prozess } = await mitEntgeltdaten(request, org, marke);
   await anmelden(page);
 
-  // Erste Bewertung: DS 3 über die schnelle Variante.
-  await starte(page, prozess.id, 'Schnell');
+  // Erste Bewertung: DS 3, und der Durchlauf geht bis zum Ende (E-64).
+  await starte(page, prozess.id);
   await antworte(page, 'Nein');
   await antworte(page, 'Ja');
+  await beendeDurchlauf(page);
   await page.getByTestId('bewertung-speichern').click();
   await expect(page.getByRole('heading', { name: 'Bewertungshistorie' })).toBeVisible();
   await expect(page.getByRole('row')).toHaveCount(2); // Kopf plus eine Bewertung
 
   // Neubewertung, diesmal vollständig und mit MB 3.
-  await starte(page, prozess.id, 'Vollständig');
+  await starte(page, prozess.id);
   await antworte(page, 'Nein');
   await antworte(page, 'Ja');
   await antworte(page, 'Ja'); // 3a -> MB 3
-  for (let i = 0; i < 9; i += 1) {
-    if ((await page.getByTestId('frage').count()) === 0) break;
-    const vorschlag = page.getByTestId('vorschlag');
-    const wert = (await vorschlag.count()) > 0 ? await vorschlag.getAttribute('data-wert') : null;
-    await antworte(page, wert === 'true' ? 'Ja' : 'Nein');
-  }
+  await beendeDurchlauf(page);
   await page.getByTestId('bewertung-speichern').click();
 
   // Die alte Bewertung bleibt erhalten, die neue steht oben und ist maßgeblich.
@@ -415,17 +431,16 @@ vorgang('V-BEW-12', async ({ page, request }) => {
   const { prozess } = await mitEntgeltdaten(request, org, marke);
   await anmelden(page);
 
-  await starte(page, prozess.id, 'Schnell');
+  await starte(page, prozess.id);
   await antworte(page, 'Nein');
   await antworte(page, 'Ja');
+  await beendeDurchlauf(page);
   await page.getByTestId('bewertung-speichern').click();
 
   await expect(page.getByRole('heading', { name: 'Bewertungshistorie' })).toBeVisible();
   const zeile = page.getByTestId('bewertung-massgeblich');
-  // Jede Version ist mit Datum und Profil nachvollziehbar.
+  // Jede Version ist mit Datum und vollständigem Profil nachvollziehbar.
   await expect(zeile).toContainText(new Date().toISOString().slice(0, 10));
-  await expect(zeile).toContainText('KI0-DS3-MB0-IT0-RG0-UR0');
+  await expect(zeile).toContainText('KI0-DS3');
   await expect(zeile).toContainText('Tier 3');
-  // Der schnelle Durchlauf ist als solcher gekennzeichnet.
-  await expect(zeile).toContainText('(schnell)');
 });

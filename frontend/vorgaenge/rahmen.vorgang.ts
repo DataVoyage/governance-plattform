@@ -65,14 +65,18 @@ async function aufbau(
   return { org, prozess, tool };
 }
 
-/** Einen roten Zustand über die Oberfläche melden. */
-async function melden(seite: Page, toolId: string, begruendung: string, verbot?: string) {
+/**
+ * Eine Compliance-Abweichung über die Oberfläche melden.
+ *
+ * Ein Knopf, ein Feld (E-64). Farbe, Abweichungsart und ein verletztes Verbot
+ * misst der Server selbst — es gibt nichts auszuwählen.
+ */
+async function melden(seite: Page, toolId: string, begruendung: string) {
   await seite.goto(`/de/tools/${toolId}`);
-  await seite.getByLabel('Zustand melden').selectOption('rot');
-  if (verbot !== undefined) await seite.getByLabel('Verstoß gegen Schicht 2').selectOption(verbot);
-  await seite.getByLabel('Begründung').fill(begruendung);
-  await seite.getByRole('button', { name: 'Zustand melden' }).click();
-  await expect(seite.getByTestId('aktueller-zustand')).toContainText(begruendung);
+  await seite.getByLabel('Was haben Sie beobachtet?').fill(begruendung);
+  await seite.getByTestId('abweichung-melden').click();
+  await expect(seite.getByTestId('aktueller-zustand')).toContainText('Rot');
+  await expect(seite.getByText(begruendung)).toBeVisible();
 }
 
 vorgang('V-RAH-01', async ({ page, request }) => {
@@ -116,13 +120,14 @@ vorgang('V-RAH-03', async ({ page, request }) => {
   const { tool } = await aufbau(request, marke);
   await anmelden(page);
 
-  // Vor der Meldung steht auf dem Bildschirm, was folgt.
-  await page.goto(`/de/tools/${tool.id}`);
-  await page.getByLabel('Zustand melden').selectOption('rot');
-  await page.getByLabel('Verstoß gegen Schicht 2').selectOption('identitaet_umgangen');
-  await expect(page.getByText(/unmittelbar in Eskalationsstufe 2/)).toBeVisible();
-  await page.getByLabel('Begründung').fill('Läuft unter einem geteilten Konto');
-  await page.getByRole('button', { name: 'Zustand melden' }).click();
+  // Das Verbot benennt niemand: es steht in den Daten des Werkzeugs, und die
+  // Meldung liest es dort (E-64). Also erst eintragen, dann melden.
+  const h = await kopf(request);
+  await request.patch(`${API}/api/v1/tools/${tool.id}`, {
+    headers: h,
+    data: { ausfuehrungsidentitaet: 'geteiltes_konto' },
+  });
+  await melden(page, tool.id, 'Läuft unter einem geteilten Konto');
 
   await page.goto('/de/lenkung');
   const karte = page.locator('.k-karte').filter({ hasText: `Werkzeug ${marke}` });
@@ -245,8 +250,10 @@ vorgang('V-RAH-08', async ({ page, request }) => {
 
   await page.goto(`/de/tools/${tool.id}`);
   await expect(page.getByTestId('status')).toContainText('Inaktiv');
-  // Der Zustand bleibt rot: ein stillgelegtes Tool ist nicht „wieder konform".
-  await expect(page.getByTestId('aktueller-zustand')).toContainText('Rot');
+  // Der Abschluss steht mit Art und Grund am Werkzeug (E-64) — und er ist
+  // rot: ein stillgelegtes Tool ist nicht „wieder konform", sondern außer
+  // Betrieb.
+  await expect(page.getByText(/Lenkungsvorgang aufgelöst: stillgelegt/)).toBeVisible();
 });
 
 vorgang('V-RAH-09', async ({ page, request }) => {

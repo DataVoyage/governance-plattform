@@ -32,16 +32,6 @@ from app.services.changelog import protokolliere_erstellung
 from app.services.prozess import Ungueltig, darf_schreiben
 
 
-class Modus:
-    """Die beiden im Leitdokument vorgesehenen Ausgaenge des Wizards."""
-
-    SCHNELL = "schnell"
-    VOLLSTAENDIG = "vollstaendig"
-
-
-ALLE_MODI = (Modus.SCHNELL, Modus.VOLLSTAENDIG)
-
-
 @dataclass
 class Baumstand:
     """Zwischenstand eines Durchlaufs — bewusst ohne Tier-Anzeige.
@@ -55,7 +45,6 @@ class Baumstand:
     naechste_frage: Frage | None = None
     abgeschlossen: bool = False
     verboten: bool = False
-    vollstaendig: bool = True
 
 
 def _werte_block_aus(
@@ -77,16 +66,20 @@ def _werte_block_aus(
     return tentativ, None, False
 
 
-def durchlaufe(antworten: dict[str, bool], modus: str = Modus.VOLLSTAENDIG) -> Baumstand:
+def durchlaufe(antworten: dict[str, bool]) -> Baumstand:
     """Fuehrt den Baum bis zur naechsten offenen Frage oder bis zum Ende.
 
     Der Durchlauf ist zustandslos: aus denselben Antworten folgt immer derselbe
     Stand. Damit braucht der Wizard keine serverseitige Sitzung, und die
     Reihenfolge bleibt trotzdem serverseitig festgelegt.
-    """
-    if modus not in ALLE_MODI:
-        raise Ungueltig(f"Unbekannter Modus: {modus}")
 
+    Es gibt **einen** Ausgang. Bis E-64 kannte der Baum eine schnelle Variante,
+    die beim ersten Tier-3-Treffer abbrach; sie hinterliess eine Bewertung ohne
+    K-Klassen und mit Nullen in den nicht durchlaufenen Dimensionen. Eine solche
+    Bewertung konnte eine vollstaendige verdraengen und dabei still loeschen,
+    was schon beantwortet war. Der Zeitgewinn war ein Scheingewinn: was die
+    Anwendung ableiten kann, schlaegt sie ohnehin vor (A.8.4).
+    """
     stand = Baumstand()
     for themenblock in BAUM:
         stufe, offene_frage, verboten = _werte_block_aus(themenblock, antworten)
@@ -94,18 +87,12 @@ def durchlaufe(antworten: dict[str, bool], modus: str = Modus.VOLLSTAENDIG) -> B
             stand.stufen[themenblock.block] = KI_VERBOTEN
             stand.verboten = True
             stand.abgeschlossen = True
-            stand.vollstaendig = False
             return stand
         if offene_frage is not None:
             stand.naechste_frage = offene_frage
             return stand
         assert stufe is not None
         stand.stufen[themenblock.block] = stufe
-        # Die schnelle Variante endet beim ersten Tier-3-Treffer.
-        if modus == Modus.SCHNELL and stufe >= 3:
-            stand.abgeschlossen = True
-            stand.vollstaendig = False
-            return stand
     stand.abgeschlossen = True
     return stand
 
@@ -313,7 +300,6 @@ def speichere(
     principal: Principal,
     prozess: Prozessobjekt,
     antworten: dict[str, bool],
-    modus: str = Modus.VOLLSTAENDIG,
     begruendungen: dict[str, str] | None = None,
 ) -> Bewertung | Alarm:
     """Schliesst einen Durchlauf ab und legt eine neue Bewertung an.
@@ -329,7 +315,7 @@ def speichere(
     pruefe_antworten(antworten)
     vorschlaege = vorschlag.fuer_prozess(prozess)
     abweichende = pruefe_begruendungen(vorschlaege, antworten, begruendungen or {})
-    stand = durchlaufe(antworten, modus)
+    stand = durchlaufe(antworten)
     if not stand.abgeschlossen:
         raise Ungueltig(
             f"Der Baumdurchlauf ist nicht abgeschlossen; offen ist Frage "
@@ -365,8 +351,7 @@ def speichere(
         ur_stufe=werte["ur"],
         tier=tier_wert,
         gesperrt=False,
-        vollstaendig=stand.vollstaendig,
-        ausgeloeste_k_klassen=leite_k_klassen_ab(werte) if stand.vollstaendig else [],
+        ausgeloeste_k_klassen=leite_k_klassen_ab(werte),
         antworten=dict(antworten),
         vorschlaege=vorschlag.werte(vorschlaege),
         abweichungen=abweichende,

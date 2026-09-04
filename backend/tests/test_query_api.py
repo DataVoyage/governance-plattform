@@ -111,7 +111,7 @@ def test_k_klassen_auch_nach_schnellem_durchlauf(client: TestClient, owner, proz
     """Die schnelle Variante speichert keine K-Klassen — die API leitet sie ab."""
     client.post(
         f"/api/v1/prozesse/{prozess['id']}/bewertungen",
-        json=nutzlast(profil_von(ds=3), modus="schnell"),
+        json=nutzlast(profil_von(ds=3)),
         headers=owner.kopf,
     )
     antwort = frage(client, f"/prozess/{prozess['id']}/k-klassen")

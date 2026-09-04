@@ -105,7 +105,7 @@ function toolAttrappe(rechte: typeof ALLE_TOOLRECHTE) {
     { pfad: /\/tools\/t-1$/, koerper: tool({ id: 't-1', rechte }) },
     { pfad: /\/tools\/t-1\/datennutzung/, koerper: [] },
     { pfad: /\/erlaubnisrahmen$/, koerper: rahmen() },
-    { pfad: /\/tools\/t-1\/compliance/, koerper: [] },
+    { pfad: /\/tools\/t-1\/compliance/, koerper: { farbe: 'gruen', offene_abweichungen: [], verlauf: [] } },
     {
       pfad: /\/klassenbefund$/,
       koerper: {

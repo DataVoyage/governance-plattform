@@ -50,7 +50,7 @@ def _frage_aus(frage, vorschlaege: dict[str, vorschlag_service.Vorschlag]) -> Fr
 def _ergebnis_aus(stand) -> ErgebnisAus:
     werte = bewertung_service.profil(stand)
     tier_wert = bewertung_service.tier(stand)
-    kennungen = bewertung_service.leite_k_klassen_ab(werte) if stand.vollstaendig else []
+    kennungen = bewertung_service.leite_k_klassen_ab(werte)
     return ErgebnisAus(
         tier=tier_wert,
         profil=werte,
@@ -64,7 +64,6 @@ def _ergebnis_aus(stand) -> ErgebnisAus:
             for kennung in kennungen
         ],
         auflagen=bewertung_service.auflagen(tier_wert),
-        vollstaendig=stand.vollstaendig,
     )
 
 
@@ -90,7 +89,7 @@ def wizard_schritt(
     bewertung_service.pruefe_antworten(anfrage.antworten)
     vorschlaege = vorschlag_service.fuer_prozess(prozess)
     bewertung_service.pruefe_begruendungen(vorschlaege, anfrage.antworten, anfrage.begruendungen)
-    stand = bewertung_service.durchlaufe(anfrage.antworten, anfrage.modus)
+    stand = bewertung_service.durchlaufe(anfrage.antworten)
 
     vorschau = None
     if stand.abgeschlossen and not stand.verboten:
@@ -101,7 +100,6 @@ def wizard_schritt(
         ),
         abgeschlossen=stand.abgeschlossen,
         verboten=stand.verboten,
-        vollstaendig=stand.vollstaendig,
         vorschau=vorschau,
     )
 
@@ -119,7 +117,6 @@ def abschliessen(
         principal,
         prozess,
         anfrage.antworten,
-        anfrage.modus,
         begruendungen=anfrage.begruendungen,
     )
     if isinstance(ergebnis, Alarm):

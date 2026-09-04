@@ -160,33 +160,35 @@ def stehender_verstoss(kontext: Kontext) -> None:
             },
         )
 
-    # Die beiden Verbote, die die Anwendung **nicht** sieht: sie betreffen
-    # Vorgaenge in der Zielplattform. Sie sind zu melden — und genau das steht
-    # in der Auskunft dabei, damit niemand die eine Haelfte fuer die ganze
-    # Wahrheit haelt (A.13.2).
+    # Die beiden Verbote, die in der Zielplattform geschehen. Seit E-64 werden
+    # sie am Werkzeug **erklärt** statt in einer Meldung ausgewählt — danach
+    # sieht die Anwendung sie wie die anderen vier.
     with kontext.aktion(vor_tagen=34, stunde=11):
-        lenkung.melde_zustand(
+        asset.aendere_tool(
             kontext.db,
             kontext.wer("toolowner"),
             kontext.tool("ohne_prozess"),
-            farbe="rot",
+            {"daten_ins_offene_netz": True},
+        )
+        lenkung.melde_abweichung(
+            kontext.db,
+            kontext.wer("toolowner"),
+            kontext.tool("ohne_prozess"),
             begruendung="Ein Export verlässt die freigegebene Infrastruktur.",
-            schicht2_verbot="daten_ins_offene_netz",
         )
 
-    # Das sechste Verbot, gemeldet auf ein Werkzeug, dessen Vorgang schon
-    # offen ist. Damit zeigt der Bestand zugleich die Regel aus A.13.5: ein
-    # Schicht-2-Verstoss hebt eine laufende Stufe 1 **sofort** auf Stufe 2 —
-    # was keine Bewertung freischalten kann, wird nicht verhandelt.
-    with kontext.aktion(vor_tagen=33, stunde=12):
-        lenkung.melde_zustand(
+    # Das sechste Verbot an einem Werkzeug, dessen Vorgang schon offen ist.
+    # Damit zeigt der Bestand die Regel aus A.13.5: ein Schicht-2-Verstoß hebt
+    # eine laufende Stufe 1 auf Stufe 2 — und zwar seit E-64, weil er in den
+    # Daten steht, nicht weil ihn jemand noch einmal meldet.
+    with kontext.aktion(vor_tagen=33, stunde=12) as wann:
+        asset.aendere_tool(
             kontext.db,
             kontext.wer("toolowner"),
             kontext.tool("ausserhalb"),
-            farbe="rot",
-            begruendung="Die Protokollierung ist im Zielsystem abgeschaltet.",
-            schicht2_verbot="protokollierung_umgangen",
+            {"protokollierung_umgangen": True},
         )
+        lenkung.eskaliere_faellige(kontext.db, jetzt=wann)
 
 
 def datenlage_bewegt_sich(kontext: Kontext) -> None:
@@ -257,27 +259,18 @@ def lenkungswege(kontext: Kontext) -> None:
     governance = kontext.wer("governance")
     toolowner = kontext.wer("toolowner")
 
-    # Gelb: eine Beobachtung ohne Vorgang. Sie erzeugt keine Frist und keinen
-    # Lenkungsvorgang — genau das ist der Unterschied zu rot.
-    with kontext.aktion(vor_tagen=80, stunde=9):
-        lenkung.melde_zustand(
-            kontext.db,
-            toolowner,
-            kontext.tool("im_rahmen"),
-            farbe="gelb",
-            begruendung="Auffälligkeit beobachtet, noch keine Abweichung belegt.",
-        )
+    # Gelb meldet niemand mehr: es ist der gerechnete Zustand eines Werkzeugs
+    # ohne Prozesskante (E-64). Im Bestand traegt ihn „ohne_prozess" — genau
+    # deshalb heisst es so.
 
     # Eine Fehlmeldung — die Governance bricht sie ab. Der Vorgang bleibt in
     # der Historie stehen; gelöscht wird nichts.
     with kontext.aktion(vor_tagen=70, stunde=10):
-        lenkung.melde_zustand(
+        lenkung.melde_abweichung(
             kontext.db,
             toolowner,
             kontext.tool("ohne_prozess"),
-            farbe="rot",
             begruendung="Vermuteter Zugriff außerhalb des Rahmens.",
-            abweichung_art="datenobjekte",
         )
     fehlmeldung = lenkung.offener_vorgang(kontext.db, kontext.tool("ohne_prozess").id)
     if fehlmeldung is not None:
@@ -292,13 +285,11 @@ def lenkungswege(kontext: Kontext) -> None:
     # Rahmen erweitern: die Abweichung war berechtigt, der Rahmen zu eng. Das
     # verlangt eine **neue Bewertung** — sonst wäre es ein Freibrief.
     with kontext.aktion(vor_tagen=50, stunde=9):
-        lenkung.melde_zustand(
+        lenkung.melde_abweichung(
             kontext.db,
             toolowner,
             kontext.tool("im_rahmen"),
-            farbe="rot",
             begruendung="Das Werkzeug braucht eine Quelle, die der Prozess nicht erklärt.",
-            abweichung_art="datenobjekte",
         )
     zu_erweitern = lenkung.offener_vorgang(kontext.db, kontext.tool("im_rahmen").id)
     if zu_erweitern is not None:
@@ -318,7 +309,6 @@ def lenkungswege(kontext: Kontext) -> None:
                 kontext.wer("prozessowner"),
                 prozess,
                 antworten,
-                modus=bewertung_service.Modus.VOLLSTAENDIG,
                 begruendungen=dict.fromkeys(antworten, "Neubewertung zur Rahmenerweiterung."),
             )
             lenkung.loese_auf(
@@ -332,13 +322,11 @@ def lenkungswege(kontext: Kontext) -> None:
     # Stilllegen: der dritte Ausweg. Er setzt das Werkzeug auf ``inaktiv`` —
     # der einzige Weg, auf dem dieser Status entsteht.
     with kontext.aktion(vor_tagen=26, stunde=9):
-        lenkung.melde_zustand(
+        lenkung.melde_abweichung(
             kontext.db,
             toolowner,
             kontext.tool("ohne_attest"),
-            farbe="rot",
             begruendung="Läuft unter einem geteilten Konto und ist nicht attestiert.",
-            schicht2_verbot="identitaet_umgangen",
         )
     stillzulegen = lenkung.offener_vorgang(kontext.db, kontext.tool("ohne_attest").id)
     if stillzulegen is not None:
@@ -383,6 +371,5 @@ def verbotstatbestand(kontext: Kontext) -> None:
             kontext.wer("prozessowner"),
             kontext.prozess("unbewertet"),
             antworten,
-            modus=bewertung_service.Modus.VOLLSTAENDIG,
             begruendungen=dict.fromkeys(antworten, "Zur Vorführung des Verbotstatbestands."),
         )

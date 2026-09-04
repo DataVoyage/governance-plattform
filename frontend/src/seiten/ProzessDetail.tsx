@@ -354,7 +354,6 @@ export function ProzessDetail() {
                   <td>
                     {`KI${b.ki_stufe}-DS${b.ds_stufe}-MB${b.mb_stufe}-` +
                       `IT${b.it_stufe}-RG${b.rg_stufe}-UR${b.ur_stufe}`}
-                    {b.vollstaendig ? '' : ` (${t('bewertung.unvollstaendig')})`}
                   </td>
                   <td>{b.ausgeloeste_k_klassen.join(', ') || '—'}</td>
                   <td>{b.gueltig_bis ? b.gueltig_bis.slice(0, 10) : '—'}</td>

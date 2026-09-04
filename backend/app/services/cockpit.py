@@ -192,21 +192,30 @@ def non_compliant_je_stufe(db: Session, principal: Principal, **filter) -> Zeile
 
 
 def rahmenabweichungen(db: Session, principal: Principal, **filter) -> Zeile:
-    """Tool-Objekte, deren aktueller Compliance-Zustand nicht gruen ist."""
+    """Tool-Objekte, deren **gerechneter** Zustand nicht gruen ist (E-64).
+
+    Vorher las diese Zeile den letzten gemeldeten Zustand. Damit fehlte jedes
+    Werkzeug, ueber das noch niemand etwas gemeldet hatte — auch dann, wenn die
+    Anwendung seine Abweichung laengst messen konnte. Ein Cockpit, das auf eine
+    Meldung wartet, zeigt nicht die Lage, sondern die Meldebereitschaft.
+    """
     zeile = Zeile(
         "rahmenabweichungen",
         "Rahmenabweichungen",
-        "Tool-Objekte, deren neuester Compliance-Zustand gelb oder rot ist.",
+        "Tool-Objekte, deren gerechneter Compliance-Zustand gelb oder rot ist.",
     )
     for tool in _sichtbare_tools(db, principal, filter.get("fachbereich_id")):
-        zustand = lenkung.aktueller_zustand(db, tool.id)
-        if zustand is None or zustand.farbe == ComplianceFarbe.GRUEN:
+        farbe = lenkung.gemessene_farbe(db, tool)
+        if farbe == ComplianceFarbe.GRUEN:
             continue
+        offen = lenkung.offene_abweichungen(db, tool)
+        zustand = lenkung.aktueller_zustand(db, tool.id)
+        hinweis = ", ".join(offen) if offen else (zustand.begruendung if zustand else "")
         zeile.eintraege.append(
             Eintrag(
                 id=tool.id,
                 titel=tool.name,
-                hinweis=f"{zustand.farbe}: {zustand.begruendung}".strip(": "),
+                hinweis=f"{farbe}: {hinweis}".strip(": "),
                 ziel_modul="tools",
                 ziel_filter={"id": str(tool.id)},
             )

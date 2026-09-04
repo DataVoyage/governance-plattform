@@ -265,7 +265,6 @@ def bewerte(kontext: Kontext) -> None:
                 kontext.wer(eintrag.owner),
                 prozess,
                 antworten,
-                modus=bewertung_service.Modus.VOLLSTAENDIG,
                 begruendungen=dict.fromkeys(
                     antworten, "Im Lehrbestand bewusst so gesetzt, um diesen Fall zu zeigen."
                 ),

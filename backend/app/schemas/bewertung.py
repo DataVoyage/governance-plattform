@@ -34,7 +34,6 @@ class FrageAus(BaseModel):
 
 
 class WizardAnfrage(BaseModel):
-    modus: str = Field(default="vollstaendig", pattern="^(schnell|vollstaendig)$")
     antworten: dict[str, bool] = Field(default_factory=dict)
     #: Frage-ID auf Begruendungstext, fuer Antworten, die dem Vorschlag
     #: widersprechen. Ohne sie wird der Schritt nicht angenommen.
@@ -52,7 +51,6 @@ class WizardSchritt(BaseModel):
     naechste_frage: FrageAus | None = None
     abgeschlossen: bool = False
     verboten: bool = False
-    vollstaendig: bool = True
     vorschau: ErgebnisAus | None = None
 
 
@@ -73,7 +71,6 @@ class ErgebnisAus(BaseModel):
     klassen: list[KKlasseAus] = Field(default_factory=list)
     #: Die Auflagen des erreichten Tiers nach A.8.6, kumuliert.
     auflagen: list[str] = Field(default_factory=list)
-    vollstaendig: bool = True
 
 
 class BewertungAus(BaseModel):
@@ -89,7 +86,6 @@ class BewertungAus(BaseModel):
     ur_stufe: int
     tier: int
     gesperrt: bool
-    vollstaendig: bool
     ausgeloeste_k_klassen: list[str]
     antworten: dict[str, bool]
     vorschlaege: dict[str, bool] = Field(default_factory=dict)

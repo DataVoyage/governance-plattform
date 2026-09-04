@@ -27,26 +27,29 @@ function frage(
 
 const KI_FRAGE = frage('1a', 1, 'ki', 'Künstliche Intelligenz', 'Setzt der Prozess KI ein?');
 const DS_FRAGE = frage('2a', 2, 'ds', 'Datenschutz', 'Besondere Kategorien?');
-const DS_MIT_VORSCHLAG = frage(
-  '2a',
-  2,
-  'ds',
-  'Datenschutz',
-  'Besondere Kategorien?',
-  true,
-  [{ text: 'Datenobjekt „Entgeltdaten“ trägt die Kategorie besondere Kategorie.', quelle: 'datenobjekt' }],
-);
+const DS_MIT_VORSCHLAG = frage('2a', 2, 'ds', 'Datenschutz', 'Besondere Kategorien?', true, [
+  {
+    text: 'Datenobjekt „Entgeltdaten“ trägt die Kategorie besondere Kategorie.',
+    quelle: 'datenobjekt',
+  },
+]);
 
 const ERGEBNIS: Ergebnis = {
   tier: 3,
   profil: { ki: 0, ds: 3, mb: 1, it: 1, rg: 2, ur: 2 },
   ausgeloeste_k_klassen: ['K1', 'K4'],
   klassen: [
-    { kennung: 'K1', name: 'Dokumentationspflicht des Prozessobjekts', erklaerung: 'Im Verzeichnis fuehren.' },
+    {
+      kennung: 'K1',
+      name: 'Dokumentationspflicht des Prozessobjekts',
+      erklaerung: 'Im Verzeichnis fuehren.',
+    },
     { kennung: 'K4', name: 'Datenschutz-Folgenabschätzung', erklaerung: 'Nach Art. 35 DSGVO.' },
   ],
-  auflagen: ['Registrierung im Verzeichnis der Prozessobjekte.', 'Freigabe durch die Governance-Rolle.'],
-  vollstaendig: true,
+  auflagen: [
+    'Registrierung im Verzeichnis der Prozessobjekte.',
+    'Freigabe durch die Governance-Rolle.',
+  ],
 };
 
 function bewertung(ueberschreibungen: Partial<Bewertung> = {}): Bewertung {
@@ -61,7 +64,6 @@ function bewertung(ueberschreibungen: Partial<Bewertung> = {}): Bewertung {
     ur_stufe: 2,
     tier: 3,
     gesperrt: false,
-    vollstaendig: true,
     ausgeloeste_k_klassen: ['K1', 'K2', 'K3', 'K4', 'K5', 'K7', 'K8', 'K9'],
     antworten: {},
     vorschlaege: {},
@@ -83,26 +85,30 @@ function grundrouten(bewertungen: Bewertung[] = []): Route[] {
   ];
 }
 
-/** Startet den Durchlauf im gewaehlten Modus. */
-async function starte(modus: 'Schnell' | 'Vollständig' = 'Vollständig') {
+/** Der Wizard beginnt ohne Vorschaltbildschirm — seit E-64 gibt es nichts zu wählen. */
+async function starte() {
   zeichne('/de/prozesse/p-1/bewertung');
-  await userEvent.click(await screen.findByRole('button', { name: modus }));
-  await userEvent.click(screen.getByRole('button', { name: 'Bewertung durchführen' }));
 }
 
 describe('Wizard', () => {
-  it('verlangt zu Beginn die Wahl des Modus und erklaert ihre Folge', async () => {
-    fetchAttrappe(grundrouten());
+  it('beginnt ohne Vorschaltbildschirm bei der ersten Frage', async () => {
+    // E-64: es gibt nur einen Durchlauf. Ein Bildschirm, auf dem nichts zu
+    // waehlen ist, waere ein Klick ohne Entscheidung.
+    fetchAttrappe([
+      ...grundrouten(),
+      {
+        pfad: '/bewertung/wizard',
+        methode: 'POST',
+        koerper: {
+          naechste_frage: KI_FRAGE,
+          abgeschlossen: false,
+          verboten: false,
+          vorschau: null,
+        },
+      },
+    ]);
     zeichne('/de/prozesse/p-1/bewertung');
-    expect(await screen.findByText('Wie möchten Sie den Baum durchlaufen?')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Vollständig' })).toHaveAttribute(
-      'aria-pressed',
-      'true',
-    );
-    expect(screen.getByText(/Alle sechs Dimensionen werden durchlaufen/)).toBeInTheDocument();
-
-    await userEvent.click(screen.getByRole('button', { name: 'Schnell' }));
-    expect(screen.getByText(/sobald eine Dimension Tier 3 erreicht/)).toBeInTheDocument();
+    expect(await screen.findByTestId('frage')).toBeInTheDocument();
   });
 
   it('zeigt eine Frage pro Bildschirm mit zwei Antwortflaechen und keinen Zwischenstand', async () => {
@@ -115,7 +121,6 @@ describe('Wizard', () => {
           naechste_frage: KI_FRAGE,
           abgeschlossen: false,
           verboten: false,
-          vollstaendig: true,
           vorschau: null,
         },
       },
@@ -132,7 +137,6 @@ describe('Wizard', () => {
 
     const erster = aufrufe.find((a) => a.url.includes('/bewertung/wizard'));
     expect(erster?.koerper).toEqual({
-      modus: 'vollstaendig',
       antworten: {},
       begruendungen: {},
     });
@@ -148,7 +152,6 @@ describe('Wizard', () => {
           naechste_frage: nummer === 1 ? KI_FRAGE : DS_FRAGE,
           abgeschlossen: false,
           verboten: false,
-          vollstaendig: true,
           vorschau: null,
         }),
       },
@@ -162,7 +165,6 @@ describe('Wizard', () => {
     );
     const letzter = aufrufe.filter((a) => a.url.includes('/bewertung/wizard')).at(-1);
     expect(letzter?.koerper).toEqual({
-      modus: 'vollstaendig',
       antworten: { '1a': false },
       begruendungen: {},
     });
@@ -180,7 +182,6 @@ describe('Wizard', () => {
           naechste_frage: DS_MIT_VORSCHLAG,
           abgeschlossen: false,
           verboten: false,
-          vollstaendig: true,
           vorschau: null,
         },
       },
@@ -206,7 +207,6 @@ describe('Wizard', () => {
           ]),
           abgeschlossen: false,
           verboten: false,
-          vollstaendig: true,
           vorschau: null,
         },
       },
@@ -228,7 +228,6 @@ describe('Wizard', () => {
           naechste_frage: nummer === 1 ? DS_MIT_VORSCHLAG : KI_FRAGE,
           abgeschlossen: false,
           verboten: false,
-          vollstaendig: true,
           vorschau: null,
         }),
       },
@@ -255,7 +254,6 @@ describe('Wizard', () => {
           naechste_frage: nummer === 1 ? DS_MIT_VORSCHLAG : KI_FRAGE,
           abgeschlossen: false,
           verboten: false,
-          vollstaendig: true,
           vorschau: null,
         }),
       },
@@ -298,7 +296,6 @@ describe('Wizard', () => {
           naechste_frage: DS_MIT_VORSCHLAG,
           abgeschlossen: false,
           verboten: false,
-          vollstaendig: true,
           vorschau: null,
         },
       },
@@ -325,7 +322,6 @@ describe('Wizard', () => {
           naechste_frage: nummer === 1 || nummer === 3 ? KI_FRAGE : DS_FRAGE,
           abgeschlossen: false,
           verboten: false,
-          vollstaendig: true,
           vorschau: null,
         }),
       },
@@ -345,7 +341,7 @@ describe('Wizard', () => {
     expect(letzter?.koerper).toMatchObject({ antworten: {} });
   });
 
-  it('fuehrt vom ersten Schritt zurueck in die Modusauswahl', async () => {
+  it('fuehrt vom ersten Schritt zurueck zum Prozessobjekt', async () => {
     fetchAttrappe([
       ...grundrouten(),
       {
@@ -355,7 +351,6 @@ describe('Wizard', () => {
           naechste_frage: KI_FRAGE,
           abgeschlossen: false,
           verboten: false,
-          vollstaendig: true,
           vorschau: null,
         },
       },
@@ -363,7 +358,10 @@ describe('Wizard', () => {
     await starte();
     await screen.findByTestId('frage');
     await userEvent.click(screen.getByTestId('bewertung-zurueck'));
-    expect(await screen.findByText('Wie möchten Sie den Baum durchlaufen?')).toBeInTheDocument();
+    // Vor der ersten Frage gibt es kein Zurueck mehr — nur den Weg hinaus.
+    expect(
+      await screen.findByRole('heading', { name: 'Rechnungspruefung', level: 1 }),
+    ).toBeInTheDocument();
   });
 
   it('fragt vor dem Verwerfen zurueck', async () => {
@@ -376,7 +374,6 @@ describe('Wizard', () => {
           naechste_frage: KI_FRAGE,
           abgeschlossen: false,
           verboten: false,
-          vollstaendig: true,
           vorschau: null,
         },
       },
@@ -407,7 +404,6 @@ describe('Wizard', () => {
           naechste_frage: null,
           abgeschlossen: true,
           verboten: false,
-          vollstaendig: true,
           vorschau: ERGEBNIS,
         },
       },
@@ -432,36 +428,6 @@ describe('Wizard', () => {
     expect(aufrufe.some((a) => a.methode === 'POST' && a.url.endsWith('/bewertungen'))).toBe(true);
   });
 
-  it('erklaert, warum der schnelle Durchlauf keine K-Klassen liefert', async () => {
-    fetchAttrappe([
-      ...grundrouten(),
-      {
-        pfad: '/bewertung/wizard',
-        methode: 'POST',
-        koerper: {
-          naechste_frage: null,
-          abgeschlossen: true,
-          verboten: false,
-          vollstaendig: false,
-          vorschau: {
-            tier: 3,
-            profil: { ki: 0, ds: 3, mb: 0, it: 0, rg: 0, ur: 0 },
-            ausgeloeste_k_klassen: [],
-            klassen: [],
-            auflagen: ['Registrierung im Verzeichnis der Prozessobjekte.'],
-            vollstaendig: false,
-          },
-        },
-      },
-    ]);
-    await starte('Schnell');
-    expect(await screen.findByTestId('tier')).toHaveTextContent('3');
-    expect(
-      screen.getByText('Der schnelle Durchlauf endet vorzeitig und liefert deshalb keine K-Klassen.'),
-    ).toBeInTheDocument();
-    expect(screen.getByText('Aus diesem Profil folgt keine Maßnahmenklasse.')).toBeInTheDocument();
-  });
-
   it('zeigt die begruendeten Abweichungen am Ergebnis', async () => {
     fetchAttrappe([
       ...grundrouten(),
@@ -474,14 +440,12 @@ describe('Wizard', () => {
                 naechste_frage: DS_MIT_VORSCHLAG,
                 abgeschlossen: false,
                 verboten: false,
-                vollstaendig: true,
                 vorschau: null,
               }
             : {
                 naechste_frage: null,
                 abgeschlossen: true,
                 verboten: false,
-                vollstaendig: true,
                 vorschau: ERGEBNIS,
               },
       },
@@ -512,12 +476,11 @@ describe('Wizard', () => {
           naechste_frage: null,
           abgeschlossen: true,
           verboten: true,
-          vollstaendig: false,
           vorschau: null,
         },
       },
     ]);
-    await starte('Schnell');
+    await starte();
     expect(await screen.findByRole('heading', { name: 'Verbotene KI-Praxis' })).toBeInTheDocument();
     expect(screen.getByTestId('verbotstatbestand')).toHaveTextContent('Governance und Recht');
     expect(screen.getByRole('alert')).toHaveTextContent('EU AI Act');
@@ -538,7 +501,7 @@ describe('Wizard', () => {
         koerper: { detail: 'Bewerten darf nur der Prozess-Owner' },
       },
     ]);
-    await starte('Schnell');
+    await starte();
     expect(await screen.findByRole('alert')).toHaveTextContent(
       'Bewerten darf nur der Prozess-Owner',
     );
@@ -554,7 +517,6 @@ describe('Wizard', () => {
           naechste_frage: null,
           abgeschlossen: true,
           verboten: false,
-          vollstaendig: true,
           vorschau: { ...ERGEBNIS, tier: 1 },
         },
       },
@@ -603,12 +565,5 @@ describe('Bewertungshistorie im Prozessdetail', () => {
     expect(screen.getByText('KI0-DS3-MB1-IT1-RG2-UR2')).toBeInTheDocument();
     expect(screen.getByText('KI0-DS1-MB0-IT0-RG0-UR0')).toBeInTheDocument();
     expect(screen.getByText('2027-09-01')).toBeInTheDocument();
-  });
-
-  it('kennzeichnet einen schnellen Durchlauf', async () => {
-    fetchAttrappe(grundrouten([bewertung({ vollstaendig: false, ausgeloeste_k_klassen: [] })]));
-    zeichne('/de/prozesse/p-1');
-    await screen.findByRole('heading', { name: 'Bewertungshistorie' });
-    expect(screen.getByText(/\(schnell\)/)).toBeInTheDocument();
   });
 });

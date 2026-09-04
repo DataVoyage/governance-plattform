@@ -22,12 +22,10 @@ from app.models.audit import Konfiguration
 from app.models.enums import (
     Aufloesungsart,
     Befundart,
-    ComplianceFarbe,
     Gate2Ausloeser,
     GateStatus,
     GateTyp,
     Klassenbewertung,
-    Schicht2Verbot,
     SelbstverpflichtungTyp,
 )
 from app.schemas.prozess import ProzessAendern
@@ -167,12 +165,9 @@ class Meldung:
     """Ein Compliance-Zustand und, wenn er rot ist, sein Lenkungsvorgang."""
 
     tool: str
-    farbe: str
     begruendung: str
     vor_tagen: int
     melder: str
-    abweichung_art: str | None = None
-    schicht2_verbot: str | None = None
     #: Wie der Vorgang ausging — ``None`` heisst: er ist noch offen.
     aufloesung: str | None = None
     aufgeloest_vor: int = 0
@@ -192,31 +187,22 @@ MELDUNGEN: tuple[Meldung, ...] = (
     # --- Schicht 2: erkannt, ohne erste Eskalationsstufe -------------------
     Meldung(
         "konditionsexport-portal",
-        ComplianceFarbe.ROT,
         "Der Export läuft unter einem Sammelkonto des Einkaufs. Die Zuordnung zu "
         "einer Person ist damit nicht mehr möglich.",
         vor_tagen=95,
         melder="renner",
-        abweichung_art="ausfuehrungsidentitaet",
-        schicht2_verbot=Schicht2Verbot.IDENTITAET_UMGANGEN,
     ),
     Meldung(
         "zollanmeldung-uebertrag",
-        ComplianceFarbe.ROT,
         "Im Übertragungsdienst sind dauerhaft gültige Zugangsdaten des Zollportals hinterlegt.",
         vor_tagen=8,
         melder="pohl",
-        abweichung_art="statische_zugangsdaten",
-        schicht2_verbot=Schicht2Verbot.STATISCHE_ZUGANGSDATEN,
     ),
     Meldung(
         "budgetkonsolidierung",
-        ComplianceFarbe.ROT,
         "Die Mappe zieht Zahlen aus Tabellen, die nicht als Datenobjekt geführt sind.",
         vor_tagen=140,
         melder="winkler",
-        abweichung_art="undeklarierte_quellen",
-        schicht2_verbot=Schicht2Verbot.UNDEKLARIERTE_QUELLEN,
         aufloesung=Aufloesungsart.ANPASSEN,
         aufgeloest_vor=126,
         aufloesungskommentar="Die beiden Zuarbeiten sind als Datenobjekte "
@@ -226,62 +212,60 @@ MELDUNGEN: tuple[Meldung, ...] = (
     ),
     Meldung(
         "artikelauswertung-mappe",
-        ComplianceFarbe.ROT,
         "Die Mappe zieht neben den beiden Datenobjekten Zahlen aus einer privaten "
         "Tabelle des Bearbeiters.",
         vor_tagen=34,
         melder="renner",
-        abweichung_art="undeklarierte_quellen",
-        schicht2_verbot=Schicht2Verbot.UNDEKLARIERTE_QUELLEN,
     ),
     Meldung(
         "schwundcockpit",
-        ComplianceFarbe.ROT,
         "Das Cockpit markiert Kassenplätze selbsttätig als auffällig; zwischen "
         "Ergebnis und Meldung an die Filialleitung steht kein Mensch.",
         vor_tagen=88,
         melder="stadler",
-        abweichung_art="entscheidung_ohne_mensch",
-        schicht2_verbot=Schicht2Verbot.ENTSCHEIDUNG_OHNE_MENSCH,
     ),
     Meldung(
         "lagerauswertung-pl",
-        ComplianceFarbe.ROT,
         "Die Auswertung läuft unter einem Konto, das sich mehrere Beschäftigte im Lager teilen.",
         vor_tagen=115,
         melder="renner",
-        abweichung_art="ausfuehrungsidentitaet",
-        schicht2_verbot=Schicht2Verbot.IDENTITAET_UMGANGEN,
         aufloesung=Aufloesungsart.STILLLEGEN,
         aufgeloest_vor=100,
         aufloesungskommentar="Die Auswertung wurde abgelöst; die Zahlen kommen "
         "seither aus dem Nachschubmonitor.",
     ),
-    # --- Schicht 2: gemeldet, nicht erkennbar ------------------------------
+    # --- Schicht 2: am Werkzeug erklaert, danach gemessen (E-64) -----------
+    Meldung(
+        "sortimentsexport-web",
+        "Der Export legt Sortimentsdaten zusätzlich in einem öffentlich "
+        "erreichbaren Objektspeicher ab.",
+        vor_tagen=52,
+        melder="stadler",
+    ),
+    Meldung(
+        "regalpflege-app",
+        "Die App schreibt ihre Zugriffe nicht in das Protokoll der Zielplattform.",
+        vor_tagen=48,
+        melder="renner",
+    ),
     Meldung(
         "preisliste-versand",
-        ComplianceFarbe.ROT,
         "Der Versand legt die Preisliste zusätzlich in einer öffentlich erreichbaren Ablage ab.",
         vor_tagen=60,
         melder="stadler",
-        abweichung_art="externe_ziele",
-        schicht2_verbot=Schicht2Verbot.DATEN_INS_OFFENE_NETZ,
         aufloesung=Aufloesungsart.ANPASSEN,
         aufgeloest_vor=52,
         aufloesungskommentar="Die öffentliche Ablage ist entfernt; der Versand "
         "geht nur noch an die Filialpostfächer.",
-        anpassung={"externe_ziele": []},
+        anpassung={"externe_ziele": [], "daten_ins_offene_netz": False},
     ),
     Meldung(
         "frischeverlust-mappe",
-        ComplianceFarbe.ROT,
         "Hinweis aus dem Plattformbetrieb: die Mappe soll die Zugriffs-protokollierung umgehen.",
         # Gemeldet hat der Plattformbetrieb; erfasst die Governance — die
         # Plattform-Rolle liest bereichsuebergreifend, schreibt aber nicht.
         vor_tagen=44,
         melder="renner",
-        abweichung_art="protokollierung",
-        schicht2_verbot=Schicht2Verbot.PROTOKOLLIERUNG_UMGANGEN,
         abgebrochen=True,
         aufgeloest_vor=40,
         aufloesungskommentar="Fehlmeldung: die Protokollierung war für die ganze "
@@ -290,29 +274,23 @@ MELDUNGEN: tuple[Meldung, ...] = (
     # --- Schicht 1: Rahmenueberschreitungen --------------------------------
     Meldung(
         "kampagnenexport",
-        ComplianceFarbe.ROT,
         "Der Export übermittelt an ein Ziel, das kein Prozessobjekt erklärt hat.",
         vor_tagen=26,
         melder="kilian",
-        abweichung_art="externe_ziele",
     ),
     Meldung(
         "bestandskorrektur-automat",
-        ComplianceFarbe.ROT,
         "Der Automat läuft geplant, obwohl zwischen Ergebnis und Buchung kein "
         "Mensch steht. Der Rahmen deckt dann nur die interaktive Ausführung.",
         vor_tagen=14,
         melder="pohl",
-        abweichung_art="ausfuehrungsart",
     ),
     Meldung(
         "kuehlkettenwaechter",
-        ComplianceFarbe.ROT,
         "Der Wächter meldet die Temperaturabweichungen zusätzlich an das "
         "Telematikportal des Dienstleisters.",
         vor_tagen=58,
         melder="pohl",
-        abweichung_art="externe_ziele",
         aufloesung=Aufloesungsart.RAHMEN_ERWEITERN,
         aufgeloest_vor=30,
         aufloesungskommentar="Der Rahmen ist um das Telematikportal erweitert; "
@@ -320,113 +298,95 @@ MELDUNGEN: tuple[Meldung, ...] = (
     ),
     Meldung(
         "abschriftenmonitor",
-        ComplianceFarbe.GELB,
         "Der Monitor läuft geplant unter einer persönlichen Kennung statt unter "
         "einer benannten Dienstidentität.",
         vor_tagen=48,
         melder="seidel",
-        abweichung_art="ausfuehrungsidentitaet",
     ),
     Meldung(
         "frischeprognose",
-        ComplianceFarbe.GELB,
         "Die Prognose liest die Kaufhistorie der Kundenkarte. Sie hängt an keinem "
         "der Prozessobjekte dieses Tools und trägt eine höhere Datenkategorie, "
         "als der Rahmen deckt.",
         vor_tagen=36,
         melder="stadler",
-        abweichung_art="datenobjekte",
     ),
     Meldung(
         "filialkennzahlen-tafel",
-        ComplianceFarbe.GELB,
         "Die Tafel schreibt in die Abverkaufsdaten. Der Prozess führt sie als "
         "Eingang, nicht als Ergebnis — geschrieben werden darf dort nicht.",
         vor_tagen=18,
         melder="lenz",
-        abweichung_art="zugriffsart",
     ),
     # --- Gruen: der Regelfall, und er gehoert in die Zeitreihe -------------
     Meldung(
         "bestellvorschlagsrechner",
-        ComplianceFarbe.GRUEN,
         "Turnusmäßige Prüfung: Rahmen eingehalten.",
         40,
         "seidel",
     ),
     Meldung(
         "entgeltvorbereitung",
-        ComplianceFarbe.GRUEN,
         "Turnusmäßige Prüfung: Rahmen eingehalten.",
         35,
         "kraus",
     ),
     Meldung(
         "kassenabschluss-melder",
-        ComplianceFarbe.GRUEN,
         "Turnusmäßige Prüfung: Rahmen eingehalten.",
         33,
         "lenz",
     ),
     Meldung(
         "tourenrechner",
-        ComplianceFarbe.GRUEN,
         "Turnusmäßige Prüfung: Rahmen eingehalten.",
         31,
         "pohl",
     ),
     Meldung(
         "probenplan-app",
-        ComplianceFarbe.GRUEN,
         "Turnusmäßige Prüfung: Rahmen eingehalten.",
         29,
         "straub",
     ),
     Meldung(
         "rueckrufmelder",
-        ComplianceFarbe.GRUEN,
         "Turnusmäßige Prüfung: Rahmen eingehalten.",
         27,
         "straub",
     ),
     Meldung(
         "schnittstellenwaechter",
-        ComplianceFarbe.GRUEN,
         "Turnusmäßige Prüfung: Rahmen eingehalten.",
         24,
         "hartwig",
     ),
     Meldung(
         "ladestrecke-warenwirtschaft",
-        ComplianceFarbe.GRUEN,
         "Turnusmäßige Prüfung: Rahmen eingehalten.",
         21,
         "baumann",
     ),
     Meldung(
         "couponzuteilung",
-        ComplianceFarbe.GRUEN,
         "Turnusmäßige Prüfung: Rahmen eingehalten.",
         19,
         "kilian",
     ),
     Meldung(
         "dienstplanrechner",
-        ComplianceFarbe.GRUEN,
         "Turnusmäßige Prüfung: Rahmen eingehalten.",
         16,
         "albrecht",
     ),
     Meldung(
         "wareneingangs-scanner",
-        ComplianceFarbe.GRUEN,
         "Turnusmäßige Prüfung: Rahmen eingehalten.",
         12,
         "pohl",
     ),
     Meldung(
         "abschlusscockpit",
-        ComplianceFarbe.GRUEN,
         "Turnusmäßige Prüfung: Rahmen eingehalten.",
         9,
         "steiner",
@@ -792,18 +752,14 @@ def lenkungsvorgaenge(kontext: Kontext) -> None:
 
     def melden(meldung: Meldung):
         def tun(wann):
-            _zustand, vorgang = lenkung.melde_zustand(
+            _zustand, vorgang = lenkung.melde_abweichung(
                 kontext.db,
                 kontext.wer(meldung.melder),
                 kontext.tool(meldung.tool),
-                farbe=meldung.farbe,
                 begruendung=meldung.begruendung,
-                abweichung_art=meldung.abweichung_art,
-                schicht2_verbot=meldung.schicht2_verbot,
                 jetzt=wann,
             )
-            if vorgang is not None:
-                vorgaenge[meldung.tool] = vorgang
+            vorgaenge[meldung.tool] = vorgang
 
         return tun
 

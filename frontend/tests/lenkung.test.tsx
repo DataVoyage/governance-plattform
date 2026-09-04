@@ -6,7 +6,7 @@ import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { ComplianceZustand, Lenkungsvorgang } from '@/api/typen';
+import type { ComplianceFarbe, ComplianceZustand, Lenkungsvorgang } from '@/api/typen';
 import { EINHEITEN, PROFIL, fetchAttrappe, prozess, tool, zeichne, type Route } from './hilfen';
 
 afterEach(() => vi.useRealTimers());
@@ -47,12 +47,19 @@ function vorgang(ueberschreibungen: Partial<Lenkungsvorgang> = {}): Lenkungsvorg
   };
 }
 
-function toolrouten(verlauf: ComplianceZustand[] = []): Route[] {
+function toolrouten(
+  verlauf: ComplianceZustand[] = [],
+  farbe: ComplianceFarbe = 'gruen',
+  offeneAbweichungen: string[] = [],
+): Route[] {
   return [
     { pfad: '/api/v1/auth/me', koerper: PROFIL },
     { pfad: '/api/v1/organisationseinheiten', koerper: EINHEITEN },
     { pfad: '/api/v1/prozesse', koerper: [prozess()] },
-    { pfad: '/api/v1/tools/tool-1/compliance', koerper: verlauf },
+    {
+      pfad: '/api/v1/tools/tool-1/compliance',
+      koerper: { farbe, offene_abweichungen: offeneAbweichungen, verlauf },
+    },
     { pfad: '/api/v1/tools/tool-1', koerper: tool() },
   ];
 }
@@ -62,11 +69,29 @@ describe('Compliance-Zeitreihe', () => {
     fetchAttrappe(toolrouten());
     zeichne('/de/tools/tool-1');
     expect(
-      await screen.findByText('Für dieses Tool-Objekt ist noch kein Zustand erfasst.'),
+      await screen.findByText('Zu diesem Tool-Objekt wurde noch nichts gemeldet.'),
     ).toBeInTheDocument();
   });
 
-  it('zeigt den neuesten Zustand oben', async () => {
+  it('zeigt den gerechneten Zustand und begruendet ihn aus der Messung', async () => {
+    // E-64: die Farbe wird gemessen, nicht gemeldet. Was sie traegt, steht
+    // daneben — sonst waere sie eine Behauptung mit Abzeichen.
+    fetchAttrappe(toolrouten([], 'rot', ['Verbot identitaet_umgangen', 'datenobjekte']));
+    zeichne('/de/tools/tool-1');
+    expect(await screen.findByTestId('aktueller-zustand')).toHaveTextContent('Rot');
+    expect(screen.getByTestId('zustand-grund')).toHaveTextContent(
+      'Gemessen: Verbot identitaet_umgangen, datenobjekte.',
+    );
+  });
+
+  it('erklaert Gelb als „nicht zugeordnet", nicht als Befund', async () => {
+    fetchAttrappe(toolrouten([], 'gelb'));
+    zeichne('/de/tools/tool-1');
+    expect(await screen.findByTestId('aktueller-zustand')).toHaveTextContent('Gelb');
+    expect(screen.getByTestId('zustand-grund')).toHaveTextContent('An keinem Prozessobjekt');
+  });
+
+  it('zeigt den Verlauf unter dem Zustand', async () => {
     fetchAttrappe(
       toolrouten([
         zustand({ id: 'cz-2', farbe: 'rot', begruendung: 'Rahmen verlassen' }),
@@ -74,25 +99,11 @@ describe('Compliance-Zeitreihe', () => {
       ]),
     );
     zeichne('/de/tools/tool-1');
-    const aktuell = await screen.findByTestId('aktueller-zustand');
-    expect(aktuell).toHaveTextContent('Rot — Rahmenüberschreitung');
-    expect(aktuell).toHaveTextContent('Rahmen verlassen');
-    // Der aeltere Eintrag bleibt sichtbar.
+    expect(await screen.findByText('Rahmen verlassen')).toBeInTheDocument();
     expect(screen.getByText('Erstpruefung')).toBeInTheDocument();
   });
 
-  it('weist auf die Folge einer roten Meldung hin', async () => {
-    fetchAttrappe(toolrouten());
-    zeichne('/de/tools/tool-1');
-    await userEvent.selectOptions(await screen.findByLabelText('Zustand melden'), 'rot');
-    expect(
-      screen.getByText(
-        'Eine rote Meldung eröffnet automatisch einen Lenkungsvorgang in Eskalationsstufe 1 mit der tier-abhängigen Frist.',
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it('meldet einen Zustand und ergaenzt die Zeitreihe', async () => {
+  it('meldet eine Abweichung mit einem Knopf und einem Feld', async () => {
     const { aufrufe } = fetchAttrappe([
       ...toolrouten(),
       {
@@ -100,26 +111,41 @@ describe('Compliance-Zeitreihe', () => {
         methode: 'POST',
         status: 201,
         koerper: {
-          zustand: zustand({ id: 'cz-3', farbe: 'rot', abweichung_art: 'externes_ziel' }),
+          zustand: zustand({ id: 'cz-3', farbe: 'rot', begruendung: 'Neues externes Ziel' }),
           lenkungsvorgang: vorgang(),
         },
       },
     ]);
     zeichne('/de/tools/tool-1');
-    await userEvent.selectOptions(await screen.findByLabelText('Zustand melden'), 'rot');
-    await userEvent.type(screen.getByLabelText('Begründung'), 'Neues externes Ziel');
-    await userEvent.type(screen.getByLabelText('Art der Abweichung'), 'externes_ziel');
-    await userEvent.click(screen.getByRole('button', { name: 'Zustand melden' }));
-
-    await waitFor(() =>
-      expect(screen.getByTestId('aktueller-zustand')).toHaveTextContent('externes_ziel'),
+    await userEvent.type(
+      await screen.findByLabelText('Was haben Sie beobachtet?'),
+      'Neues externes Ziel',
     );
-    expect(aufrufe.find((a) => a.methode === 'POST')?.koerper).toEqual({
-      farbe: 'rot',
-      begruendung: 'Neues externes Ziel',
-      abweichung_art: 'externes_ziel',
-      schicht2_verbot: null,
-    });
+    await userEvent.click(screen.getByTestId('abweichung-melden'));
+
+    // Genau ein Feld geht hinaus: Farbe, Abweichungsart und Verbot misst der
+    // Server selbst.
+    await waitFor(() =>
+      expect(aufrufe.find((a) => a.methode === 'POST')?.koerper).toEqual({
+        begruendung: 'Neues externes Ziel',
+      }),
+    );
+  });
+
+  it('sagt es, wenn schon ein ungeklaerter Vorgang laeuft', async () => {
+    fetchAttrappe([
+      ...toolrouten(),
+      {
+        pfad: '/api/v1/tools/tool-1/compliance',
+        methode: 'POST',
+        status: 200,
+        koerper: { zustand: null, lenkungsvorgang: vorgang() },
+      },
+    ]);
+    zeichne('/de/tools/tool-1');
+    await userEvent.type(await screen.findByLabelText('Was haben Sie beobachtet?'), 'Nochmal');
+    await userEvent.click(screen.getByTestId('abweichung-melden'));
+    expect(await screen.findByText(/Es wurde nichts angelegt/)).toBeInTheDocument();
   });
 
   it('meldet einen abgelehnten Versuch', async () => {
@@ -133,7 +159,8 @@ describe('Compliance-Zeitreihe', () => {
       },
     ]);
     zeichne('/de/tools/tool-1');
-    await userEvent.click(await screen.findByRole('button', { name: 'Zustand melden' }));
+    await userEvent.type(await screen.findByLabelText('Was haben Sie beobachtet?'), 'Etwas');
+    await userEvent.click(screen.getByTestId('abweichung-melden'));
     expect(await screen.findByRole('alert')).toHaveTextContent('technische Owner');
   });
 

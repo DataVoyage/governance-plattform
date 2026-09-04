@@ -383,6 +383,26 @@ Im Bestand offen: **1 · 2 · 2** über die drei Stufen.
 
 ---
 
+## Was die Anwendung weiß, fragt sie nicht
+
+Die Compliance-Meldung ist **ein Knopf und ein Feld**: *Was haben Sie
+beobachtet?*
+
+| Angabe | Woher sie kommt |
+|---|---|
+| Farbe (grün · gelb · rot) | gerechnet aus Rahmen, Verboten und offenem Vorgang |
+| Art der Abweichung | aus dem Erlaubnisrahmen |
+| Verletztes Verbot | aus den Daten des Werkzeugs — alle sechs |
+| **Beobachtung** | **vom Menschen — das Einzige, was er beisteuert** |
+
+Ein Auswahlfeld, dessen richtige Antwort aus den Daten folgt, ist kein Komfort:
+es lädt dazu ein, etwas anderes einzutragen, als der Sachstand hergibt.
+
+Zweimal melden ist einmal melden — läuft schon ein ungeklärter Vorgang,
+passiert nichts.
+
+---
+
 ## Ein Zustand folgt aus einer Messung
 
 Zwei der drei Auswege behaupten, die Abweichung sei weg. Beide werden

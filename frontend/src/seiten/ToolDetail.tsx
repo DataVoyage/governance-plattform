@@ -438,6 +438,36 @@ export function ToolDetail() {
           }
           gesperrt={!tool.rechte.bearbeiten}
         />
+        {/* Die beiden Verbote aus A.13.2 Schicht 2, die in der Zielplattform
+            geschehen. Die Anwendung sieht dort nicht hinein — der technische
+            Owner schon, und was er hier erklärt, ist danach messbar wie alles
+            andere (E-64). Vorher waren sie nur in einer Meldung auswählbar. */}
+        <Umschalter
+          beschriftung={t('tool.feld.protokollierungUmgangen')}
+          hilfe={t('tool.protokollierungUmgangen.hilfe')}
+          an={tool.protokollierung_umgangen === true}
+          aendern={(an) =>
+            fuehreAus(() =>
+              api.toolAendern(token as string, tool.id, {
+                protokollierung_umgangen: an,
+              }),
+            )
+          }
+          gesperrt={!tool.rechte.bearbeiten}
+        />
+        <Umschalter
+          beschriftung={t('tool.feld.datenInsOffeneNetz')}
+          hilfe={t('tool.datenInsOffeneNetz.hilfe')}
+          an={tool.daten_ins_offene_netz === true}
+          aendern={(an) =>
+            fuehreAus(() =>
+              api.toolAendern(token as string, tool.id, {
+                daten_ins_offene_netz: an,
+              }),
+            )
+          }
+          gesperrt={!tool.rechte.bearbeiten}
+        />
       </Karte>
 
       {/* --- Externe Ziele: was das Tool tatsächlich anspricht ------------ */}

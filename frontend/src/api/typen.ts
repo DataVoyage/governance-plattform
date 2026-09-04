@@ -164,8 +164,6 @@ export interface ProzessEingabe {
 
 // --- Bewertung (Phase 2) ---------------------------------------------------
 
-export type BewertungsModus = 'schnell' | 'vollstaendig';
-
 /** Ein Grund für einen Vorschlag, in der Sprache des Objekts, aus dem er stammt. */
 export interface Beleg {
   text: string;
@@ -196,14 +194,12 @@ export interface Ergebnis {
   ausgeloeste_k_klassen: string[];
   klassen: KKlasse[];
   auflagen: string[];
-  vollstaendig: boolean;
 }
 
 export interface WizardSchritt {
   naechste_frage: Frage | null;
   abgeschlossen: boolean;
   verboten: boolean;
-  vollstaendig: boolean;
   vorschau: Ergebnis | null;
 }
 
@@ -218,7 +214,6 @@ export interface Bewertung {
   ur_stufe: number;
   tier: number;
   gesperrt: boolean;
-  vollstaendig: boolean;
   ausgeloeste_k_klassen: string[];
   antworten: Record<string, boolean>;
   vorschlaege: Record<string, boolean>;
@@ -293,6 +288,9 @@ export interface ToolObjekt {
   lauftyp: Lauftyp | null;
   ausfuehrungsidentitaet: Ausfuehrungsidentitaet | null;
   statische_zugangsdaten: boolean | null;
+  /** Die beiden Verbote, die in der Zielplattform geschehen (E-64). */
+  protokollierung_umgangen: boolean | null;
+  daten_ins_offene_netz: boolean | null;
   externe_ziele: string[];
   herkunft: Herkunft;
   quelle: string | null;
@@ -329,6 +327,8 @@ export interface ToolEingabe {
   lauftyp?: Lauftyp | null;
   ausfuehrungsidentitaet?: Ausfuehrungsidentitaet | null;
   statische_zugangsdaten?: boolean | null;
+  protokollierung_umgangen?: boolean | null;
+  daten_ins_offene_netz?: boolean | null;
   externe_ziele?: string[];
 }
 
@@ -619,8 +619,17 @@ export interface Lenkungsvorgang {
   rechte: Lenkungsrechte;
 }
 
+/** Der gerechnete Zustand eines Werkzeugs, mit seiner Zeitreihe (E-64). */
+export interface Compliance {
+  farbe: ComplianceFarbe;
+  /** Was die Anwendung gerade selbst sieht; leer heißt: nichts. */
+  offene_abweichungen: string[];
+  verlauf: ComplianceZustand[];
+}
+
 export interface Meldung {
-  zustand: ComplianceZustand;
+  /** Fehlt, wenn nichts passiert ist: dann lief schon ein ungeklärter Vorgang. */
+  zustand: ComplianceZustand | null;
   lenkungsvorgang: Lenkungsvorgang | null;
 }
 

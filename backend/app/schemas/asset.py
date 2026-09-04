@@ -68,6 +68,8 @@ class ToolAendern(BaseModel):
     #: und das Signal fuer eines der Schicht-2-Verbote.
     ausfuehrungsidentitaet: Ausfuehrungsidentitaet | None = None
     statische_zugangsdaten: bool | None = None
+    protokollierung_umgangen: bool | None = None
+    daten_ins_offene_netz: bool | None = None
     externe_ziele: list[str] | None = None
     metadaten: dict[str, Any] | None = None
 
@@ -127,6 +129,8 @@ class ToolAus(BaseModel):
     lauftyp: Lauftyp | None = None
     ausfuehrungsidentitaet: Ausfuehrungsidentitaet | None = None
     statische_zugangsdaten: bool | None = None
+    protokollierung_umgangen: bool | None = None
+    daten_ins_offene_netz: bool | None = None
     externe_ziele: list[str] = Field(default_factory=list)
     herkunft: Herkunft
     quelle: str | None = None

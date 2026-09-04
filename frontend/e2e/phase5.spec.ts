@@ -139,26 +139,22 @@ function karte(seite: Page, toolName: string) {
 }
 
 test.describe('Phase 5 in der Oberflaeche', () => {
-  test('rote Meldung eroeffnet einen Lenkungsvorgang in Stufe 1', async ({ page, request }) => {
+  test('gemeldete Abweichung eroeffnet einen Lenkungsvorgang in Stufe 1', async ({
+    page,
+    request,
+  }) => {
     const { toolId, toolName } = await tier3Tool(request);
     await anmelden(page);
     await page.goto(`/de/tools/${toolId}`);
 
-    await expect(
-      page.getByText('Für dieses Tool-Objekt ist noch kein Zustand erfasst.'),
-    ).toBeVisible();
+    await expect(page.getByText('Zu diesem Tool-Objekt wurde noch nichts gemeldet.')).toBeVisible();
 
-    await page.getByLabel('Zustand melden').selectOption('rot');
-    await expect(
-      page.getByText(
-        'Eine rote Meldung eröffnet automatisch einen Lenkungsvorgang in Eskalationsstufe 1 mit der tier-abhängigen Frist.',
-      ),
-    ).toBeVisible();
-    await page.getByLabel('Begründung').fill('Schreibt in ein fremdes Datenobjekt');
-    await page.getByLabel('Art der Abweichung').fill('datenobjekt_ausserhalb_rahmen');
-    await page.getByRole('button', { name: 'Zustand melden' }).click();
+    // Ein Knopf, ein Feld (E-64): Farbe, Abweichungsart und Verbot misst der
+    // Server selbst.
+    await page.getByLabel('Was haben Sie beobachtet?').fill('Schreibt in ein fremdes Datenobjekt');
+    await page.getByTestId('abweichung-melden').click();
 
-    await expect(page.getByTestId('aktueller-zustand')).toContainText('Rot — Rahmenüberschreitung');
+    await expect(page.getByTestId('aktueller-zustand')).toContainText('Rot');
 
     await page.getByRole('link', { name: 'Lenkung', exact: true }).click();
     const meine = karte(page, toolName);

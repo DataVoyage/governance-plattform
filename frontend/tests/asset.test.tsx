@@ -43,7 +43,7 @@ function grundrouten(): Route[] {
     { pfad: '/api/v1/auth/me', koerper: PROFIL },
     { pfad: '/api/v1/organisationseinheiten', koerper: EINHEITEN },
     { pfad: /\/bewertungen$/, koerper: [] },
-    { pfad: /\/compliance$/, koerper: [] },
+    { pfad: /\/compliance$/, koerper: { farbe: 'gruen', offene_abweichungen: [], verlauf: [] } },
   ];
 }
 

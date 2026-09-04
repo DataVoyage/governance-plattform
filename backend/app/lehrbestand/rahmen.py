@@ -13,8 +13,6 @@ from app.bestand.kontext import Kontext
 from app.models.enums import (
     Ausfuehrungsidentitaet,
     Befundart,
-    ComplianceFarbe,
-    Schicht2Verbot,
 )
 from app.services import klassen, lenkung
 
@@ -23,25 +21,17 @@ def baue(kontext: Kontext) -> None:
     """Meldet die Zustände und erzeugt die beiden Lenkungswege."""
     toolowner = kontext.wer("toolowner")
 
-    # Grün: der unauffällige Fall. Er kostet nichts und erzeugt keinen Vorgang.
-    with kontext.aktion(vor_tagen=90, stunde=9):
-        lenkung.melde_zustand(
-            kontext.db,
-            toolowner,
-            kontext.tool("im_rahmen"),
-            farbe=ComplianceFarbe.GRUEN,
-            begruendung="Rahmen eingehalten; keine Abweichung gemessen.",
-        )
+    # Der unauffaellige Fall braucht keine Meldung mehr: grün ist gerechnet
+    # (E-64). Ein Eintrag „alles in Ordnung" waere eine Behauptung neben einer
+    # Messung, die dasselbe schon sagt.
 
-    # Rot aus einer Rahmenabweichung: Stufe 1, mit Frist nach Tier.
+    # Eine gemeldete Abweichung: Stufe 1, mit Frist nach Tier.
     with kontext.aktion(vor_tagen=30, stunde=10):
-        lenkung.melde_zustand(
+        lenkung.melde_abweichung(
             kontext.db,
             toolowner,
             kontext.tool("ausserhalb"),
-            farbe=ComplianceFarbe.ROT,
             begruendung="Zugriff auf ein Datenobjekt, das der Prozess nicht erklärt.",
-            abweichung_art="datenobjekte",
         )
 
     # Schicht 2: die Ausführungsidentität ist ein geteiltes Konto. Das ist
@@ -52,13 +42,13 @@ def baue(kontext: Kontext) -> None:
         from app.services import asset
 
         asset.aendere_tool(kontext.db, toolowner, kontext.tool("zwei_kanten"), asset_werte)
-        lenkung.melde_zustand(
+        # Das Verbot benennt niemand: es steht in den Daten, und die Meldung
+        # findet es dort (A.13.5, Stufe 1 entfällt).
+        lenkung.melde_abweichung(
             kontext.db,
             toolowner,
             kontext.tool("zwei_kanten"),
-            farbe=ComplianceFarbe.ROT,
             begruendung="Läuft unter einem geteilten Konto.",
-            schicht2_verbot=Schicht2Verbot.IDENTITAET_UMGANGEN,
         )
 
     # Eine dokumentierte Kompensation: der Weg aus A.9.3, wenn eine Technologie

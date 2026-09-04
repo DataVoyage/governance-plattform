@@ -30,7 +30,10 @@ function toolrouten(zusatz: Route[] = []): Route[] {
     { pfad: '/api/v1/auth/me', koerper: PROFIL },
     { pfad: '/api/v1/organisationseinheiten', koerper: EINHEITEN },
     { pfad: '/api/v1/prozesse', koerper: [prozess()] },
-    { pfad: '/api/v1/tools/tool-1/compliance', koerper: [] },
+    {
+      pfad: '/api/v1/tools/tool-1/compliance',
+      koerper: { farbe: 'gruen', offene_abweichungen: [], verlauf: [] },
+    },
     { pfad: '/api/v1/tools/tool-1', koerper: tool() },
   ];
 }
@@ -149,28 +152,11 @@ describe('Erlaubnisrahmen', () => {
 });
 
 describe('Schicht-2-Meldung', () => {
-  it('bietet die sechs Verbote erst bei einer roten Meldung an', async () => {
-    fetchAttrappe(toolrouten());
-    zeichne('/de/tools/tool-1');
-    await screen.findByLabelText('Zustand melden');
-    expect(screen.queryByLabelText('Verstoß gegen Schicht 2')).not.toBeInTheDocument();
-
-    await userEvent.selectOptions(screen.getByLabelText('Zustand melden'), 'rot');
-    const wahl = screen.getByLabelText('Verstoß gegen Schicht 2');
-    const optionen = Array.from(wahl.querySelectorAll('option')).map((o) => o.value);
-    // Sechs Verbote plus „keiner" — kein siebter, freier Grund.
-    expect(optionen).toEqual([
-      '',
-      'identitaet_umgangen',
-      'statische_zugangsdaten',
-      'undeklarierte_quellen',
-      'entscheidung_ohne_mensch',
-      'daten_ins_offene_netz',
-      'protokollierung_umgangen',
-    ]);
-  });
-
-  it('kuendigt die Folge an und schickt das Verbot mit', async () => {
+  // E-64: Die sechs Verbote stehen am Werkzeug, nicht in einem Auswahlfeld der
+  // Meldung. Vier misst die Anwendung, zwei erklärt der technische Owner —
+  // aber keines wird beim Melden noch erfragt. Die Meldung trägt genau ein
+  // Feld: die Beobachtung. Was daraus folgt, misst der Server.
+  it('meldet ohne Auswahlliste und laesst dem Server die Einstufung', async () => {
     const { aufrufe } = fetchAttrappe([
       ...toolrouten(),
       {
@@ -193,30 +179,19 @@ describe('Schicht-2-Meldung', () => {
       },
     ]);
     zeichne('/de/tools/tool-1');
-    await userEvent.selectOptions(await screen.findByLabelText('Zustand melden'), 'rot');
-    await userEvent.selectOptions(
-      screen.getByLabelText('Verstoß gegen Schicht 2'),
-      'identitaet_umgangen',
-    );
-    expect(screen.getByText(/unmittelbar in Eskalationsstufe 2/)).toBeInTheDocument();
-
     await userEvent.type(
-      screen.getByLabelText('Begründung'),
+      await screen.findByLabelText('Was haben Sie beobachtet?'),
       'Laeuft unter einem geteilten Konto',
     );
-    await userEvent.click(screen.getByRole('button', { name: 'Zustand melden' }));
+    // Es gibt nichts auszuwählen — weder eine Farbe noch ein Verbot.
+    expect(screen.queryByLabelText('Zustand melden')).toBeNull();
+    expect(screen.queryByLabelText('Verstoß gegen Schicht 2')).toBeNull();
 
+    await userEvent.click(screen.getByTestId('abweichung-melden'));
     await waitFor(() =>
       expect(aufrufe.find((a) => a.methode === 'POST')?.koerper).toEqual({
-        farbe: 'rot',
         begruendung: 'Laeuft unter einem geteilten Konto',
-        abweichung_art: null,
-        schicht2_verbot: 'identitaet_umgangen',
       }),
-    );
-    // In der Zeitreihe steht der Name des Verbots, nicht sein Schlüssel.
-    expect(await screen.findByTestId('aktueller-zustand')).toHaveTextContent(
-      'Ausführung unter umgangener Unternehmensidentität',
     );
   });
 });
@@ -330,7 +305,10 @@ describe('Erklärter Rahmen am Prozessobjekt (V-PRO-23)', () => {
       ...zusatz,
       { pfad: '/api/v1/auth/me', koerper: PROFIL },
       { pfad: '/api/v1/admin/users', koerper: NUTZER },
-      { pfad: '/api/v1/prozesse/p-1', koerper: prozess({ erlaubte_externe_ziele: ['alt.example'] }) },
+      {
+        pfad: '/api/v1/prozesse/p-1',
+        koerper: prozess({ erlaubte_externe_ziele: ['alt.example'] }),
+      },
       { pfad: '/api/v1/prozesse', koerper: [] },
     ];
   }
@@ -360,8 +338,11 @@ describe('Erklärter Rahmen am Prozessobjekt (V-PRO-23)', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
     await waitFor(() =>
       expect(
-        (aufrufe.find((a) => a.methode === 'PATCH')?.koerper as { erlaubte_externe_ziele: string[] })
-          .erlaubte_externe_ziele,
+        (
+          aufrufe.find((a) => a.methode === 'PATCH')?.koerper as {
+            erlaubte_externe_ziele: string[];
+          }
+        ).erlaubte_externe_ziele,
       ).toEqual(['alt.example', 'neu.example']),
     );
   });
@@ -369,11 +350,11 @@ describe('Erklärter Rahmen am Prozessobjekt (V-PRO-23)', () => {
   it('entfernt ein Ziel wieder', async () => {
     fetchAttrappe(formularrouten());
     zeichne('/de/prozesse/p-1/bearbeiten');
-    await userEvent.click(
-      await screen.findByRole('button', { name: 'alt.example — Entfernen' }),
-    );
+    await userEvent.click(await screen.findByRole('button', { name: 'alt.example — Entfernen' }));
     expect(screen.queryByTestId('ziel-alt.example')).not.toBeInTheDocument();
-    expect(screen.getByText('Für diesen Prozess ist kein externes Ziel erklärt.')).toBeInTheDocument();
+    expect(
+      screen.getByText('Für diesen Prozess ist kein externes Ziel erklärt.'),
+    ).toBeInTheDocument();
   });
 });
 
@@ -413,6 +394,22 @@ describe('Gemessene Seite am Tool-Objekt (V-TOO-18)', () => {
     await waitFor(() =>
       expect(aufrufe.filter((a) => a.methode === 'PATCH').at(-1)?.koerper).toEqual({
         statische_zugangsdaten: true,
+      }),
+    );
+
+    // E-64: die beiden Verbote, die in der Zielplattform geschehen, werden
+    // hier **erklärt** — vorher waren sie nur in einer Meldung auswählbar.
+    await userEvent.click(screen.getByLabelText(/Umgeht die Zugriffsprotokollierung/));
+    await waitFor(() =>
+      expect(aufrufe.filter((a) => a.methode === 'PATCH').at(-1)?.koerper).toEqual({
+        protokollierung_umgangen: true,
+      }),
+    );
+
+    await userEvent.click(screen.getByLabelText(/offen erreichbares Ziel/));
+    await waitFor(() =>
+      expect(aufrufe.filter((a) => a.methode === 'PATCH').at(-1)?.koerper).toEqual({
+        daten_ins_offene_netz: true,
       }),
     );
   });

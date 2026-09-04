@@ -260,32 +260,35 @@ def erlaubnisrahmen(db: Session, tool: ToolObjekt) -> Rahmen:
 
 # --- Schicht 2 (Leitdokument A.13.2) -------------------------------------
 
-#: Die Verbote, die diese Anwendung aus vorhandenen Daten selbst erkennt. Die
-#: uebrigen beiden sind zu melden — sie betreffen Vorgaenge in der Zielplattform,
-#: von denen die Governance-Plattform nichts sieht.
-AUTOMATISCH_ERKENNBAR: frozenset[str] = frozenset(
-    {
-        Schicht2Verbot.IDENTITAET_UMGANGEN,
-        Schicht2Verbot.STATISCHE_ZUGANGSDATEN,
-        Schicht2Verbot.UNDEKLARIERTE_QUELLEN,
-        Schicht2Verbot.ENTSCHEIDUNG_OHNE_MENSCH,
-    }
-)
+#: Alle sechs Verbote aus A.13.2 Schicht 2 stehen in den Daten des
+#: Tool-Objekts — seit E-64 auch die beiden, die in der Zielplattform
+#: geschehen. Sie waren frueher nur ueber eine Meldung erfassbar, in der
+#: jemand das Verbot aus einer Liste auswaehlte. Das hiess: dieselbe Tatsache
+#: war je nach Verbot mal eine Eigenschaft des Werkzeugs, mal eine Behauptung
+#: in einem Vorgang — und die Anwendung konnte nur die eine Haelfte pruefen.
+#: Jetzt erklaert der technische Owner sie am Werkzeug, wie die drei
+#: Attestierungen aus A.6, und die Anwendung fragt danach nicht mehr.
+AUTOMATISCH_ERKENNBAR: frozenset[str] = frozenset(Schicht2Verbot)
 
 
 def pruefe_schicht2(tool: ToolObjekt) -> list[Schicht2Verbot]:
-    """Welche der sechs Verbote die erfassten Daten selbst belegen.
+    """Welche der sechs Verbote die erfassten Daten belegen.
 
-    Die Liste ist nicht die Wahrheit ueber das Tool, sondern das, was ohne
-    Meldung erkennbar ist. Wer eine Umgehung der Protokollierung sucht, findet
-    sie hier nicht — dafuer gibt es die Meldung. Was die Anwendung aber sieht,
-    soll sie auch sagen, statt auf jemanden zu warten.
+    Zwei davon kann die Anwendung nicht messen — was in der Zielplattform
+    geschieht, sieht sie nicht. Sie sind deshalb **erklaerte** Angaben: der
+    technische Owner traegt sie am Werkzeug ein, so wie er die drei
+    Attestierungen aus A.6 abgibt. Danach sind sie fuer jede weitere Pruefung
+    dasselbe wie die uebrigen vier — Daten, keine Meinung.
     """
     verstoesse: list[Schicht2Verbot] = []
     if tool.ausfuehrungsidentitaet == Ausfuehrungsidentitaet.GETEILTES_KONTO:
         verstoesse.append(Schicht2Verbot.IDENTITAET_UMGANGEN)
     if tool.statische_zugangsdaten is True:
         verstoesse.append(Schicht2Verbot.STATISCHE_ZUGANGSDATEN)
+    if tool.protokollierung_umgangen is True:
+        verstoesse.append(Schicht2Verbot.PROTOKOLLIERUNG_UMGANGEN)
+    if tool.daten_ins_offene_netz is True:
+        verstoesse.append(Schicht2Verbot.DATEN_INS_OFFENE_NETZ)
     if tool.attest_undeklarierte_quellen is True:
         verstoesse.append(Schicht2Verbot.UNDEKLARIERTE_QUELLEN)
     if tool.attest_entscheidung_ueber_personen is True and tool.attest_mensch_dazwischen is False:

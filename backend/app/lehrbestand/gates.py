@@ -129,7 +129,6 @@ def aufstieg(kontext: Kontext) -> None:
             kontext.wer("prozessowner"),
             prozess,
             antworten,
-            modus=bewertung_service.Modus.VOLLSTAENDIG,
             begruendungen=dict.fromkeys(
                 antworten,
                 "Die Auswertung erfolgt seit der Umstellung je Fahrerin und Fahrer.",

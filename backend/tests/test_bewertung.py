@@ -42,7 +42,7 @@ def profil_von(ki=0, ds=0, mb=0, it=0, rg=0, ur=0) -> dict[str, int]:
     return {"ki": ki, "ds": ds, "mb": mb, "it": it, "rg": rg, "ur": ur}
 
 
-def nutzlast(profil: dict[str, int], modus: str = "vollstaendig") -> dict:
+def nutzlast(profil: dict[str, int]) -> dict:
     """Die Wizard-Nutzlast zu einem Zielprofil, mit Begruendungen zu jeder Frage.
 
     Ein synthetisch gesetztes Zielprofil widerspricht der Datenlage des
@@ -54,7 +54,6 @@ def nutzlast(profil: dict[str, int], modus: str = "vollstaendig") -> dict:
     """
     antworten = antworten_fuer(profil)
     return {
-        "modus": modus,
         "antworten": antworten,
         "begruendungen": dict.fromkeys(
             antworten, "Fuer diesen Testfall bewusst abweichend gesetzt."
@@ -124,13 +123,6 @@ def test_ki_einsatz_ohne_weitere_treffer_ergibt_stufe_eins() -> None:
     assert bewertung_service.profil(stand)["ki"] == 1
 
 
-def test_unbekannter_modus() -> None:
-    from app.services.prozess import Ungueltig
-
-    with pytest.raises(Ungueltig):
-        bewertung_service.durchlaufe({}, "gemuetlich")
-
-
 # --- Verbotstatbestand (Abnahmekriterium 2.2) ----------------------------
 
 
@@ -179,32 +171,20 @@ def test_jede_k_klasse_hat_eine_beschreibung() -> None:
     assert alle == set(bewertung_service.K_KLASSEN_BESCHREIBUNG)
 
 
-# --- Schnelle und vollstaendige Variante (Abnahmekriterium 2.3) ----------
+# --- Ein Durchlauf, und der ist vollstaendig (A.8.5, E-64) ---------------
 
 
-def test_schnelle_variante_endet_beim_ersten_tier_3_treffer() -> None:
-    antworten = antworten_fuer(profil_von(ds=3, rg=3))
-    stand = bewertung_service.durchlaufe(antworten, bewertung_service.Modus.SCHNELL)
-    assert stand.abgeschlossen
-    assert not stand.vollstaendig
-    # Nach dem Datenschutzblock ist Schluss; RG wurde nicht mehr gewertet.
-    assert bewertung_service.profil(stand) == profil_von(ds=3)
-    assert bewertung_service.tier(stand) == 3
+def test_ein_tier_3_treffer_beendet_den_durchlauf_nicht() -> None:
+    """E-64: es gibt keine unvollstaendige Bewertung mehr.
 
-
-def test_schnelle_variante_ohne_treffer_laeuft_durch() -> None:
-    stand = bewertung_service.durchlaufe(
-        antworten_fuer(profil_von(ds=2)), bewertung_service.Modus.SCHNELL
-    )
-    assert stand.abgeschlossen
-    assert stand.vollstaendig
-    assert bewertung_service.tier(stand) == 2
-
-
-def test_vollstaendige_variante_liefert_das_ganze_profil() -> None:
+    Frueher hoerte der Baum beim ersten Tier-3-Treffer auf. Das Tier stimmte,
+    aber die uebrigen Dimensionen standen auf null und **keine** K-Klasse war
+    ausgeloest — und diese Fassung konnte eine vollstaendige verdraengen.
+    """
     stand = bewertung_service.durchlaufe(antworten_fuer(profil_von(ds=3, rg=3)))
-    assert stand.vollstaendig
+    assert stand.abgeschlossen
     assert bewertung_service.profil(stand) == profil_von(ds=3, rg=3)
+    assert bewertung_service.tier(stand) == 3
 
 
 # --- HTTP-Schicht ---------------------------------------------------------
@@ -233,10 +213,10 @@ def prozess(client: TestClient, owner, vertretung, prozess_daten):
     return antwort.json()
 
 
-def wizard(client: TestClient, anmeldung, prozess_id: str, antworten: dict, modus="vollstaendig"):
+def wizard(client: TestClient, anmeldung, prozess_id: str, antworten: dict):
     return client.post(
         f"/api/v1/prozesse/{prozess_id}/bewertung/wizard",
-        json={"modus": modus, "antworten": antworten},
+        json={"antworten": antworten},
         headers=anmeldung.kopf,
     )
 
@@ -246,7 +226,6 @@ def abschliessen(
     anmeldung,
     prozess_id: str,
     antworten: dict,
-    modus="vollstaendig",
     begruendungen: dict | None = None,
 ):
     """Schliesst einen Durchlauf ab; begruendet standardmaessig jede Abweichung.
@@ -258,7 +237,7 @@ def abschliessen(
         begruendungen = dict.fromkeys(antworten, "Fuer diesen Testfall bewusst abweichend gesetzt.")
     return client.post(
         f"/api/v1/prozesse/{prozess_id}/bewertungen",
-        json={"modus": modus, "antworten": antworten, "begruendungen": begruendungen},
+        json={"antworten": antworten, "begruendungen": begruendungen},
         headers=anmeldung.kopf,
     )
 
@@ -306,15 +285,6 @@ def test_wizard_lehnt_unbekannte_frage_ab(client: TestClient, owner, prozess) ->
     assert antwort.status_code == 422
 
 
-def test_wizard_lehnt_unbekannten_modus_ab(client: TestClient, owner, prozess) -> None:
-    antwort = client.post(
-        f"/api/v1/prozesse/{prozess['id']}/bewertung/wizard",
-        json={"modus": "gemuetlich", "antworten": {}},
-        headers=owner.kopf,
-    )
-    assert antwort.status_code == 422
-
-
 def test_bewertung_speichern_und_profil_lesen(client: TestClient, owner, prozess, db) -> None:
     antwort = abschliessen(
         client, owner, prozess["id"], antworten_fuer(profil_von(ds=3, mb=1, it=1, rg=2, ur=2))
@@ -325,7 +295,6 @@ def test_bewertung_speichern_und_profil_lesen(client: TestClient, owner, prozess
     assert bewertung["tier"] == 3
     assert bewertung["ds_stufe"] == 3
     assert bewertung["mb_stufe"] == 1
-    assert bewertung["vollstaendig"] is True
     # Ab Tier 3 gilt die jaehrliche Erneuerungspflicht.
     assert bewertung["gueltig_bis"] is not None
 
@@ -348,15 +317,18 @@ def test_unvollstaendiger_durchlauf_wird_abgelehnt(client: TestClient, owner, pr
     assert "2a" in antwort.json()["detail"]
 
 
-def test_schnelle_variante_speichert_ohne_k_klassen(client: TestClient, owner, prozess) -> None:
-    """Ohne vollstaendigen Durchlauf gibt es kein belastbares K-Klassen-Bild."""
-    antwort = abschliessen(
-        client, owner, prozess["id"], antworten_fuer(profil_von(ds=3)), modus="schnell"
-    )
+def test_jede_gespeicherte_bewertung_traegt_ihre_k_klassen(
+    client: TestClient, owner, prozess
+) -> None:
+    """E-64: eine Bewertung ohne K-Klassen kann es nicht mehr geben.
+
+    Vorher lieferte die schnelle Variante Tier 3 und eine leere Klassenliste —
+    und verdraengte damit eine vollstaendige, ohne dass jemand etwas loeschte.
+    """
+    antwort = abschliessen(client, owner, prozess["id"], antworten_fuer(profil_von(ds=3)))
     bewertung = antwort.json()["bewertung"]
     assert bewertung["tier"] == 3
-    assert bewertung["vollstaendig"] is False
-    assert bewertung["ausgeloeste_k_klassen"] == []
+    assert bewertung["ausgeloeste_k_klassen"]
 
 
 def test_verbotstatbestand_speichert_keine_bewertung(

@@ -47,7 +47,7 @@ function grundrouten(): Route[] {
     { pfad: '/api/v1/fachbereiche', koerper: FACHBEREICHE },
     { pfad: '/api/v1/organisationseinheiten', koerper: EINHEITEN },
     { pfad: /\/bewertungen$/, koerper: [] },
-    { pfad: /\/compliance$/, koerper: [] },
+    { pfad: /\/compliance$/, koerper: { farbe: 'gruen', offene_abweichungen: [], verlauf: [] } },
     { pfad: /\/selbstverpflichtungen$/, koerper: [] },
     { pfad: /\/gates$/, koerper: [] },
     { pfad: '/api/v1/gates/ausloeser', koerper: [] },

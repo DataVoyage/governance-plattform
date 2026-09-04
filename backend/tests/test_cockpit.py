@@ -217,7 +217,7 @@ def test_non_compliant_je_stufe_und_filter(
     )
     client.post(
         f"/api/v1/tools/{tool['id']}/compliance",
-        json={"farbe": "rot", "begruendung": "Rahmen verlassen"},
+        json={"begruendung": "Abweichung beobachtet"},
         headers=governance.kopf,
     )
 
@@ -239,32 +239,49 @@ def test_non_compliant_je_stufe_und_filter(
     assert nur_2["anzahl"] == 1
 
 
-def test_rahmenabweichungen_zeigen_nur_nicht_gruene(
-    client: TestClient, governance, organisation
+def test_rahmenabweichungen_rechnen_statt_auf_eine_meldung_zu_warten(
+    client: TestClient, governance, organisation, owner, prozess_daten, vertretung, attestieren
 ) -> None:
-    gruen = client.post(
-        "/api/v1/tools",
-        json={"name": "Gruen", "organisationseinheit_id": organisation["fin_de"]},
-        headers=governance.kopf,
-    ).json()
-    gelb = client.post(
-        "/api/v1/tools",
-        json={"name": "Gelb", "organisationseinheit_id": organisation["fin_de"]},
-        headers=governance.kopf,
+    """E-64: die Zeile zeigt die Lage, nicht die Meldebereitschaft.
+
+    Vorher las sie den letzten gemeldeten Zustand — ein Werkzeug ohne Meldung
+    fehlte darin, auch wenn seine Abweichung messbar war.
+    """
+    prozess = client.post(
+        "/api/v1/prozesse",
+        json=prozess_daten(owner.user_id, vertretung.user_id),
+        headers=owner.kopf,
     ).json()
     client.post(
-        f"/api/v1/tools/{gruen['id']}/compliance",
-        json={"farbe": "gruen"},
+        "/api/v1/tools",
+        json={"name": "Ohne Kante", "organisationseinheit_id": organisation["fin_de"]},
         headers=governance.kopf,
     )
+    sauber = client.post(
+        "/api/v1/tools",
+        json={"name": "Sauber", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
+    attestieren(governance.kopf, sauber["id"])
     client.post(
-        f"/api/v1/tools/{gelb['id']}/compliance",
-        json={"farbe": "gelb", "begruendung": "Beobachtung"},
+        f"/api/v1/tools/{sauber['id']}/prozesse",
+        json={"prozessobjekt_id": prozess["id"]},
         headers=governance.kopf,
     )
+
+    # Niemand hat etwas gemeldet — und trotzdem steht das eine in der Zeile.
     treffer = zeile(client, governance, "rahmenabweichungen")
-    assert [e["titel"] for e in treffer["eintraege"]] == ["Gelb"]
-    assert "Beobachtung" in treffer["eintraege"][0]["hinweis"]
+    assert [e["titel"] for e in treffer["eintraege"]] == ["Ohne Kante"]
+    assert treffer["eintraege"][0]["hinweis"].startswith("gelb")
+
+    # Eine Meldung macht aus Gelb Rot, und der Grund steht daneben.
+    client.post(
+        f"/api/v1/tools/{sauber['id']}/compliance",
+        json={"begruendung": "Zugriff außerhalb des Rahmens"},
+        headers=governance.kopf,
+    )
+    titel = [e["titel"] for e in zeile(client, governance, "rahmenabweichungen")["eintraege"]]
+    assert sorted(titel) == ["Ohne Kante", "Sauber"]
 
 
 def test_kritikalitaetsketten_zeigen_nur_geerbte_faelle(
@@ -364,7 +381,7 @@ def test_stillgelegtes_asset_gilt_als_inaktiv(
     )
     vorgang = client.post(
         f"/api/v1/tools/{tool['id']}/compliance",
-        json={"farbe": "rot"},
+        json={"begruendung": "Abweichung beobachtet"},
         headers=governance.kopf,
     ).json()["lenkungsvorgang"]
     client.post(
@@ -443,7 +460,7 @@ def test_widerspruch_zwischen_erklaerung_und_zustand(
     ).json()
     client.post(
         f"/api/v1/tools/{tool['id']}/compliance",
-        json={"farbe": "rot", "begruendung": "Rahmen verlassen"},
+        json={"begruendung": "Abweichung beobachtet"},
         headers=governance.kopf,
     )
     # Noch keine Erklaerung: kein Widerspruch.
@@ -475,7 +492,7 @@ def test_verneinte_aussage_ist_kein_widerspruch(
     ).json()
     client.post(
         f"/api/v1/tools/{tool['id']}/compliance",
-        json={"farbe": "rot"},
+        json={"begruendung": "Abweichung beobachtet"},
         headers=governance.kopf,
     )
     aussagen = {i: {"bestaetigt": True, "kommentar": ""} for i in T_AUSSAGEN}

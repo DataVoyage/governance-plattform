@@ -70,7 +70,7 @@ def k_klassen(db: Session, prozess_id: uuid.UUID) -> dict:
     """Die ausgeloesten Massnahmenklassen.
 
     Sie werden hier aus dem gespeicherten Profil neu abgeleitet statt aus dem
-    Datensatz gelesen: so kann eine Bewertung, die im schnellen Modus ohne
+    Datensatz gelesen: so kann eine Bewertung, die ohne
     K-Klassen gespeichert wurde, trotzdem beantwortet werden — und beide Wege
     benutzen dieselbe Funktion.
     """

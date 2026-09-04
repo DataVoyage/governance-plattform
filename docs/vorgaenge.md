@@ -143,7 +143,7 @@ ihn zu hinterlegen, bekommt einen roten Test — und umgekehrt.
 | Kennung | Vorgang | Rolle | Erwartetes Ergebnis | AP | Stand |
 |---|---|---|---|---|---|
 | V-BEW-01 | Eine vollständige Bewertung durchführen | Prozess-Owner | Alle sechs Dimensionen werden gefragt; das Ergebnis nennt Tier, Profil und ausgelöste Klassen | AP-4 | erfüllt |
-| V-BEW-02 | Die schnelle Variante wählen | Prozess-Owner | Der Durchlauf endet beim ersten Tier-3-Treffer; das Fehlen der K-Klassen wird erklärt, nicht verschwiegen | AP-4 | erfüllt |
+| V-BEW-02 | Die Bewertung ohne Vorschaltbildschirm beginnen | Prozess-Owner | Die erste Frage steht sofort da; es gibt nichts zu wählen, und der Durchlauf endet erst nach allen sechs Dimensionen | AP-18 | erfüllt |
 | V-BEW-03 | Den Vorschlag je Dimension ansehen | Prozess-Owner | Jeder Vorschlag nennt seinen Grund im Klartext, mit dem Objekt, aus dem er stammt | AP-4 | erfüllt |
 | V-BEW-04 | Vom Vorschlag abweichen | Prozess-Owner | Ein Begründungsfeld öffnet sich; Vorschlag und Antwort werden beide festgehalten | AP-4 | erfüllt |
 | V-BEW-05 | Abweichend antworten ohne Begründung | Prozess-Owner | Der Schritt wird nicht angenommen | AP-4 | erfüllt |

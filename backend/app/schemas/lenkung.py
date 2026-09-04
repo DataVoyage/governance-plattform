@@ -10,13 +10,17 @@ from pydantic import BaseModel, ConfigDict, Field
 from app.models.enums import Aufloesungsart, ComplianceFarbe, LenkungStatus, Schicht2Verbot
 
 
-class ZustandMelden(BaseModel):
-    farbe: ComplianceFarbe
-    begruendung: str = ""
-    abweichung_art: str | None = Field(default=None, max_length=64)
-    #: Eines der sechs Verbote aus A.13.2 Schicht 2. Gesetzt heisst: der
-    #: Vorgang beginnt ohne erste Stufe (A.13.5).
-    schicht2_verbot: Schicht2Verbot | None = None
+class AbweichungMelden(BaseModel):
+    """Der eine Knopf. Ein Feld, und das kennt die Anwendung nicht (E-64).
+
+    Farbe, Abweichungsart und das verletzte Verbot standen frueher hier zur
+    Auswahl. Alle drei misst die Anwendung selbst; sie zu erfragen hiess, eine
+    Antwort zu erlauben, die dem eigenen Befund widerspricht.
+    """
+
+    #: Was beobachtet wurde. Pflicht: ohne sie stuende im Vorgang nur, dass
+    #: jemand etwas bemerkt hat.
+    begruendung: str = Field(min_length=1)
 
 
 class ZustandAus(BaseModel):
@@ -30,6 +34,21 @@ class ZustandAus(BaseModel):
     schicht2_verbot: Schicht2Verbot | None = None
     festgestellt_am: datetime
     festgestellt_von: uuid.UUID | None = None
+
+
+class ComplianceAus(BaseModel):
+    """Der Zustand eines Werkzeugs: gerechnet, mit seinem Verlauf darunter.
+
+    ``farbe`` ist keine gespeicherte Angabe, sondern die Messung von jetzt
+    (A.13.3). Der ``verlauf`` bleibt die Zeitreihe: was gemeldet und wie
+    geschlossen wurde, mit Datum und Namen. Beides nebeneinander, weil das eine
+    den Stand sagt und das andere den Weg dorthin.
+    """
+
+    farbe: ComplianceFarbe
+    #: Was die Anwendung gerade selbst sieht; leer heisst: nichts.
+    offene_abweichungen: list[str] = Field(default_factory=list)
+    verlauf: list[ZustandAus] = Field(default_factory=list)
 
 
 class LenkungsrechteAus(BaseModel):
@@ -65,9 +84,13 @@ class LenkungAus(BaseModel):
 
 
 class MeldungAus(BaseModel):
-    """Was eine Meldung ausgeloest hat — Zustand und ggf. der Vorgang dazu."""
+    """Was die Meldung ausgeloest hat.
 
-    zustand: ZustandAus
+    ``zustand`` fehlt, wenn nichts passiert ist: dann lief fuer dieses Werkzeug
+    schon ein ungeklaerter Vorgang, und der steht daneben (E-64).
+    """
+
+    zustand: ZustandAus | None = None
     lenkungsvorgang: LenkungAus | None = None
 
 

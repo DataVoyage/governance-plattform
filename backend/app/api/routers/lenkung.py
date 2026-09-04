@@ -4,19 +4,20 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, status
+from fastapi import APIRouter, Response, status
 
 from app.api.deps import AktuellerNutzer, DbSession
 from app.models.enums import Schicht2Verbot
 from app.models.governance import ToolObjekt
 from app.schemas.lenkung import (
     Abbrechen,
+    AbweichungMelden,
     Aufloesen,
+    ComplianceAus,
     LenkungAus,
     LenkungsrechteAus,
     MeldungAus,
     ZustandAus,
-    ZustandMelden,
 )
 from app.schemas.rahmen import Schicht2VerbotAus
 from app.services import asset as asset_service
@@ -39,37 +40,51 @@ def _vorgang_aus(db, principal, vorgang) -> LenkungAus:
     return ausgabe
 
 
-@router.get("/tools/{tool_id}/compliance", response_model=list[ZustandAus])
-def verlauf(tool_id: uuid.UUID, principal: AktuellerNutzer, db: DbSession) -> list:
-    """Die Zeitreihe; der aktuelle Zustand ist der erste Eintrag."""
-    asset_service.hole_tool_sichtbar(db, principal, tool_id)
-    return lenkung_service.verlauf(db, tool_id)
+@router.get("/tools/{tool_id}/compliance", response_model=ComplianceAus)
+def compliance(tool_id: uuid.UUID, principal: AktuellerNutzer, db: DbSession) -> ComplianceAus:
+    """Der gerechnete Zustand und die Zeitreihe dahinter.
+
+    Die Farbe wird nicht gelesen, sondern gemessen (E-64). Ein Werkzeug, zu dem
+    noch nie etwas gemeldet wurde, hat deshalb trotzdem einen Zustand — vorher
+    stand dort nichts, obwohl die Anwendung es laengst beurteilen konnte.
+    """
+    tool = asset_service.hole_tool_sichtbar(db, principal, tool_id)
+    return ComplianceAus(
+        farbe=lenkung_service.gemessene_farbe(db, tool),
+        offene_abweichungen=lenkung_service.offene_abweichungen(db, tool),
+        verlauf=[ZustandAus.model_validate(z) for z in lenkung_service.verlauf(db, tool.id)],
+    )
 
 
 @router.post(
     "/tools/{tool_id}/compliance", response_model=MeldungAus, status_code=status.HTTP_201_CREATED
 )
 def melden(
-    tool_id: uuid.UUID, daten: ZustandMelden, principal: AktuellerNutzer, db: DbSession
+    tool_id: uuid.UUID,
+    daten: AbweichungMelden,
+    antwort: Response,
+    principal: AktuellerNutzer,
+    db: DbSession,
 ) -> MeldungAus:
-    """Manuelle Meldung eines Zustands.
+    """Eine Compliance-Abweichung melden — die einzige Meldung, die es gibt.
 
-    Bei ``rot`` entsteht automatisch ein Lenkungsvorgang in Stufe 1 mit der
-    tier-abhaengigen Frist (Leitdokument A.13.5) — bei einem Verstoss gegen
-    Schicht 2 unmittelbar in Stufe 2, weil dort nichts zu klaeren ist.
+    Es entsteht ein Lenkungsvorgang in Stufe 1 mit der tier-abhaengigen Frist
+    (A.13.5), oder unmittelbar in Stufe 2, wenn die Daten ein Verbot aus
+    Schicht 2 belegen: dort ist nichts zu klaeren.
+
+    Laeuft fuer dieses Werkzeug schon ein ungeklaerter Vorgang, passiert
+    nichts. Die Antwort ist dann **200** statt 201 und traegt den laufenden
+    Vorgang ohne neuen Zustand — dieselbe Abweichung zweimal zu melden ist
+    dieselbe Abweichung.
     """
     tool = asset_service.hole_tool_sichtbar(db, principal, tool_id)
-    zustand, vorgang = lenkung_service.melde_zustand(
-        db,
-        principal,
-        tool,
-        farbe=daten.farbe,
-        begruendung=daten.begruendung,
-        abweichung_art=daten.abweichung_art,
-        schicht2_verbot=daten.schicht2_verbot,
+    zustand, vorgang = lenkung_service.melde_abweichung(
+        db, principal, tool, begruendung=daten.begruendung
     )
+    if zustand is None:
+        antwort.status_code = status.HTTP_200_OK
     return MeldungAus(
-        zustand=ZustandAus.model_validate(zustand),
+        zustand=None if zustand is None else ZustandAus.model_validate(zustand),
         lenkungsvorgang=_vorgang_aus(db, principal, vorgang) if vorgang is not None else None,
     )
 

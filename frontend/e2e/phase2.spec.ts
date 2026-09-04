@@ -83,7 +83,10 @@ async function antworte(seite: Page, antwort: 'Ja' | 'Nein') {
     ),
     seite.getByRole('button', { name: antwort, exact: true }).click(),
   ]);
-  expect(ruf.ok(), `Wizard-Schritt fehlgeschlagen: ${ruf.status()} ${await ruf.text()}`).toBeTruthy();
+  expect(
+    ruf.ok(),
+    `Wizard-Schritt fehlgeschlagen: ${ruf.status()} ${await ruf.text()}`,
+  ).toBeTruthy();
 
   await expect
     .poll(async () => {
@@ -101,9 +104,6 @@ test.describe('Phase 2 in der Oberflaeche', () => {
     const id = await prozessAnlegen(request, 'Bewertung vollstaendig');
     await anmelden(page);
     await page.goto(`/de/prozesse/${id}/bewertung`);
-
-    await page.getByRole('button', { name: 'Vollständig' }).click();
-    await page.getByRole('button', { name: 'Bewertung durchführen' }).click();
 
     // Profil KI0-DS3-MB1-IT1-RG2-UR2 aus dem durchgerechneten Beispiel.
     await expect(page.getByText('Schritt 1 von 6 — Künstliche Intelligenz')).toBeVisible();
@@ -143,30 +143,11 @@ test.describe('Phase 2 in der Oberflaeche', () => {
     await expect(page.getByText('KI0-DS3-MB1-IT1-RG2-UR2')).toBeVisible();
   });
 
-  test('schnelle Variante endet beim ersten Tier-3-Treffer', async ({ page, request }) => {
-    const id = await prozessAnlegen(request, 'Bewertung schnell');
-    await anmelden(page);
-    await page.goto(`/de/prozesse/${id}/bewertung`);
-
-    await page.getByRole('button', { name: 'Schnell' }).click();
-    await page.getByRole('button', { name: 'Bewertung durchführen' }).click();
-    await antworte(page, 'Nein'); // 1a
-    await antworte(page, 'Ja'); // 2a -> DS 3, Schluss
-
-    await expect(page.getByTestId('tier')).toHaveText('3');
-    await expect(
-      page.getByText('Der schnelle Durchlauf endet vorzeitig und liefert deshalb keine K-Klassen.'),
-    ).toBeVisible();
-    await expect(page.getByTestId('k-klassen')).toHaveCount(0);
-  });
-
   test('verbotene KI-Praxis speichert keine Bewertung', async ({ page, request }) => {
     const id = await prozessAnlegen(request, 'Bewertung verboten');
     await anmelden(page);
     await page.goto(`/de/prozesse/${id}/bewertung`);
 
-    await page.getByRole('button', { name: 'Schnell' }).click();
-    await page.getByRole('button', { name: 'Bewertung durchführen' }).click();
     await antworte(page, 'Ja'); // 1a: KI im Einsatz
     await page.getByRole('button', { name: 'Ja', exact: true }).click(); // 1b: verbotene Praxis
 

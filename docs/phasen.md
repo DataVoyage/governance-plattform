@@ -96,7 +96,7 @@ sagt, welche Klassen ausgelöst sind — nicht, ob ein konkretes Tool sie erfül
 |---|---|---|---|
 | 1 | Sechs Themenblöcke in der festgelegten Reihenfolge; Verifikation über alle Antwortkombinationen ergibt das tabellierte Tier | V-BEW-01, V-BEW-10 | `backend/tests/test_bewertung.py::test_bloecke_stehen_in_der_festgelegten_reihenfolge`, `::test_jede_antwortkombination_ergibt_das_tabellierte_tier` (4096 Kombinationen), `frontend/e2e/phase2.spec.ts` |
 | 2 | Treffer auf „verbotene KI-Praxis" speichert keine Bewertung, sondern erzeugt einen Alarm | V-BEW-08 | `backend/tests/test_bewertung.py::test_verbotstatbestand_speichert_keine_bewertung`, `frontend/e2e/phase2.spec.ts` |
-| 3 | Schnelle Variante endet beim ersten Tier-3-Treffer; vollständige liefert das ganze Profil | V-BEW-02, V-BEW-01 | `backend/tests/test_bewertung.py::test_schnelle_variante_endet_beim_ersten_tier_3_treffer`, `::test_vollstaendige_variante_liefert_das_ganze_profil`, `frontend/e2e/phase2.spec.ts` |
+| 3 | Ein Durchlauf, und der ist vollständig: alle sechs Dimensionen und die ausgelösten K-Klassen, auch bei einem Tier-3-Treffer (E-64) | V-BEW-02, V-BEW-01 | `backend/tests/test_bewertung.py::test_ein_tier_3_treffer_beendet_den_durchlauf_nicht`, `::test_jede_gespeicherte_bewertung_traegt_ihre_k_klassen`, `frontend/e2e/phase2.spec.ts` |
 | 4 | Neubewertung erzeugt einen neuen Datensatz; die vorherige bleibt einsehbar | V-BEW-11, V-BEW-12 | `backend/tests/test_bewertung.py::test_neubewertung_erzeugt_neuen_datensatz`, `frontend/tests/bewertung.test.tsx` |
 | 5 | Profil `KI0-DS3-MB1-IT1-RG2-UR2` löst K1–K5, K7, K8, K9 aus — nicht K6, nicht K10 | V-BEW-06, V-BEW-07, V-KLA-01 | `backend/tests/test_bewertung.py::test_beispiel_aus_dem_leitdokument`, `frontend/e2e/phase2.spec.ts` |
 

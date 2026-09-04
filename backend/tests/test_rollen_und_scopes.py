@@ -161,7 +161,6 @@ def _status(antwort) -> int:
 #: Begruendung bei — der Server behaelt nur die, wo es wirklich abweicht.
 _ANTWORTEN = {f"{block}{frage}": False for block in range(1, 7) for frage in ("a", "b", "c")}
 _BEWERTUNG = {
-    "modus": "vollstaendig",
     "antworten": _ANTWORTEN,
     "begruendungen": dict.fromkeys(_ANTWORTEN, "Fuer diese Pruefung bewusst gesetzt."),
 }

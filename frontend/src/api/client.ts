@@ -10,17 +10,15 @@ import type {
   Attestierung,
   Bewertung,
   BewertungAbschluss,
-  BewertungsModus,
   DatenObjekt,
   DatenobjektKatalog,
   Datennutzung,
   Datenkategorie,
   Aufloesungsart,
   AussageEingabe,
-  ComplianceFarbe,
+  Compliance,
   CockpitZeile,
   CockpitZeilenkopf,
-  ComplianceZustand,
   Deckung,
   Fachbereich,
   GateStatus,
@@ -44,7 +42,6 @@ import type {
   RolleErklaert,
   Rollenzuweisung,
   ScopeTyp,
-  Schicht2Verbot,
   Schicht2VerbotEintrag,
   Rollenwirkung,
   Technologie,
@@ -155,25 +152,23 @@ export const api = {
   wizardSchritt: (
     token: string,
     prozessId: string,
-    modus: BewertungsModus,
     antworten: Record<string, boolean>,
     begruendungen: Record<string, string> = {},
   ) =>
     anfrage<WizardSchritt>(`/api/v1/prozesse/${prozessId}/bewertung/wizard`, {
       methode: 'POST',
-      koerper: { modus, antworten, begruendungen },
+      koerper: { antworten, begruendungen },
       token,
     }),
   bewertungAbschliessen: (
     token: string,
     prozessId: string,
-    modus: BewertungsModus,
     antworten: Record<string, boolean>,
     begruendungen: Record<string, string> = {},
   ) =>
     anfrage<BewertungAbschluss>(`/api/v1/prozesse/${prozessId}/bewertungen`, {
       methode: 'POST',
-      koerper: { modus, antworten, begruendungen },
+      koerper: { antworten, begruendungen },
       token,
     }),
   bewertungen: (token: string, prozessId: string) =>
@@ -357,20 +352,12 @@ export const api = {
       token,
     }),
   compliance: (token: string, toolId: string) =>
-    anfrage<ComplianceZustand[]>(`/api/v1/tools/${toolId}/compliance`, { token }),
-  complianceMelden: (
-    token: string,
-    toolId: string,
-    daten: {
-      farbe: ComplianceFarbe;
-      begruendung?: string;
-      abweichung_art?: string | null;
-      schicht2_verbot?: Schicht2Verbot | null;
-    },
-  ) =>
+    anfrage<Compliance>(`/api/v1/tools/${toolId}/compliance`, { token }),
+  /** Der eine Knopf. Ein Feld — die Beobachtung; alles Übrige misst der Server. */
+  abweichungMelden: (token: string, toolId: string, begruendung: string) =>
     anfrage<Meldung>(`/api/v1/tools/${toolId}/compliance`, {
       methode: 'POST',
-      koerper: daten,
+      koerper: { begruendung },
       token,
     }),
   schicht2Verbote: (token: string) =>

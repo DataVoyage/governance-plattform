@@ -47,8 +47,6 @@ class Einstufung:
     #: Die jaehrliche Erneuerung ab Tier 3 (A.10.5). Ohne sie laeuft die
     #: Bewertung ab und das Cockpit meldet es.
     erneuert_vor: int | None = None
-    #: Der schnelle Durchlauf endet beim ersten Tier-3-Treffer (A.8.5).
-    schnell: bool = False
     #: Trifft den Verbotstatbestand aus Schritt 1b: es entsteht keine Bewertung,
     #: sondern ein Governance-Alarm.
     verboten: bool = False
@@ -94,8 +92,7 @@ EINSTUFUNGEN: tuple[Einstufung, ...] = (
     Einstufung("bewerbervorauswahl", ki=3, ds=3, mb=3, it=2, rg=2),
     Einstufung("fehlzeitenauswertung", ki=0, ds=3, mb=3, it=2, rg=2, erneuert_vor=155),
     Einstufung("schulungssteuerung", ki=0, ds=2, mb=2, it=1, rg=2),
-    # Der schnelle Durchlauf: nach der Datenschutzstufe 3 ist die Sache klar.
-    Einstufung("befragungsauswertung", ki=0, ds=3, mb=0, it=0, rg=0, schnell=True),
+    Einstufung("befragungsauswertung", ki=0, ds=3, mb=0, it=0, rg=0),
     Einstufung("leistungsdialog", ki=0, ds=3, mb=3, it=2, rg=2, erneuert_vor=230),
     # --- Finanzen und Controlling -----------------------------------------
     Einstufung("monatsabschluss", ki=0, ds=0, mb=0, it=3, rg=3, erneuert_vor=70),
@@ -176,14 +173,12 @@ def _block_antworten(block: Themenblock, stufe: int) -> dict[str, bool]:
     return antworten
 
 
-def antworten_aus_profil(profil: dict[str, int], schnell: bool = False) -> dict[str, bool]:
+def antworten_aus_profil(profil: dict[str, int]) -> dict[str, bool]:
     """Rechnet ein Sechser-Profil in die Antworten des Baums zurueck."""
     antworten: dict[str, bool] = {}
     for block in BAUM:
         stufe = profil.get(block.block.value, 0)
         antworten.update(_block_antworten(block, stufe))
-        if schnell and stufe >= 3:
-            break
     return antworten
 
 
@@ -203,7 +198,7 @@ def _pruefe_begruendungen(kontext: Kontext, einstufung: Einstufung) -> list[str]
     """Sammelt Abweichungen ohne Begruendung, statt bei der ersten zu scheitern."""
     prozess = kontext.prozess(einstufung.prozess)
     profil = profil_von(einstufung, ableitung.leite_kritikalitaet_ab(prozess))
-    antworten = antworten_aus_profil(profil, einstufung.schnell)
+    antworten = antworten_aus_profil(profil)
     vorschlaege = vorschlag_service.fuer_prozess(prozess)
     return [
         f"{einstufung.prozess}: Frage {abweichung.frage_id} — geantwortet "
@@ -220,19 +215,13 @@ KATALOG = {p.schluessel: p for p in PROZESSE}
 def _speichere(kontext: Kontext, einstufung: Einstufung, vor_tagen: int) -> Bewertung | None:
     prozess = kontext.prozess(einstufung.prozess)
     profil = profil_von(einstufung, ableitung.leite_kritikalitaet_ab(prozess))
-    antworten = antworten_aus_profil(profil, einstufung.schnell)
-    modus = (
-        bewertung_service.Modus.SCHNELL
-        if einstufung.schnell
-        else bewertung_service.Modus.VOLLSTAENDIG
-    )
+    antworten = antworten_aus_profil(profil)
     with kontext.aktion(vor_tagen, stunde=10, minute=(vor_tagen * 13) % 60):
         ergebnis = bewertung_service.speichere(
             kontext.db,
             kontext.wer(handelnder(kontext, KATALOG[einstufung.prozess])),
             prozess,
             antworten,
-            modus=modus,
             begruendungen=dict(einstufung.begruendungen),
         )
     if isinstance(ergebnis, Bewertung):

@@ -1984,3 +1984,88 @@ was ein Prozess als Ergebnis führt (A.4.1). Die Kante entscheidet, nicht die
 Absicht. Das Werkzeug hängt jetzt an Kette 2 und Kette 3.
 
 **Anwendervorgang:** V-RAH-11.
+
+---
+
+## E-64 — Die Anwendung fragt nicht, was sie schon weiß
+
+**Zwei Beobachtungen, eine Ursache.** Beim Nachspielen eines Lenkungsvorgangs
+fiel zweierlei auf: eine Schnellbewertung hatte eine vollständige verdrängt und
+dabei acht Anforderungsklassen auf null gesetzt, ohne dass jemand etwas gelöscht
+hätte. Und die Compliance-Meldung verlangte, dass ein Mensch die **Farbe**
+auswählt — grün, gelb oder rot —, dazu die Art der Abweichung und, aus einer
+Liste, das verletzte Verbot.
+
+Beides ist derselbe Entwurfsfehler: die Anwendung fragt nach etwas, das sie
+selbst bestimmen kann. Ein Auswahlfeld, dessen richtige Antwort aus vorhandenen
+Daten folgt, ist kein Bedienkomfort. Es lädt dazu ein, etwas anderes
+einzutragen, als der Sachstand hergibt — und erzeugt damit genau die Zustände,
+gegen die E-63 den Riegel gebaut hat.
+
+### Es gibt nur die vollständige Bewertung
+
+Der Baum kannte eine schnelle Variante, die beim ersten Tier-3-Treffer abbrach.
+Sie hinterließ ein Ergebnis mit Nullen in den nicht durchlaufenen Dimensionen
+und **ohne** K-Klassen. Gemessen an einem echten Fall: aus `ds 3 · mb 2 · it 1 ·
+rg 2 · ur 2` mit K1–K5, K7, K8, K9 wurde `ds 3` und sonst nichts.
+
+Das Tier stimmte beide Male. Alles daneben nicht — und auf dieses Daneben
+stützen sich die Anforderungsklassen aus A.9, die Selbstverpflichtung nach A.10
+und, seit A.13.6, die Auflösung eines Lenkungsvorgangs durch Rahmenerweiterung.
+Eine unvollständige Bewertung konnte eine vollständige ablösen, und niemand sah
+es. Der Zeitgewinn war ohnehin ein Scheingewinn: was die Anwendung ableiten
+kann, schlägt sie nach A.8.4 vor.
+
+Der Abbruch bei einem Verbotstatbestand (A.8.5, Schritt 1b) bleibt unberührt —
+dort entsteht **keine** Bewertung, sondern ein Governance-Alarm. Das ist kein
+unvollständiges Ergebnis, sondern gar keines, und das ist der Unterschied.
+
+### Ein Knopf, ein Feld
+
+Die Meldung heißt jetzt „Compliance-Abweichung melden" und trägt genau eine
+Angabe: **was beobachtet wurde**. Das ist das einzige, was die Anwendung nicht
+weiß.
+
+* Die **Farbe** wird gerechnet (A.13.3): rot bei einem stehenden Verbot, einem
+  offenen Vorgang oder einem verletzten Rahmen; gelb, wenn das Werkzeug an
+  keinem Prozessobjekt hängt; sonst grün. Die Reihenfolge ist der Punkt — ein
+  Werkzeug ohne Prozesskante wird nicht am Rahmen gemessen, denn ohne Kante
+  erklärt niemand etwas, und jede genutzte Quelle stünde als Abweichung da. Rot
+  wäre dort die Verwechslung von „unzulässig" mit „unbekannt".
+* Die **Abweichungsart** kommt aus dem Rahmen.
+* Das **Verbot** kommt aus den Daten des Werkzeugs.
+
+Damit hat jedes Werkzeug einen Zustand, auch ohne Meldung. Vorher stand dort
+nichts, obwohl die Anwendung es längst beurteilen konnte: sie wartete auf einen
+Menschen, der ihr sagt, was sie weiß.
+
+### Zweimal melden ist einmal melden
+
+Läuft für ein Werkzeug schon ein ungeklärter Vorgang, passiert nichts. Die
+Antwort ist 200 statt 201 und trägt den laufenden Vorgang ohne neuen Zustand.
+Ein zweiter Vorgang mit eigener Frist wäre eine Verdopplung ohne Anlass —
+dieselbe Abweichung zweimal zu melden ist dieselbe Abweichung.
+
+### Alle sechs Verbote stehen am Werkzeug
+
+Vier der sechs las die Anwendung aus den Daten. Die beiden anderen — umgangene
+Protokollierung, Daten im offenen Netz — geschehen in der Zielplattform und
+waren nur über die Auswahlliste erfassbar. Damit war dieselbe Tatsache je nach
+Verbot einmal eine Eigenschaft des Werkzeugs und einmal eine Behauptung in einem
+Vorgang; prüfen ließ sich nur die eine Hälfte.
+
+Beide werden jetzt am Werkzeug **erklärt**, wie die drei Attestierungen aus A.6.
+Die Anwendung misst sie nicht — sie hält fest, wer sie wann erklärt hat, und
+rechnet danach mit ihnen wie mit allem anderen. Als Folge hängt auch die
+Stufenhebung nach A.13.5 an der Messung statt an einer zweiten Meldung: der
+geplante Lauf sieht nach, ob inzwischen ein Verbot in den Daten steht.
+
+### Und der Abschluss steht am Werkzeug
+
+Jeder der drei Wege aus A.13.6 hinterlässt einen Eintrag in der Zeitreihe, mit
+**Art und Grund** des Schlusses — auch das Stilllegen, das rot bleibt, und der
+Abbruch einer Fehlmeldung, dessen Farbe wieder die Messung bestimmt. Wer die
+Zeitreihe eines Werkzeugs liest, soll den Vorgang nicht aufschlagen müssen, um
+zu erfahren, was aus ihm geworden ist.
+
+**Anwendervorgänge:** V-BEW-02, V-TOO-17, V-RAH-03.

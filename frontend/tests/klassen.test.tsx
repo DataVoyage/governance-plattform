@@ -97,7 +97,7 @@ function toolrouten(zusatz: Route[] = []): Route[] {
     { pfad: '/api/v1/auth/me', koerper: PROFIL },
     { pfad: '/api/v1/organisationseinheiten', koerper: EINHEITEN },
     { pfad: '/api/v1/prozesse', koerper: [prozess()] },
-    { pfad: '/api/v1/tools/tool-1/compliance', koerper: [] },
+    { pfad: '/api/v1/tools/tool-1/compliance', koerper: { farbe: 'gruen', offene_abweichungen: [], verlauf: [] } },
     { pfad: '/api/v1/tools/tool-1', koerper: tool() },
   ];
 }

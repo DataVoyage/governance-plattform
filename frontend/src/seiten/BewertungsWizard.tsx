@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { ApiFehler, api } from '@/api/client';
-import type { Beleg, BewertungsModus, Ergebnis, Frage } from '@/api/typen';
+import type { Beleg, Ergebnis, Frage } from '@/api/typen';
 import { useSprache } from '@/i18n/SprachKontext';
 import {
   Abzeichen,
@@ -13,7 +13,6 @@ import {
   Knopf,
   Ladeschimmer,
   Seitenkopf,
-  SegmentierteSteuerung,
   Werteliste,
 } from '@/ui';
 import { useSitzung } from '@/zustand/Sitzung';
@@ -21,7 +20,7 @@ import { useSitzung } from '@/zustand/Sitzung';
 /** Reihenfolge der Blöcke im Profil — dieselbe wie im Baum (A.8.5). */
 const BLOECKE = ['ki', 'ds', 'mb', 'it', 'rg', 'ur'] as const;
 
-type Phase = 'modus' | 'frage' | 'ergebnis' | 'verboten';
+type Phase = 'frage' | 'ergebnis' | 'verboten';
 
 /**
  * Der Bewertungs-Wizard (Leitdokument A.8, Umsetzungsplan AP-4).
@@ -42,8 +41,7 @@ export function BewertungsWizard() {
   const { token } = useSitzung();
   const navigiere = useNavigate();
 
-  const [modus, setModus] = useState<BewertungsModus>('vollstaendig');
-  const [phase, setPhase] = useState<Phase>('modus');
+  const [phase, setPhase] = useState<Phase>('frage');
   const [antworten, setAntworten] = useState<Record<string, boolean>>({});
   const [begruendungen, setBegruendungen] = useState<Record<string, string>>({});
   const [verlauf, setVerlauf] = useState<string[]>([]);
@@ -65,16 +63,12 @@ export function BewertungsWizard() {
   const laufendeNummer = useRef(0);
 
   const schritt = useCallback(
-    async (
-      gewaehlterModus: BewertungsModus,
-      bisher: Record<string, boolean>,
-      gruende: Record<string, string>,
-    ) => {
+    async (bisher: Record<string, boolean>, gruende: Record<string, string>) => {
       if (token === null || id === undefined) return;
       laufendeNummer.current += 1;
       const meine = laufendeNummer.current;
       try {
-        const stand = await api.wizardSchritt(token, id, gewaehlterModus, bisher, gruende);
+        const stand = await api.wizardSchritt(token, id, bisher, gruende);
         if (meine !== laufendeNummer.current) return;
         setFehler(null);
         setFrage(stand.naechste_frage);
@@ -91,41 +85,28 @@ export function BewertungsWizard() {
     [token, id, t],
   );
 
-  // Der Modusbildschirm fragt noch nichts ab; erst mit dem Start beginnt der
-  // Durchlauf. Danach folgt jeder Schritt einer Antwort, nicht einem Effekt.
+  // Die erste Frage holt sich der Wizard selbst. Seit E-64 gibt es nichts
+  // mehr zu wählen, also auch keinen Bildschirm davor: ein Klick, der nur eine
+  // einzige Fortsetzung hat, ist keine Entscheidung.
   useEffect(() => {
-    if (phase !== 'modus' && frage === null && ergebnis === null) {
-      void schritt(modus, antworten, begruendungen);
-    }
-    // Nur beim Übergang aus der Modusauswahl.
+    void schritt({}, {});
+    // Nur beim ersten Aufbau.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+  }, []);
 
   const zurueckZumProzess = () => navigiere(pfad(`/prozesse/${id}`));
-
-  const starten = () => {
-    setAntworten({});
-    setGesehen({});
-    setBegruendungen({});
-    setVerlauf([]);
-    setFrage(null);
-    setErgebnis(null);
-    setPhase('frage');
-  };
 
   /** Übernimmt eine Antwort und geht einen Schritt weiter. */
   const uebernimm = (wert: boolean, begruendung?: string) => {
     if (frage === null) return;
     const naechste = { ...antworten, [frage.id]: wert };
     const gruende =
-      begruendung === undefined
-        ? begruendungen
-        : { ...begruendungen, [frage.id]: begruendung };
+      begruendung === undefined ? begruendungen : { ...begruendungen, [frage.id]: begruendung };
     setAntworten(naechste);
     setGesehen((bisher) => ({ ...bisher, [frage.id]: wert }));
     setBegruendungen(gruende);
     setVerlauf((bisher) => [...bisher, frage.id]);
-    void schritt(modus, naechste, gruende);
+    void schritt(naechste, gruende);
   };
 
   /**
@@ -146,8 +127,9 @@ export function BewertungsWizard() {
   /** Einen Schritt zurück: die letzte Antwort fällt weg, die Frage kommt wieder. */
   const zurueck = () => {
     const letzte = verlauf[verlauf.length - 1];
+    // Vor der ersten Frage gibt es kein Zurück mehr — nur den Weg hinaus.
     if (letzte === undefined) {
-      setPhase('modus');
+      zurueckZumProzess();
       return;
     }
     const naechste = { ...antworten };
@@ -155,13 +137,13 @@ export function BewertungsWizard() {
     setAntworten(naechste);
     setVerlauf((bisher) => bisher.slice(0, -1));
     setErgebnis(null);
-    void schritt(modus, naechste, begruendungen);
+    void schritt(naechste, begruendungen);
   };
 
   const speichern = async () => {
     if (token === null || id === undefined) return;
     try {
-      await api.bewertungAbschliessen(token, id, modus, antworten, begruendungen);
+      await api.bewertungAbschliessen(token, id, antworten, begruendungen);
       zurueckZumProzess();
     } catch (ausnahme) {
       setFehler(ausnahme instanceof ApiFehler ? ausnahme.message : t('app.fehler'));
@@ -175,39 +157,6 @@ export function BewertungsWizard() {
       rueckweg={{ ziel: pfad(`/prozesse/${id}`), text: t('nav.prozesse') }}
     />
   );
-
-  // --- Modusauswahl (A.8.5) ----------------------------------------------
-
-  if (phase === 'modus') {
-    return (
-      <>
-        {kopf}
-        <Karte titel={t('bewertung.modus.frage')} beischrift={t('bewertung.modus.hinweis')}>
-          {fehler !== null && <Hinweis art="fehler">{fehler}</Hinweis>}
-          <SegmentierteSteuerung<BewertungsModus>
-            beschriftung={t('bewertung.modus.frage')}
-            wert={modus}
-            aendern={setModus}
-            optionen={[
-              { wert: 'vollstaendig', text: t('bewertung.modus.vollstaendig.kurz') },
-              { wert: 'schnell', text: t('bewertung.modus.schnell.kurz') },
-            ]}
-          />
-          <Hinweis art="information">
-            {modus === 'schnell'
-              ? t('bewertung.modus.schnell.folge')
-              : t('bewertung.modus.vollstaendig.folge')}
-          </Hinweis>
-          <div className="k-knopfreihe">
-            <Knopf art="gefuellt" onClick={starten} data-testid="bewertung-starten">
-              {t('bewertung.starten')}
-            </Knopf>
-            <Knopf onClick={zurueckZumProzess}>{t('prozess.abbrechen')}</Knopf>
-          </div>
-        </Karte>
-      </>
-    );
-  }
 
   // --- Verbotstatbestand (1b): eigener roter Ausgang ---------------------
 
@@ -255,7 +204,6 @@ export function BewertungsWizard() {
               {profil.join('-')}
             </p>
           </div>
-          {!ergebnis.vollstaendig && <Hinweis art="warnung">{t('bewertung.keineKKlassen')}</Hinweis>}
         </Karte>
 
         <Karte titel={t('bewertung.kKlassen')} beischrift={t('bewertung.kKlassen.hinweis')}>
@@ -288,7 +236,10 @@ export function BewertungsWizard() {
         </Karte>
 
         {Object.keys(begruendungen).length > 0 && (
-          <Karte titel={t('bewertung.abweichungen')} beischrift={t('bewertung.abweichungen.hinweis')}>
+          <Karte
+            titel={t('bewertung.abweichungen')}
+            beischrift={t('bewertung.abweichungen.hinweis')}
+          >
             <Werteliste
               eintraege={Object.entries(begruendungen).map(([frageId, text]) => ({
                 beschriftung: `${t('bewertung.frage')} ${frageId}`,
@@ -319,7 +270,9 @@ export function BewertungsWizard() {
         <Karte>
           <Hinweis art="fehler">{fehler}</Hinweis>
           <div className="k-knopfreihe">
-            <Knopf onClick={() => setPhase('modus')}>{t('bewertung.zurueckZurAuswahl')}</Knopf>
+            <Knopf art="gefuellt" onClick={() => void schritt(antworten, begruendungen)}>
+              {t('app.erneut')}
+            </Knopf>
             <Knopf onClick={zurueckZumProzess}>{t('prozess.abbrechen')}</Knopf>
           </div>
         </Karte>
@@ -372,7 +325,11 @@ export function BewertungsWizard() {
           </div>
         ) : (
           frage.belege.length > 0 && (
-            <div className="k-vorschlag k-vorschlag--offen" data-testid="vorschlag" data-wert="offen">
+            <div
+              className="k-vorschlag k-vorschlag--offen"
+              data-testid="vorschlag"
+              data-wert="offen"
+            >
               <p className="titel">{t('bewertung.vorschlag.offen')}</p>
               <BelegListe belege={frage.belege} />
             </div>

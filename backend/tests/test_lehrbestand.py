@@ -46,6 +46,7 @@ from app.models.governance import (
 )
 from app.models.organisation import Rollenzuweisung, User
 from app.services import cockpit, klassen
+from app.services import lenkung as lenkung_service
 from app.services import prozess as prozess_service
 from app.services import rahmen as rahmen_service
 from app.services.asset import erbe_klassifikation
@@ -355,7 +356,17 @@ def test_jede_aufzaehlung_ist_belegt(lehrbestand: Session) -> None:
         ),
         ("GateTyp", e.GateTyp, werte(GateVorgang, "gate_typ")),
         ("GateStatus", e.GateStatus, werte(GateVorgang, "status")),
-        ("ComplianceFarbe", e.ComplianceFarbe, werte(ComplianceZustand, "farbe")),
+        # Die Farbe wird gerechnet, nicht gespeichert (E-64): geprueft wird,
+        # was die Anwendung ueber die Werkzeuge sagt, nicht was in der
+        # Zeitreihe steht — dort kommt Gelb naturgemaess nie vor.
+        (
+            "ComplianceFarbe",
+            e.ComplianceFarbe,
+            [
+                lenkung_service.gemessene_farbe(lehrbestand, werkzeug)
+                for werkzeug in lehrbestand.execute(select(ToolObjekt)).scalars()
+            ],
+        ),
         ("LenkungStatus", e.LenkungStatus, werte(Lenkungsvorgang, "status")),
         ("Aufloesungsart", e.Aufloesungsart, werte(Lenkungsvorgang, "aufloesungsart")),
         ("Herkunft", e.Herkunft, werte(ToolObjekt, "herkunft")),
@@ -369,26 +380,21 @@ def test_jede_aufzaehlung_ist_belegt(lehrbestand: Session) -> None:
 
 
 def test_alle_sechs_schicht_zwei_verbote_kommen_vor(lehrbestand: Session) -> None:
-    """Vier erkennt die Anwendung selbst, zwei sind zu melden (A.13.2).
+    """Alle sechs stehen in den Daten der Werkzeuge (A.13.2, E-64).
 
-    Beide Wege müssen vorkommen — sonst hielte man die eine Hälfte für die
-    ganze Wahrheit, und genau davor warnt das Leitdokument.
+    Vier misst die Anwendung, zwei erklärt der technische Owner am Werkzeug —
+    aber prüfen kann sie danach alle sechs gleich. Vorher war die eine Hälfte
+    eine Eigenschaft des Werkzeugs und die andere eine Behauptung in einem
+    Vorgang; nur die erste ließ sich nachrechnen.
     """
     from app.models.enums import Schicht2Verbot
 
     erkannt = {
         str(v)
-        for t in lehrbestand.execute(select(ToolObjekt)).scalars()
-        for v in rahmen_service.pruefe_schicht2(t)
+        for werkzeug in lehrbestand.execute(select(ToolObjekt)).scalars()
+        for v in rahmen_service.pruefe_schicht2(werkzeug)
     }
-    gemeldet = {
-        str(v.schicht2_verbot)
-        for v in lehrbestand.execute(select(Lenkungsvorgang)).scalars()
-        if v.schicht2_verbot is not None
-    }
-    assert erkannt, "kein selbst erkannter Verstoß"
-    assert gemeldet - erkannt, "kein ausschließlich gemeldeter Verstoß"
-    fehlt = {str(v) for v in Schicht2Verbot} - erkannt - gemeldet
+    fehlt = {str(v) for v in Schicht2Verbot} - erkannt
     assert not fehlt, f"nicht belegt: {sorted(fehlt)}"
 
 

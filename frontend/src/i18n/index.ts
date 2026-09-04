@@ -21,6 +21,7 @@ const de = {
   'app.fehler': 'Es ist ein Fehler aufgetreten',
   'app.nichtGefunden': 'Diese Seite gibt es nicht',
   'app.zurueck': 'Zurück',
+  'app.erneut': 'Erneut versuchen',
   'app.farbschema': 'Darstellung',
   'app.farbschema.system': 'Auto',
   'app.farbschema.hell': 'Hell',
@@ -154,26 +155,14 @@ const de = {
   'prozess.freigabeAusstehend':
     'Dieses Prozessobjekt läuft, ist aber für seine jetzige Einstufung nicht freigegeben: die Neubewertung hat es auf Tier 3 gehoben. Ein Gate-1-Vorgang liegt bereits vor. Nach der Freigabe und einer neuen Selbstverpflichtung lässt es sich wieder aktivieren.',
 
+  'bewertung.starten': 'Bewertung durchführen',
   'bewertung.titel': 'Bewertung',
   'bewertung.untertitel': 'Eine Frage je Schritt. Das Ergebnis erscheint am Ende.',
-  'bewertung.starten': 'Bewertung durchführen',
-  'bewertung.modus.frage': 'Wie möchten Sie den Baum durchlaufen?',
-  'bewertung.modus.schnell': 'Schnell — endet beim ersten Tier-3-Treffer',
-  'bewertung.modus.vollstaendig': 'Vollständig — alle sechs Schritte, mit K-Klassen',
-  'bewertung.modus.schnell.kurz': 'Schnell',
-  'bewertung.modus.vollstaendig.kurz': 'Vollständig',
-  'bewertung.modus.schnell.folge':
-    'Der Durchlauf endet, sobald eine Dimension Tier 3 erreicht. Sie erfahren das Tier, aber keine Maßnahmenklassen — die setzen das vollständige Profil voraus.',
-  'bewertung.modus.vollstaendig.folge':
-    'Alle sechs Dimensionen werden durchlaufen. Das Ergebnis nennt Tier, Profil und die ausgelösten Maßnahmenklassen mit ihren Auflagen.',
-  'bewertung.modus.hinweis':
-    'Die Wahl treffen Sie zu Beginn. Der Zwischenstand wird bewusst nicht angezeigt.',
   'bewertung.ja': 'Ja',
   'bewertung.nein': 'Nein',
   'bewertung.weiter': 'Weiter',
   'bewertung.zurueck': 'Zurück',
   'bewertung.abbrechen': 'Bewertung abbrechen',
-  'bewertung.zurueckZurAuswahl': 'Von vorn beginnen',
   'bewertung.schritt': 'Schritt',
   'bewertung.von': 'von',
   'bewertung.fortschritt': 'Fortschritt im Bewertungsbaum',
@@ -202,8 +191,6 @@ const de = {
   'bewertung.kKlassen.leer': 'Aus diesem Profil folgt keine Maßnahmenklasse.',
   'bewertung.auflagen': 'Auflagen des erreichten Tiers',
   'bewertung.auflagen.hinweis': 'gilt einschließlich der Auflagen der darunterliegenden Tiers.',
-  'bewertung.keineKKlassen':
-    'Der schnelle Durchlauf endet vorzeitig und liefert deshalb keine K-Klassen.',
   'bewertung.speichern': 'Bewertung speichern',
   'bewertung.gespeichert': 'Die Bewertung wurde gespeichert.',
   'bewertung.abbruch.titel': 'Bewertung verwerfen?',
@@ -223,7 +210,6 @@ const de = {
   'bewertung.massgeblich': 'Maßgeblich',
   'bewertung.historie.leer': 'Für diesen Prozess liegt noch keine Bewertung vor.',
   'bewertung.vollstaendig': 'vollständig',
-  'bewertung.unvollstaendig': 'schnell',
   'bewertung.gueltigBis': 'Gültig bis',
 
   'nav.tools': 'Tool-Objekte',
@@ -467,18 +453,26 @@ const de = {
 
   'compliance.titel': 'Compliance-Zustand',
   'compliance.hinweis':
-    'Jede Feststellung erzeugt einen neuen Eintrag; der aktuelle Zustand ist der oberste. Nichts wird überschrieben.',
-  'compliance.leer': 'Für dieses Tool-Objekt ist noch kein Zustand erfasst.',
+    'Der Zustand wird gemessen, nicht gemeldet: aus dem Erlaubnisrahmen und den sechs Verboten der Schicht 2. Darunter steht, was gemeldet und wie geschlossen wurde.',
+  'compliance.leer': 'Zu diesem Tool-Objekt wurde noch nichts gemeldet.',
+  'compliance.verlauf': 'Verlauf',
   'compliance.farbe': 'Zustand',
   'compliance.farbe.gruen': 'Grün',
   'compliance.farbe.gelb': 'Gelb',
-  'compliance.farbe.rot': 'Rot — Rahmenüberschreitung',
+  'compliance.farbe.rot': 'Rot',
+  'compliance.grund.gruen': 'Im Rahmen, kein Verbot verletzt, kein Vorgang offen.',
+  'compliance.grund.gelb':
+    'An keinem Prozessobjekt — es erbt nichts, also gibt es nichts, wogegen zu prüfen wäre.',
+  'compliance.grund.rot': 'Ein Lenkungsvorgang ist offen.',
+  'compliance.grund.gemessen': 'Gemessen: {elemente}.',
   'compliance.begruendung': 'Begründung',
-  'compliance.abweichung': 'Art der Abweichung',
-  'compliance.melden': 'Zustand melden',
+  'compliance.beobachtung': 'Was haben Sie beobachtet?',
+  'compliance.beobachtung.hilfe':
+    'Nur das: Farbe, Abweichungsart und ein verletztes Verbot ermittelt die Anwendung selbst.',
+  'compliance.melden': 'Compliance-Abweichung melden',
+  'compliance.laeuftSchon':
+    'Für dieses Tool-Objekt läuft bereits ein ungeklärter Lenkungsvorgang. Es wurde nichts angelegt — dieselbe Abweichung zweimal zu melden ist dieselbe Abweichung.',
   'compliance.festgestelltAm': 'Festgestellt am',
-  'compliance.rotHinweis':
-    'Eine rote Meldung eröffnet automatisch einen Lenkungsvorgang in Eskalationsstufe 1 mit der tier-abhängigen Frist.',
 
   'lenkung.titel': 'Lenkungsvorgänge',
   'lenkung.leer': 'Es ist kein Lenkungsvorgang offen.',
@@ -564,13 +558,6 @@ const de = {
     'Übermittlung von Unternehmensdaten außerhalb der freigegebenen Infrastruktur',
   'schicht2.protokollierung_umgangen': 'Betrieb ohne oder mit abgeschalteter Protokollierung',
 
-  'compliance.schicht2': 'Verstoß gegen Schicht 2',
-  'compliance.schicht2.keiner': 'Keiner — Rahmenüberschreitung nach Schicht 1',
-  'compliance.schicht2Hilfe':
-    'Genau eines der sechs organisationsweiten Verbote aus A.13.2. Ein siebter, freier Grund ist nicht wählbar.',
-  'compliance.schicht2Folge':
-    'Dieser Vorgang beginnt unmittelbar in Eskalationsstufe 2: Die Führungskraft wird sofort informiert, und keine Bewertung schaltet den Fall frei.',
-
   'konfiguration.titel': 'Einstellungen',
   'konfiguration.hinweis':
     'Fristen, Schwellen und Vorlaufzeiten der Governance — änderbar im Betrieb, ohne Auslieferung.',
@@ -608,6 +595,12 @@ const de = {
   'tool.identitaet.keine': 'Nicht erklärt',
   'tool.identitaet.hilfe':
     'Unter welcher Identität das Tool läuft. Ein geteiltes Konto ist organisationsweit verboten (A.13.2 Schicht 2).',
+  'tool.feld.protokollierungUmgangen': 'Umgeht die Zugriffsprotokollierung',
+  'tool.protokollierungUmgangen.hilfe':
+    'Erklärte Angabe: die Anwendung sieht nicht in die Zielplattform. „Ja" ist ein Verstoß gegen Schicht 2 und macht das Werkzeug rot.',
+  'tool.feld.datenInsOffeneNetz': 'Gibt Daten in ein offen erreichbares Ziel',
+  'tool.datenInsOffeneNetz.hilfe':
+    'Erklärte Angabe wie oben. „Ja" ist ein Verstoß gegen Schicht 2 — er lässt sich durch keine Bewertung freischalten.',
   'tool.feld.statischeZugangsdaten': 'Dauerhaft gültige Zugangsdaten hinterlegt',
   'tool.statischeZugangsdaten.hilfe':
     'Zugangsdaten, die im Tool stehen statt verwaltet zu werden. Ein Ja ist ein Verstoß gegen Schicht 2.',
@@ -835,6 +828,7 @@ const fr: Record<Schluessel, string> = {
   'app.fehler': 'Une erreur est survenue',
   'app.nichtGefunden': "Cette page n'existe pas",
   'app.zurueck': 'Retour',
+  'app.erneut': 'Réessayer',
   'app.farbschema': 'Apparence',
   'app.farbschema.system': 'Auto',
   'app.farbschema.hell': 'Clair',
@@ -967,26 +961,14 @@ const fr: Record<Schluessel, string> = {
   'prozess.freigabeAusstehend':
     "Cet objet de processus fonctionne, mais n'est pas validé pour son niveau actuel : la réévaluation l'a porté au niveau 3. Une procédure Gate 1 existe déjà. Après la validation et un nouvel engagement, il peut être réactivé.",
 
+  'bewertung.starten': "Réaliser l'évaluation",
   'bewertung.titel': 'Évaluation',
   'bewertung.untertitel': 'Une question par étape. Le résultat apparaît à la fin.',
-  'bewertung.starten': "Réaliser l'évaluation",
-  'bewertung.modus.frage': "Comment souhaitez-vous parcourir l'arbre ?",
-  'bewertung.modus.schnell': 'Rapide — s’arrête au premier résultat de niveau 3',
-  'bewertung.modus.vollstaendig': 'Complet — les six étapes, avec les classes K',
-  'bewertung.modus.schnell.kurz': 'Rapide',
-  'bewertung.modus.vollstaendig.kurz': 'Complet',
-  'bewertung.modus.schnell.folge':
-    "Le parcours s'arrête dès qu'une dimension atteint le niveau 3. Vous obtenez le niveau, mais pas les classes de mesures : celles-ci supposent le profil complet.",
-  'bewertung.modus.vollstaendig.folge':
-    'Les six dimensions sont parcourues. Le résultat indique le niveau, le profil et les classes de mesures déclenchées avec leurs obligations.',
-  'bewertung.modus.hinweis':
-    "Le choix se fait au début. Le résultat intermédiaire n'est volontairement pas affiché.",
   'bewertung.ja': 'Oui',
   'bewertung.nein': 'Non',
   'bewertung.weiter': 'Continuer',
   'bewertung.zurueck': 'Retour',
   'bewertung.abbrechen': "Interrompre l'évaluation",
-  'bewertung.zurueckZurAuswahl': 'Recommencer',
   'bewertung.schritt': 'Étape',
   'bewertung.von': 'sur',
   'bewertung.fortschritt': "Progression dans l'arbre d'évaluation",
@@ -1015,8 +997,6 @@ const fr: Record<Schluessel, string> = {
   'bewertung.kKlassen.leer': 'Ce profil ne déclenche aucune classe de mesures.',
   'bewertung.auflagen': 'Obligations du niveau atteint',
   'bewertung.auflagen.hinweis': 'inclut les obligations des niveaux inférieurs.',
-  'bewertung.keineKKlassen':
-    'Le parcours rapide s’arrête plus tôt et ne fournit donc pas de classes K.',
   'bewertung.speichern': "Enregistrer l'évaluation",
   'bewertung.gespeichert': "L'évaluation a été enregistrée.",
   'bewertung.abbruch.titel': "Abandonner l'évaluation ?",
@@ -1036,7 +1016,6 @@ const fr: Record<Schluessel, string> = {
   'bewertung.massgeblich': 'Applicable',
   'bewertung.historie.leer': "Aucune évaluation n'existe encore pour ce processus.",
   'bewertung.vollstaendig': 'complet',
-  'bewertung.unvollstaendig': 'rapide',
   'bewertung.gueltigBis': "Valable jusqu'au",
 
   'nav.tools': 'Objets outils',
@@ -1286,18 +1265,27 @@ const fr: Record<Schluessel, string> = {
 
   'compliance.titel': 'État de conformité',
   'compliance.hinweis':
-    "Chaque constat crée une nouvelle entrée ; l'état actuel est celui du haut. Rien n'est écrasé.",
-  'compliance.leer': "Aucun état n'est encore enregistré pour cet objet outil.",
+    "L'état est mesuré, non signalé : à partir du cadre d'autorisation et des six interdictions de la couche 2. En dessous figure ce qui a été signalé et comment cela a été clos.",
+  'compliance.leer': "Rien n'a encore été signalé pour cet objet outil.",
+  'compliance.verlauf': 'Historique',
   'compliance.farbe': 'État',
   'compliance.farbe.gruen': 'Vert',
   'compliance.farbe.gelb': 'Jaune',
-  'compliance.farbe.rot': 'Rouge — dépassement du cadre',
+  'compliance.farbe.rot': 'Rouge',
+  'compliance.grund.gruen':
+    'Dans le cadre, aucune interdiction enfreinte, aucune procédure ouverte.',
+  'compliance.grund.gelb':
+    "Rattaché à aucun objet de processus — il n'hérite de rien, il n'y a donc rien à vérifier.",
+  'compliance.grund.rot': 'Une procédure de pilotage est ouverte.',
+  'compliance.grund.gemessen': 'Mesuré : {elemente}.',
   'compliance.begruendung': 'Justification',
-  'compliance.abweichung': 'Type d’écart',
-  'compliance.melden': 'Signaler un état',
+  'compliance.beobachtung': "Qu'avez-vous observé ?",
+  'compliance.beobachtung.hilfe':
+    "Cela seulement : la couleur, le type d'écart et l'interdiction enfreinte sont déterminés par l'application.",
+  'compliance.melden': 'Signaler un écart de conformité',
+  'compliance.laeuftSchon':
+    "Une procédure de pilotage non résolue est déjà en cours pour cet objet outil. Rien n'a été créé — signaler deux fois le même écart reste le même écart.",
   'compliance.festgestelltAm': 'Constaté le',
-  'compliance.rotHinweis':
-    "Un signalement rouge ouvre automatiquement une procédure de pilotage au niveau d'escalade 1, avec le délai lié au niveau.",
 
   'lenkung.titel': 'Procédures de pilotage',
   'lenkung.leer': 'Aucune procédure de pilotage ouverte.',
@@ -1385,13 +1373,6 @@ const fr: Record<Schluessel, string> = {
   'schicht2.protokollierung_umgangen':
     'Exploitation sans journalisation ou avec journalisation désactivée',
 
-  'compliance.schicht2': 'Violation de la couche 2',
-  'compliance.schicht2.keiner': 'Aucune — dépassement du cadre selon la couche 1',
-  'compliance.schicht2Hilfe':
-    "Exactement l'une des six interdictions valables pour toute l'organisation (A.13.2). Aucun septième motif libre n'est proposé.",
-  'compliance.schicht2Folge':
-    'Ce dossier commence directement au niveau 2 : le responsable hiérarchique est informé immédiatement, et aucune évaluation ne débloque le cas.',
-
   'konfiguration.titel': 'Paramètres',
   'konfiguration.hinweis':
     'Délais, seuils et préavis de la gouvernance — modifiables en exploitation, sans livraison.',
@@ -1429,6 +1410,12 @@ const fr: Record<Schluessel, string> = {
   'tool.identitaet.keine': 'Non déclarée',
   'tool.identitaet.hilfe':
     "Sous quelle identité l'outil s'exécute. Un compte partagé est interdit dans toute l'organisation (A.13.2 couche 2).",
+  'tool.feld.protokollierungUmgangen': 'Contourne la journalisation des accès',
+  'tool.protokollierungUmgangen.hilfe':
+    "Donnée déclarée : l'application ne voit pas dans la plateforme cible. « Oui » constitue une violation de la couche 2 et met l'outil en rouge.",
+  'tool.feld.datenInsOffeneNetz': 'Transmet des données vers une cible publiquement accessible',
+  'tool.datenInsOffeneNetz.hilfe':
+    'Donnée déclarée, comme ci-dessus. « Oui » constitue une violation de la couche 2 — aucune évaluation ne peut la lever.',
   'tool.feld.statischeZugangsdaten': 'Identifiants à validité permanente enregistrés',
   'tool.statischeZugangsdaten.hilfe':
     "Des identifiants inscrits dans l'outil au lieu d'être gérés. Un oui constitue une violation de la couche 2.",

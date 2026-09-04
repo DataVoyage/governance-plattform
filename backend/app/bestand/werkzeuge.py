@@ -46,6 +46,11 @@ class Werkzeug:
     lauftyp: str | None = None
     identitaet: str | None = None
     statisch: bool | None = False
+    #: Die beiden Verbote aus A.13.2 Schicht 2, die in der Zielplattform
+    #: geschehen. Seit E-64 stehen sie am Werkzeug statt in einer Meldung:
+    #: erklaert wie die Attestierungen, danach messbar wie alles andere.
+    protokollierung_umgangen: bool | None = None
+    daten_ins_offene_netz: bool | None = None
     prozesse: tuple[str, ...] = ()
     #: Datenobjekt und Zugriffsart — die gemessene Seite des Rahmens.
     daten: tuple[tuple[str, str], ...] = ()
@@ -389,6 +394,10 @@ WERKZEUGE: tuple[Werkzeug, ...] = (
         False,
         prozesse=("regalpflege",),
         daten=(("regalplanogramme", Z.LESEN), ("filialfotos", Z.LESEN_SCHREIBEN)),
+        # Erklaert: die App schreibt ihre Zugriffe nicht in das Protokoll der
+        # Zielplattform. Das sieht die Anwendung nicht — der technische Owner
+        # schon, und seit E-64 traegt er es hier ein.
+        protokollierung_umgangen=True,
         angelegt_vor=285,
         attestiert_vor=280,
     ),
@@ -441,6 +450,9 @@ WERKZEUGE: tuple[Werkzeug, ...] = (
         prozesse=("sortimentsveroeffentlichung",),
         daten=(("sortimentsliste", Z.LESEN), ("oeffnungszeiten", Z.LESEN)),
         ziele=("www.unternehmensauftritt.de",),
+        # Erklaert und ungeloest: der Export schreibt zusaetzlich in einen
+        # oeffentlichen Objektspeicher. Der Gegenfall zu preisliste-versand.
+        daten_ins_offene_netz=True,
         angelegt_vor=360,
         attestiert_vor=90,
     ),
@@ -499,6 +511,9 @@ WERKZEUGE: tuple[Werkzeug, ...] = (
         False,
         prozesse=("preisauszeichnung",),
         daten=(("handzettelpreise", Z.LESEN),),
+        # Erklaert: die Liste liegt zusaetzlich in einer offen erreichbaren
+        # Ablage. Der Vorgang dazu wird angepasst und das Verbot faellt weg.
+        daten_ins_offene_netz=True,
         angelegt_vor=560,
         attestiert_vor=500,
     ),
@@ -1384,6 +1399,8 @@ def baue(kontext: Kontext) -> None:
                     "lauftyp": eintrag.lauftyp,
                     "ausfuehrungsidentitaet": eintrag.identitaet,
                     "statische_zugangsdaten": eintrag.statisch,
+                    "protokollierung_umgangen": eintrag.protokollierung_umgangen,
+                    "daten_ins_offene_netz": eintrag.daten_ins_offene_netz,
                     "externe_ziele": list(eintrag.ziele),
                     "letzte_aktivitaet_am": kontext.zeitpunkt(
                         eintrag.letzte_aktivitaet_vor, stunde=17

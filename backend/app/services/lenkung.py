@@ -63,6 +63,18 @@ AUFLOESUNG_TEXT: dict[str, str] = {
     Aufloesungsart.STILLLEGEN: "stillgelegt",
 }
 
+
+def _schlusstext(art: str, kommentar: str) -> str:
+    """Was am Werkzeug stehenbleibt, wenn ein Vorgang schliesst.
+
+    Beides gehoert hinein: **wie** geschlossen wurde und **warum**. Wer spaeter
+    die Zeitreihe eines Werkzeugs liest, soll den Vorgang nicht erst aufschlagen
+    muessen, um zu erfahren, was aus ihm geworden ist (E-64).
+    """
+    text = f"Lenkungsvorgang {art}"
+    return f"{text} — {kommentar.strip()}" if kommentar.strip() else text
+
+
 ANLASS_ESKALATION = "lenkungsvorgang_eskaliert"
 ANLASS_LENKUNG_NEU = "lenkungsvorgang_eroeffnet"
 
@@ -98,52 +110,87 @@ def verlauf(db: Session, tool_id: uuid.UUID) -> list[ComplianceZustand]:
     )
 
 
-def melde_zustand(
+def gemessene_farbe(db: Session, tool: ToolObjekt) -> ComplianceFarbe:
+    """Die Farbe nach A.13.3 — gerechnet, nicht gewaehlt.
+
+    Bis E-64 hat ein Mensch sie ausgesucht. Das war die falsche Frage: die
+    Anwendung misst den Erlaubnisrahmen und vier der sechs Verbote selbst, und
+    eine Auswahlliste lud nur dazu ein, etwas anderes einzutragen, als der
+    Sachstand hergibt. Was sie weiss, fragt sie nicht.
+
+    * **rot** — eine Abweichung steht, gemessen oder als offener Vorgang.
+    * **gelb** — das Werkzeug haengt an keinem Prozessobjekt. Es erbt nichts,
+      also gibt es nichts, wogegen zu pruefen waere (A.13.3, „nicht
+      zugeordnet"); das ist kein Befund, aber auch keine Unbedenklichkeit.
+    * **gruen** — zugeordnet, im Rahmen, kein Verbot, kein offener Vorgang.
+    """
+    if rahmen_service.pruefe_schicht2(tool):
+        return ComplianceFarbe.ROT
+    if offener_vorgang(db, tool.id) is not None:
+        return ComplianceFarbe.ROT
+    # Die Reihenfolge ist der Punkt: ein Werkzeug ohne Prozesskante wird
+    # **nicht** am Rahmen gemessen. Der Rahmen entsteht aus dem, was seine
+    # Prozessobjekte erklaeren — ohne Kante erklaert niemand etwas, und jede
+    # genutzte Quelle staende als Abweichung da. Rot waere dann kein Befund,
+    # sondern eine Verwechslung von „unzulaessig" mit „unbekannt".
+    if not tool.prozessobjekte:
+        return ComplianceFarbe.GELB
+    if not rahmen_service.erlaubnisrahmen(db, tool).eingehalten:
+        return ComplianceFarbe.ROT
+    return ComplianceFarbe.GRUEN
+
+
+def melde_abweichung(
     db: Session,
     principal: Principal,
     tool: ToolObjekt,
     *,
-    farbe: ComplianceFarbe,
-    begruendung: str = "",
-    abweichung_art: str | None = None,
-    schicht2_verbot: str | None = None,
+    begruendung: str,
     jetzt: datetime | None = None,
-) -> tuple[ComplianceZustand, Lenkungsvorgang | None]:
-    """Traegt einen Zustand in die Zeitreihe ein.
+) -> tuple[ComplianceZustand | None, Lenkungsvorgang]:
+    """Der eine Knopf: „Compliance-Abweichung melden" (E-64).
 
-    Bei ``rot`` entsteht automatisch ein Lenkungsvorgang — in Stufe 1, oder bei
-    einem Verstoss gegen Schicht 2 unmittelbar in Stufe 2 (A.13.5: „Bei
-    Verletzung von Schicht 2 entfaellt Stufe 1"). Ist fuer dieses Tool schon
-    einer offen, wird er nicht verdoppelt: eine zweite Meldung derselben
-    Abweichung ist dieselbe Abweichung. Ein Schicht-2-Verstoss hebt einen
-    laufenden Stufe-1-Vorgang aber sofort auf Stufe 2 — sonst haette die
-    Reihenfolge der Meldungen ueber die Schwere entschieden.
+    Gemeldet wird **eine Abweichung**, nichts sonst. Es gibt keine Farbe zu
+    waehlen, kein Verbot zu benennen und keine Abweichungsart einzutragen: die
+    Farbe ist rot, weil eine Abweichung gemeldet wurde, und ob ein Verbot aus
+    Schicht 2 daran haengt, sieht die Anwendung selbst.
+
+    Der Aufruf ist **idempotent**. Laeuft fuer dieses Werkzeug schon ein
+    ungeklaerter Vorgang, passiert nichts — dieselbe Abweichung zweimal zu
+    melden ist dieselbe Abweichung, und ein zweiter Vorgang mit eigener Frist
+    waere eine Verdopplung ohne Anlass. Zurueck kommt dann der laufende
+    Vorgang und kein neuer Zustand.
+
+    Der Beitrag des Menschen ist der **Grund**: was er beobachtet hat. Zwei der
+    sechs Verbote aus A.13.2 sieht die Anwendung nicht, und was in der
+    Zielplattform geschieht, sieht sie nie. Dafuer gibt es dieses eine Feld.
     """
     verlange(
         darf_tool_schreiben(db, principal, tool),
         "Compliance-Meldungen erfasst der technische Owner oder die Governance-Rolle",
     )
+    bestehend = offener_vorgang(db, tool.id)
+    if bestehend is not None:
+        return None, bestehend
+
     zeitpunkt = jetzt or now_utc()
+    # Was die Anwendung selbst sieht, traegt sie an der Meldung nach: bei einem
+    # Verstoss gegen Schicht 2 entfaellt die erste Stufe (A.13.5).
+    verbote = rahmen_service.pruefe_schicht2(tool)
+    verletzt = rahmen_service.erlaubnisrahmen(db, tool).verletzte_elemente
     zustand = _trage_zustand_ein(
         db,
         tool,
-        farbe=farbe,
+        farbe=ComplianceFarbe.ROT,
         begruendung=begruendung,
-        abweichung_art=abweichung_art,
-        schicht2_verbot=schicht2_verbot,
+        abweichung_art=verletzt[0] if verletzt else None,
+        schicht2_verbot=verbote[0] if verbote else None,
         zeitpunkt=zeitpunkt,
         akteur_user_id=principal.user_id,
     )
-
-    if farbe != ComplianceFarbe.ROT:
-        return zustand, None
-    stufe = 2 if schicht2_verbot is not None else 1
-    bestehend = offener_vorgang(db, tool.id)
-    if bestehend is not None:
-        if stufe > bestehend.eskalationsstufe:
-            _hebe_auf_stufe(db, principal, bestehend, tool, zustand, zeitpunkt)
-        return zustand, bestehend
-    return zustand, _eroeffne_lenkungsvorgang(db, principal, tool, zustand, zeitpunkt, stufe=stufe)
+    stufe = 2 if verbote else 1
+    vorgang = _eroeffne_lenkungsvorgang(db, principal, tool, zustand, zeitpunkt, stufe=stufe)
+    return zustand, vorgang
 
 
 def _trage_zustand_ein(
@@ -203,23 +250,28 @@ def _trage_zustand_ein(
 
 def _hebe_auf_stufe(
     db: Session,
-    principal: Principal,
     vorgang: Lenkungsvorgang,
     tool: ToolObjekt,
-    zustand: ComplianceZustand,
+    verbot: str,
     zeitpunkt: datetime,
+    akteur_user_id: uuid.UUID | None = None,
 ) -> None:
-    """Hebt einen laufenden Vorgang wegen eines Schicht-2-Verstosses auf Stufe 2."""
+    """Hebt einen laufenden Vorgang wegen eines Schicht-2-Verstosses auf Stufe 2.
+
+    Ausgeloest wird das seit E-64 von der **Messung**, nicht von einer zweiten
+    Meldung: wer ein Verbot benennen musste, damit die Stufe stimmt, konnte es
+    auch weglassen. Der geplante Lauf sieht nach, was in den Daten steht.
+    """
     vorher = snapshot(vorgang)
     vorgang.eskalationsstufe = 2
-    vorgang.schicht2_verbot = zustand.schicht2_verbot
+    vorgang.schicht2_verbot = verbot
     vorgang.frist = frist_fuer(db, tool, zeitpunkt, stufe=2)
     db.flush()
     protokolliere_aenderung(
         db,
         vorgang,
         vorher,
-        akteur_user_id=principal.user_id,
+        akteur_user_id=akteur_user_id,
         beschreibung="Verstoß gegen Schicht 2 — Stufe 1 entfällt",
     )
     empfaenger = _eskalationsempfaenger(db, vorgang)
@@ -404,12 +456,21 @@ def eskaliere_faellige(db: Session, jetzt: datetime | None = None) -> list[Lenku
 
     gerueckt: list[Lenkungsvorgang] = []
     for vorgang in offene:
+        tool = db.get(ToolObjekt, vorgang.tool_objekt_id)
+        # A.13.5: bei einem Verstoss gegen Schicht 2 entfaellt die erste Stufe.
+        # Steht ein Verbot erst seit einer spaeteren Aenderung in den Daten,
+        # faellt es hier auf — vorher brauchte es dafuer eine zweite Meldung.
+        if tool is not None and vorgang.eskalationsstufe < 2:
+            verbote = rahmen_service.pruefe_schicht2(tool)
+            if verbote:
+                _hebe_auf_stufe(db, vorgang, tool, verbote[0], zeitpunkt)
+                gerueckt.append(vorgang)
+                continue
         frist = _als_utc(vorgang.frist)
         if frist is None or frist > zeitpunkt or vorgang.eskalationsstufe >= HOECHSTE_STUFE:
             continue
         vorher = snapshot(vorgang)
         vorgang.eskalationsstufe += 1
-        tool = db.get(ToolObjekt, vorgang.tool_objekt_id)
         if tool is not None and vorgang.eskalationsstufe < HOECHSTE_STUFE:
             vorgang.frist = frist_fuer(db, tool, zeitpunkt, stufe=vorgang.eskalationsstufe)
         db.flush()
@@ -505,15 +566,21 @@ def loese_auf(
     db.flush()
     protokolliere_aenderung(db, vorgang, vorher, akteur_user_id=principal.user_id)
 
-    if art in (Aufloesungsart.ANPASSEN, Aufloesungsart.RAHMEN_ERWEITERN):
-        _trage_zustand_ein(
-            db,
-            tool,
-            farbe=ComplianceFarbe.GRUEN,
-            begruendung=f"Lenkungsvorgang aufgelöst: {AUFLOESUNG_TEXT[art]}",
-            zeitpunkt=zeitpunkt,
-            akteur_user_id=principal.user_id,
-        )
+    # Jeder der drei Wege hinterlaesst einen Eintrag am Werkzeug — auch das
+    # Stilllegen. Es ist keine Rueckkehr in den Rahmen, also bleibt es rot;
+    # aber es ist ein Abschluss, und der gehoert in die Zeitreihe.
+    _trage_zustand_ein(
+        db,
+        tool,
+        farbe=(
+            ComplianceFarbe.GRUEN
+            if art in (Aufloesungsart.ANPASSEN, Aufloesungsart.RAHMEN_ERWEITERN)
+            else ComplianceFarbe.ROT
+        ),
+        begruendung=_schlusstext(f"aufgelöst: {AUFLOESUNG_TEXT[art]}", kommentar),
+        zeitpunkt=zeitpunkt,
+        akteur_user_id=principal.user_id,
+    )
     return vorgang
 
 
@@ -595,11 +662,24 @@ def brich_ab(
     verlange(principal.ist_governance, "Abbrechen darf ausschließlich die Governance-Rolle")
     if vorgang.status != LenkungStatus.OFFEN:
         raise Ungueltig("Dieser Lenkungsvorgang ist bereits abgeschlossen")
+    tool = db.get(ToolObjekt, vorgang.tool_objekt_id)
+    zeitpunkt = now_utc()
     vorher = snapshot(vorgang)
     vorgang.status = LenkungStatus.ABGEBROCHEN
-    vorgang.aufgeloest_am = now_utc()
+    vorgang.aufgeloest_am = zeitpunkt
     if kommentar:
-        vorgang.beschreibung = f"{vorgang.beschreibung}\n{kommentar}".strip()
+        vorgang.aufloesungskommentar = kommentar.strip()
     db.flush()
     protokolliere_aenderung(db, vorgang, vorher, akteur_user_id=principal.user_id)
+    if tool is not None:
+        # Eine Fehlmeldung heisst: es gab nie eine Abweichung. Welche Farbe
+        # danach gilt, sagt die Messung — nicht der Abbrechende (E-64).
+        _trage_zustand_ein(
+            db,
+            tool,
+            farbe=gemessene_farbe(db, tool),
+            begruendung=_schlusstext("abgebrochen — Fehlmeldung", kommentar),
+            zeitpunkt=zeitpunkt,
+            akteur_user_id=principal.user_id,
+        )
     return vorgang

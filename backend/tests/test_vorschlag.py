@@ -395,7 +395,6 @@ def test_leerer_begruendungstext_zaehlt_nicht(
     mit_leerzeichen = client.post(
         f"/api/v1/prozesse/{prozess['id']}/bewertung/wizard",
         json={
-            "modus": "vollstaendig",
             "antworten": {"1a": False, "2a": False},
             "begruendungen": {"2a": "   "},
         },

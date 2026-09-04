@@ -144,6 +144,8 @@ export function tool(ueberschreibungen: Partial<ToolObjekt> = {}): ToolObjekt {
     lauftyp: null,
     ausfuehrungsidentitaet: null,
     statische_zugangsdaten: null,
+    protokollierung_umgangen: null,
+    daten_ins_offene_netz: null,
     externe_ziele: [],
     herkunft: 'manuell',
     quelle: null,
@@ -209,8 +211,8 @@ export const SCHICHT2_VERBOTE: Schicht2VerbotEintrag[] = [
   { schluessel: 'statische_zugangsdaten', automatisch_erkennbar: true },
   { schluessel: 'undeklarierte_quellen', automatisch_erkennbar: true },
   { schluessel: 'entscheidung_ohne_mensch', automatisch_erkennbar: true },
-  { schluessel: 'daten_ins_offene_netz', automatisch_erkennbar: false },
-  { schluessel: 'protokollierung_umgangen', automatisch_erkennbar: false },
+  { schluessel: 'daten_ins_offene_netz', automatisch_erkennbar: true },
+  { schluessel: 'protokollierung_umgangen', automatisch_erkennbar: true },
 ];
 
 export const TECHNOLOGIEN: Technologie[] = [

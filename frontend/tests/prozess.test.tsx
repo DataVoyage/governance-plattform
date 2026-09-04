@@ -43,6 +43,27 @@ describe('Prozessliste', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Es ist ein Fehler aufgetreten');
   });
 
+  it('faerbt das Tier-Abzeichen nach seiner Stufe', async () => {
+    // Tier 3 rot, Tier 2 gelb, Tier 1 neutral: die Liste soll die Schwere auf
+    // einen Blick zeigen, ohne dass man die Zahl lesen muss.
+    fetchAttrappe([
+      ...grundrouten(),
+      {
+        pfad: '/api/v1/prozesse',
+        koerper: [
+          prozess({ id: 'p-1', name: 'Hoch', tier: 3, mitbestimmung_flag: true }),
+          prozess({ id: 'p-2', name: 'Mittel', tier: 2 }),
+          prozess({ id: 'p-3', name: 'Niedrig', tier: 1 }),
+        ],
+      },
+    ]);
+    zeichne('/de/prozesse');
+    expect(await screen.findByText('Tier 3')).toBeInTheDocument();
+    expect(screen.getByText('Tier 2')).toBeInTheDocument();
+    expect(screen.getByText('Tier 1')).toBeInTheDocument();
+    expect(screen.getByText('MB')).toBeInTheDocument();
+  });
+
   it('verlinkt in die Detailansicht', async () => {
     fetchAttrappe([
       ...grundrouten(),

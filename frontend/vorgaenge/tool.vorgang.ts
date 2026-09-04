@@ -422,17 +422,22 @@ vorgang('V-TOO-17', async ({ page, request }) => {
   const tool = await toolAnlegen(request, { name: `Zu melden ${kennzeichen()}` });
   await anmelden(page);
   await page.goto(`/de/tools/${tool.id}`);
-  await expect(
-    page.getByText('Für dieses Tool-Objekt ist noch kein Zustand erfasst.'),
-  ).toBeVisible();
+  // Ohne Prozesskante ist der gerechnete Zustand gelb — „nicht zugeordnet"
+  // (A.13.3). Er steht da, ohne dass jemand etwas gemeldet hätte (E-64).
+  await expect(page.getByTestId('aktueller-zustand')).toContainText('Gelb');
+  await expect(page.getByTestId('zustand-grund')).toContainText('An keinem Prozessobjekt');
+  await expect(page.getByText('Zu diesem Tool-Objekt wurde noch nichts gemeldet.')).toBeVisible();
 
-  await page.getByLabel('Zustand melden').selectOption('gelb');
-  await page.getByLabel('Begründung').fill('Externes Ziel nicht im Rahmen');
-  await page.getByRole('button', { name: 'Zustand melden' }).click();
+  // Ein Knopf, ein Feld: alles Übrige misst der Server.
+  await page.getByLabel('Was haben Sie beobachtet?').fill('Externes Ziel nicht im Rahmen');
+  await page.getByTestId('abweichung-melden').click();
+  await expect(page.getByTestId('aktueller-zustand')).toContainText('Rot');
+  await expect(page.getByText('Externes Ziel nicht im Rahmen')).toBeVisible();
 
-  const aktuell = page.getByTestId('aktueller-zustand');
-  await expect(aktuell).toContainText('Gelb');
-  await expect(aktuell).toContainText('Externes Ziel nicht im Rahmen');
+  // Ein zweites Mal bewirkt nichts — dieselbe Abweichung bleibt dieselbe.
+  await page.getByLabel('Was haben Sie beobachtet?').fill('Nochmal dasselbe');
+  await page.getByTestId('abweichung-melden').click();
+  await expect(page.getByText(/Es wurde nichts angelegt/)).toBeVisible();
 });
 
 vorgang('V-TOO-18', async ({ page, request }) => {

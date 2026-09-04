@@ -178,7 +178,6 @@ class Bewertung(Base, TimestampMixin):
     ur_stufe: Mapped[int] = mapped_column(Integer)
     tier: Mapped[int] = mapped_column(Integer)
     gesperrt: Mapped[bool] = mapped_column(Boolean, default=False)
-    vollstaendig: Mapped[bool] = mapped_column(Boolean, default=True)
     ausgeloeste_k_klassen: Mapped[list[str]] = mapped_column(JSON, default=list)
     antworten: Mapped[dict] = mapped_column(JSON, default=dict)
     #: Was die Datenlage zum Zeitpunkt der Bewertung vorgeschlagen hat
@@ -282,6 +281,15 @@ class ToolObjekt(Base, TimestampMixin):
     #: Sind dauerhaft gueltige Zugangsdaten im Tool hinterlegt? ``True`` ist
     #: ein Schicht-2-Verstoss (A.13.2), ``None`` heisst unbeantwortet.
     statische_zugangsdaten: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    #: Umgeht das Tool die Zugriffsprotokollierung der Zielplattform? ``True``
+    #: ist ein Schicht-2-Verstoss. Wie die Zugangsdaten eine **erklaerte**
+    #: Angabe: die Anwendung sieht nicht in die Zielplattform, aber der
+    #: technische Owner weiss es — und sobald er es hier eintraegt, weiss es
+    #: die Anwendung auch und muss nicht mehr danach fragen (E-64).
+    protokollierung_umgangen: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
+    #: Gibt das Tool Daten in ein oeffentlich erreichbares Ziel? ``True`` ist
+    #: ein Schicht-2-Verstoss. Ebenfalls erklaert, aus demselben Grund.
+    daten_ins_offene_netz: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     #: Die Ziele, an die dieses Tool tatsaechlich uebermittelt. Gegenstueck zu
     #: ``Prozessobjekt.erlaubte_externe_ziele``: der Prozess erklaert, was
     #: erlaubt ist, das Tool traegt, was geschieht.

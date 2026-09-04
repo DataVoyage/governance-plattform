@@ -44,7 +44,6 @@ from app.models.governance import (
     Alarm,
     Benachrichtigung,
     Bewertung,
-    ComplianceZustand,
     Datenobjekt,
     GateVorgang,
     Lenkungsvorgang,
@@ -146,7 +145,18 @@ def test_alle_gate_status_und_alle_ausloeser(bestand: Session) -> None:
 
 
 def test_alle_compliance_farben_und_eskalationsstufen(bestand: Session) -> None:
-    farben = {z.farbe for z in bestand.execute(select(ComplianceZustand)).scalars()}
+    """Die Farbe wird gerechnet, nicht gemeldet (E-64).
+
+    Geprueft wird deshalb, was die Anwendung ueber ihre Werkzeuge sagt. In der
+    Zeitreihe kaeme Gelb nie vor: sie haelt fest, was gemeldet und wie
+    geschlossen wurde, und „nicht zugeordnet" ist beides nicht.
+    """
+    from app.services import lenkung as lenkung_service
+
+    farben = {
+        lenkung_service.gemessene_farbe(bestand, werkzeug)
+        for werkzeug in bestand.execute(select(ToolObjekt)).scalars()
+    }
     assert farben == set(ComplianceFarbe)
     offen = {
         v.eskalationsstufe
@@ -157,18 +167,26 @@ def test_alle_compliance_farben_und_eskalationsstufen(bestand: Session) -> None:
 
 
 def test_alle_sechs_verbote_der_schicht_zwei(bestand: Session) -> None:
-    """Vier erkennt die Anwendung selbst, zwei sind nur zu melden (A.13.2)."""
-    gemeldet = {
-        z.schicht2_verbot
-        for z in bestand.execute(select(ComplianceZustand)).scalars()
-        if z.schicht2_verbot
-    }
-    assert gemeldet == set(Schicht2Verbot)
+    """Alle sechs stehen in den Daten der Werkzeuge (A.13.2, E-64).
 
+    Vier misst die Anwendung, zwei erklaert der technische Owner am Werkzeug.
+    Frueher war die zweite Haelfte nur eine Angabe in einer Meldung — und damit
+    das einzige am Compliance-Modell, das sich nicht nachrechnen liess.
+    """
     erkannt: set[str] = set()
     for tool in bestand.execute(select(ToolObjekt)).scalars():
         erkannt.update(rahmen.pruefe_schicht2(tool))
+    assert erkannt == set(Schicht2Verbot)
     assert erkannt == set(rahmen.AUTOMATISCH_ERKENNBAR)
+
+    # Und jedes davon steht auch an einem Vorgang: die Meldung uebernimmt es
+    # aus der Messung, statt es erfragen zu muessen.
+    an_vorgaengen = {
+        v.schicht2_verbot
+        for v in bestand.execute(select(Lenkungsvorgang)).scalars()
+        if v.schicht2_verbot
+    }
+    assert an_vorgaengen
 
 
 def test_jedes_rahmenelement_wird_irgendwo_verletzt(bestand: Session) -> None:

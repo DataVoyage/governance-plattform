@@ -556,6 +556,24 @@ der Bestand dahinter nicht.
       Feststellung gehört dem Melder und ändert sich nicht mehr
 - [x] Beide Bestände zeigen keinen Zustand mehr, der der Messung widerspricht
 
+### AP-18 — Nichts abfragen, was die Anwendung weiß *(E-64)*
+
+**Anwendervorgänge:** V-BEW-02, V-TOO-17, V-RAH-03.
+
+- [x] Die Schnellbewertung entfällt: es gibt nur den vollständigen Durchlauf, und der
+      trägt immer alle sechs Dimensionen und die ausgelösten K-Klassen
+      (Migration `c3b8e42f1a76`)
+- [x] Der Wizard beginnt bei der ersten Frage — kein Vorschaltbildschirm ohne Wahl
+- [x] Die Compliance-Meldung ist **ein Knopf und ein Feld**: „Was haben Sie beobachtet?"
+- [x] Farbe, Abweichungsart und verletztes Verbot misst der Server; die Farbe nach
+      A.13.3 wird gerechnet, nicht gespeichert
+- [x] Idempotent: läuft schon ein ungeklärter Vorgang, passiert nichts (HTTP 200)
+- [x] Alle sechs Verbote der Schicht 2 stehen am Tool-Objekt; die beiden, die in der
+      Zielplattform geschehen, werden dort **erklärt** (Migration `a5d1f78b2c40`)
+- [x] Die Stufenhebung bei Schicht 2 hängt an der Messung, nicht an einer zweiten Meldung
+- [x] Jeder Abschluss steht mit Grund und Art im Werkzeugprotokoll — auch Stilllegen
+      und Abbruch
+
 ---
 
 ## 3. Reihenfolge und Meilensteine
