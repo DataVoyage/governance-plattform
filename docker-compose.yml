@@ -1,9 +1,22 @@
 # Entwicklungsumgebung mit denselben getrennten Containern wie in Produktion
 # (Architektur 6.5) — keine abweichende, monolithische lokale Umgebung.
 
+# Die Basisimages kommen aus Docker Hub und ghcr.io, sofern nichts anderes
+# gesetzt ist. In einer Umgebung ohne Zugang dorthin zeigen zwei Variablen auf
+# den internen Spiegel — mit abschliessendem Schraegstrich, damit der Vorgabewert
+# leer bleiben kann:
+#
+#   GP_BASIS_PRAEFIX=artifactory.beispiel-ag.de/docker-remote/
+#   GP_GHCR_PRAEFIX=artifactory.beispiel-ag.de/ghcr-remote/
+#
+# Compose liest sie aus der Umgebung oder aus einer `.env` neben dieser Datei;
+# `.env.beispiel` zeigt, wie sie aussieht. GP_IMAGE_REGISTRY bleibt davon
+# unberuehrt: das ist das Ziel der selbst gebauten Images, nicht die Herkunft
+# der fremden.
+
 services:
   datenbank:
-    image: postgres:17-alpine
+    image: ${GP_BASIS_PRAEFIX:-}postgres:17-alpine
     environment:
       POSTGRES_USER: governance
       POSTGRES_PASSWORD: governance
@@ -22,6 +35,9 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        GP_BASIS_PRAEFIX: ${GP_BASIS_PRAEFIX:-}
+        GP_GHCR_PRAEFIX: ${GP_GHCR_PRAEFIX:-ghcr.io/}
     image: ${GP_IMAGE_REGISTRY:-localhost:5000}/governance-backend:${GP_IMAGE_TAG:-dev}
     depends_on:
       datenbank:
@@ -48,6 +64,8 @@ services:
       dockerfile: frontend/Dockerfile
       args:
         VITE_API_BASIS: http://localhost:8000
+        GP_BASIS_PRAEFIX: ${GP_BASIS_PRAEFIX:-}
+        GP_GHCR_PRAEFIX: ${GP_GHCR_PRAEFIX:-ghcr.io/}
     image: ${GP_IMAGE_REGISTRY:-localhost:5000}/governance-frontend:${GP_IMAGE_TAG:-dev}
     depends_on:
       - backend
@@ -58,6 +76,9 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile.worker
+      args:
+        GP_BASIS_PRAEFIX: ${GP_BASIS_PRAEFIX:-}
+        GP_GHCR_PRAEFIX: ${GP_GHCR_PRAEFIX:-ghcr.io/}
     image: ${GP_IMAGE_REGISTRY:-localhost:5000}/governance-sync-worker:${GP_IMAGE_TAG:-dev}
     depends_on:
       - backend

@@ -1,6 +1,20 @@
 # Mehrstufiger Build (Architektur 6.5): eine Build-Stage mit `uv sync` gegen die
 # Lockfile, ein schlankes Runtime-Image ohne Build-Werkzeuge.
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS build
+# Woher die Basisimages kommen. Leer heisst Docker Hub beziehungsweise ghcr.io;
+# in einer Umgebung ohne Zugang dorthin zeigen beide auf den internen Spiegel:
+#
+#   GP_BASIS_PRAEFIX=artifactory.beispiel-ag.de/docker-remote/
+#   GP_GHCR_PRAEFIX=artifactory.beispiel-ag.de/ghcr-remote/
+#
+# Der abschliessende Schraegstrich gehoert zum Wert — nur so bleibt der
+# Vorgabewert leer und der Name unveraendert. Zwei Variablen, weil Docker Hub
+# und ghcr.io in Artifactory ueblicherweise getrennte Remote-Repositories sind;
+# bei einem virtuellen Repository, das beide buendelt, bekommen sie denselben
+# Wert. Analog zu GP_IMAGE_REGISTRY steht keine Adresse im Code.
+ARG GP_BASIS_PRAEFIX=""
+ARG GP_GHCR_PRAEFIX="ghcr.io/"
+
+FROM ${GP_GHCR_PRAEFIX}astral-sh/uv:python3.12-bookworm-slim AS build
 
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
@@ -24,7 +38,7 @@ COPY alembic.ini ./
 RUN uv sync --frozen --no-dev
 
 
-FROM python:3.12-slim-bookworm AS runtime
+FROM ${GP_BASIS_PRAEFIX}python:3.12-slim-bookworm AS runtime
 
 RUN useradd --create-home --uid 10001 governance
 WORKDIR /app

@@ -36,6 +36,22 @@ Sync-Worker. Das Registry-Ziel ist über `GP_IMAGE_REGISTRY` konfigurierbar und
 nirgends im Code verankert; `./pruefen.sh --images` baut alle drei gegen zwei
 verschiedene Ziele, ohne dass sich am Code etwas ändert.
 
+Dasselbe gilt für die **Herkunft der Basisimages**. Ohne Zutun kommen sie aus
+Docker Hub und ghcr.io; wo der Zugang dorthin gesperrt ist, zeigen zwei
+Variablen auf den internen Spiegel — der abschließende Schrägstrich gehört zum
+Wert, damit die Vorgabe leer bleiben kann:
+
+```bash
+cp .env.beispiel .env        # und darin eintragen:
+GP_BASIS_PRAEFIX=artifactory.beispiel-ag.de/docker-remote/   # python, node, nginx, postgres
+GP_GHCR_PRAEFIX=artifactory.beispiel-ag.de/ghcr-remote/      # astral-sh/uv
+```
+
+Zwei Variablen, weil Docker Hub und ghcr.io in Artifactory üblicherweise
+getrennte Remote-Repositories sind; bündelt ein virtuelles Repository beide,
+bekommen sie denselben Wert. `docker compose` liest die `.env` von selbst,
+`./pruefen.sh --images` reicht beide an jeden Build weiter.
+
 ## Schnellstart mit Docker Compose
 
 ```bash
@@ -214,7 +230,8 @@ Zwei getrennte Mechanismen für zwei Arten von Einstellungen (Architektur 6.6):
 | `GP_QUERY_API_SERVICE_TOKENS` | `name:token`-Paare andockender Anwendungen |
 | `GP_CORS_ORIGINS` | Erlaubte Herkünfte der Single-Page-Application |
 | `GP_CA_BUNDLE_PATH` | Zusätzliches CA-Bundle für ausgehende Verbindungen |
-| `GP_IMAGE_REGISTRY` | Registry-Ziel der Images |
+| `GP_IMAGE_REGISTRY` | Registry-Ziel der selbst gebauten Images |
+| `GP_BASIS_PRAEFIX`, `GP_GHCR_PRAEFIX` | Herkunft der Basisimages (mit Schrägstrich am Ende) |
 
 ## Geplante Läufe
 
