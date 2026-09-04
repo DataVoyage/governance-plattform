@@ -181,7 +181,11 @@ def test_erlaubnisrahmen_vereinigt_die_prozesskanten(
         headers=owner.kopf,
     )
 
-    tool = client.post("/api/v1/tools", json={"name": "Gemeinsam"}, headers=governance.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Gemeinsam", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     attestieren(governance.kopf, tool["id"])
     for prozessobjekt in (eng, weit):
         client.post(
@@ -205,7 +209,7 @@ def test_erlaubnisrahmen_vereinigt_die_prozesskanten(
     assert set(rahmen["quelle_prozess_ids"]) == {eng["id"], weit["id"]}
 
 
-def test_erlaubnisrahmen_ohne_prozesskante(client: TestClient, governance) -> None:
+def test_erlaubnisrahmen_ohne_prozesskante(client: TestClient, governance, organisation) -> None:
     """Positivlistenprinzip: ohne Prozesskante deckt der Rahmen nichts ab.
 
     Die einzige Ausnahme ist die Ausfuehrungsidentitaet — sie haengt nicht am
@@ -213,7 +217,11 @@ def test_erlaubnisrahmen_ohne_prozesskante(client: TestClient, governance) -> No
     bleiben beide Identitaeten moeglich; ein geteiltes Konto ist auch hier
     nicht dabei.
     """
-    tool = client.post("/api/v1/tools", json={"name": "Frei"}, headers=governance.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Frei", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     rahmen = frage(client, f"/tool/{tool['id']}/erlaubnisrahmen").json()
     assert rahmen == {
         "erlaubte_datenobjekte": [],
@@ -246,14 +254,18 @@ def test_die_api_provisioniert_nichts(client: TestClient) -> None:
 
 
 def test_delta_liefert_lueckenlos_und_in_reihenfolge(
-    client: TestClient, governance, owner, prozess
+    client: TestClient, governance, owner, prozess, organisation
 ) -> None:
     """Abnahmekriterium 7.4."""
     start = frage(client, "/changes").json()
     ab = start["naechster_cursor"]
 
     bewerte(client, owner, prozess["id"], ds=1)
-    client.post("/api/v1/tools", json={"name": "Neu"}, headers=governance.kopf)
+    client.post(
+        "/api/v1/tools",
+        json={"name": "Neu", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    )
     bewerte(client, owner, prozess["id"], ds=3)
 
     delta = frage(client, f"/changes?since={ab}").json()
@@ -276,9 +288,15 @@ def test_derselbe_cursor_liefert_dasselbe(client: TestClient, owner, prozess) ->
     assert erste == zweite
 
 
-def test_delta_filtert_nach_entity_type(client: TestClient, governance, owner, prozess) -> None:
+def test_delta_filtert_nach_entity_type(
+    client: TestClient, governance, owner, prozess, organisation
+) -> None:
     bewerte(client, owner, prozess["id"], ds=1)
-    client.post("/api/v1/tools", json={"name": "Nur Tool"}, headers=governance.kopf)
+    client.post(
+        "/api/v1/tools",
+        json={"name": "Nur Tool", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    )
 
     nur_tools = frage(client, "/changes?since=0&entity_type=tool").json()
     assert {c["entity_type"] for c in nur_tools["changes"]} == {"tool"}
@@ -334,7 +352,7 @@ def test_openapi_dokumentiert_die_vier_endpunkte(client: TestClient) -> None:
 
 
 def test_probeintegration_mit_platzhalter_client(
-    client: TestClient, governance, owner, prozess, attestieren
+    client: TestClient, governance, owner, prozess, attestieren, organisation
 ) -> None:
     """Ein andockender Client, der nur der Dokumentation folgt.
 
@@ -344,7 +362,9 @@ def test_probeintegration_mit_platzhalter_client(
     """
     bewerte(client, owner, prozess["id"], ds=3, ur=2)
     tool = client.post(
-        "/api/v1/tools", json={"name": "Andocker-Tool"}, headers=governance.kopf
+        "/api/v1/tools",
+        json={"name": "Andocker-Tool", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
     ).json()
     attestieren(governance.kopf, tool["id"])
     client.post(

@@ -122,12 +122,18 @@ def test_eintraege_verweisen_auf_das_vorgefilterte_zielmodul(
 
 
 def test_assets_ohne_prozess_zeigen_auf_das_tool(
-    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren
+    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren, organisation
 ) -> None:
-    waise = client.post("/api/v1/tools", json={"name": "Waise"}, headers=governance.kopf).json()
+    waise = client.post(
+        "/api/v1/tools",
+        json={"name": "Waise", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     prozess = lege_prozess_an(client, owner, vertretung, prozess_daten)
     verknuepft = client.post(
-        "/api/v1/tools", json={"name": "Verknuepft"}, headers=governance.kopf
+        "/api/v1/tools",
+        json={"name": "Verknuepft", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
     ).json()
     attestieren(governance.kopf, verknuepft["id"])
     client.post(
@@ -191,14 +197,18 @@ def test_prozesse_ohne_tragenden_owner(
 
 
 def test_non_compliant_je_stufe_und_filter(
-    client: TestClient, governance, owner, vertretung, prozess_daten, db, attestieren
+    client: TestClient, governance, owner, vertretung, prozess_daten, db, attestieren, organisation
 ) -> None:
     from app.models.governance import Lenkungsvorgang
     from app.services import lenkung
 
     prozess = lege_prozess_an(client, owner, vertretung, prozess_daten)
     bewerte(client, owner, prozess["id"], ds=3)
-    tool = client.post("/api/v1/tools", json={"name": "Auffaellig"}, headers=governance.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Auffaellig", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     attestieren(governance.kopf, tool["id"])
     client.post(
         f"/api/v1/tools/{tool['id']}/prozesse",
@@ -229,9 +239,19 @@ def test_non_compliant_je_stufe_und_filter(
     assert nur_2["anzahl"] == 1
 
 
-def test_rahmenabweichungen_zeigen_nur_nicht_gruene(client: TestClient, governance) -> None:
-    gruen = client.post("/api/v1/tools", json={"name": "Gruen"}, headers=governance.kopf).json()
-    gelb = client.post("/api/v1/tools", json={"name": "Gelb"}, headers=governance.kopf).json()
+def test_rahmenabweichungen_zeigen_nur_nicht_gruene(
+    client: TestClient, governance, organisation
+) -> None:
+    gruen = client.post(
+        "/api/v1/tools",
+        json={"name": "Gruen", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
+    gelb = client.post(
+        "/api/v1/tools",
+        json={"name": "Gelb", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     client.post(
         f"/api/v1/tools/{gruen['id']}/compliance",
         json={"farbe": "gruen"},
@@ -268,13 +288,17 @@ def test_kritikalitaetsketten_zeigen_nur_geerbte_faelle(
 
 
 def test_tier_verteilung_je_technologie_und_monat(
-    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren
+    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren, organisation
 ) -> None:
     prozess = lege_prozess_an(client, owner, vertretung, prozess_daten)
     bewertung = bewerte(client, owner, prozess["id"], ds=3)
     tool = client.post(
         "/api/v1/tools",
-        json={"name": "Skript", "technologie": "apps-script"},
+        json={
+            "name": "Skript",
+            "technologie": "apps-script",
+            "organisationseinheit_id": organisation["fin_de"],
+        },
         headers=governance.kopf,
     ).json()
     attestieren(governance.kopf, tool["id"])
@@ -283,7 +307,11 @@ def test_tier_verteilung_je_technologie_und_monat(
         json={"prozessobjekt_id": prozess["id"]},
         headers=governance.kopf,
     )
-    client.post("/api/v1/tools", json={"name": "Ohne Prozess"}, headers=governance.kopf)
+    client.post(
+        "/api/v1/tools",
+        json={"name": "Ohne Prozess", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    )
 
     treffer = zeile(client, governance, "tier_verteilung")
     assert treffer["aggregat"]["je_technologie"] == {"apps-script": {"3": 1}}
@@ -291,11 +319,19 @@ def test_tier_verteilung_je_technologie_und_monat(
     assert treffer["aggregat"]["je_monat"] == {monat: {"3": 1}}
 
 
-def test_inaktive_assets(client: TestClient, governance, db) -> None:
+def test_inaktive_assets(client: TestClient, governance, db, organisation) -> None:
     from app.models.governance import ToolObjekt
 
-    aktiv = client.post("/api/v1/tools", json={"name": "Aktiv"}, headers=governance.kopf).json()
-    alt = client.post("/api/v1/tools", json={"name": "Alt"}, headers=governance.kopf).json()
+    aktiv = client.post(
+        "/api/v1/tools",
+        json={"name": "Aktiv", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
+    alt = client.post(
+        "/api/v1/tools",
+        json={"name": "Alt", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     db.expire_all()
     import uuid as uuid_modul
 
@@ -311,12 +347,14 @@ def test_inaktive_assets(client: TestClient, governance, db) -> None:
 
 
 def test_stillgelegtes_asset_gilt_als_inaktiv(
-    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren
+    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren, organisation
 ) -> None:
     prozess = lege_prozess_an(client, owner, vertretung, prozess_daten)
     bewerte(client, owner, prozess["id"], ds=1)
     tool = client.post(
-        "/api/v1/tools", json={"name": "Stillgelegt"}, headers=governance.kopf
+        "/api/v1/tools",
+        json={"name": "Stillgelegt", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
     ).json()
     attestieren(governance.kopf, tool["id"])
     client.post(
@@ -366,11 +404,15 @@ def test_ueberfaellige_selbstverpflichtungen(
     assert treffer["eintraege"][0]["ziel_modul"] == "prozesse"
 
 
-def test_ueberfaellige_selbstverpflichtung_eines_tools(client: TestClient, governance, db) -> None:
+def test_ueberfaellige_selbstverpflichtung_eines_tools(
+    client: TestClient, governance, db, organisation
+) -> None:
     from app.models.governance import Selbstverpflichtung
 
     tool = client.post(
-        "/api/v1/tools", json={"name": "Tool mit Frist"}, headers=governance.kopf
+        "/api/v1/tools",
+        json={"name": "Tool mit Frist", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
     ).json()
     client.post(
         "/api/v1/selbstverpflichtungen",
@@ -391,9 +433,13 @@ def test_ueberfaellige_selbstverpflichtung_eines_tools(client: TestClient, gover
     assert treffer["eintraege"][0]["ziel_modul"] == "tools"
 
 
-def test_widerspruch_zwischen_erklaerung_und_zustand(client: TestClient, governance) -> None:
+def test_widerspruch_zwischen_erklaerung_und_zustand(
+    client: TestClient, governance, organisation
+) -> None:
     tool = client.post(
-        "/api/v1/tools", json={"name": "Widerspruch"}, headers=governance.kopf
+        "/api/v1/tools",
+        json={"name": "Widerspruch", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
     ).json()
     client.post(
         f"/api/v1/tools/{tool['id']}/compliance",
@@ -419,8 +465,14 @@ def test_widerspruch_zwischen_erklaerung_und_zustand(client: TestClient, governa
     )
 
 
-def test_verneinte_aussage_ist_kein_widerspruch(client: TestClient, governance) -> None:
-    tool = client.post("/api/v1/tools", json={"name": "Ehrlich"}, headers=governance.kopf).json()
+def test_verneinte_aussage_ist_kein_widerspruch(
+    client: TestClient, governance, organisation
+) -> None:
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Ehrlich", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     client.post(
         f"/api/v1/tools/{tool['id']}/compliance",
         json={"farbe": "rot"},
@@ -521,8 +573,14 @@ def test_uebersicht_beachtet_den_fachbereichsfilter(
     assert je_zeile["prozesse_ohne_owner"] == 0
 
 
-def test_ohne_rolle_ist_das_cockpit_leer(client: TestClient, anmelden, governance) -> None:
-    client.post("/api/v1/tools", json={"name": "Unsichtbar"}, headers=governance.kopf)
+def test_ohne_rolle_ist_das_cockpit_leer(
+    client: TestClient, anmelden, governance, organisation
+) -> None:
+    client.post(
+        "/api/v1/tools",
+        json={"name": "Unsichtbar", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    )
     fremder = anmelden("Ohne Rolle")
     uebersicht = client.get("/api/v1/cockpit", headers=fremder.kopf).json()
     assert all(z["anzahl"] == 0 for z in uebersicht)
@@ -589,10 +647,14 @@ def test_bestaetigte_altanwendung_ohne_prozess_bleibt_im_pfad(
     assert "keinem Prozessobjekt zugeordnet" in treffer["hinweis"]
 
 
-def test_selbst_angelegtes_tool_ist_keine_altanwendung(client: TestClient, governance) -> None:
+def test_selbst_angelegtes_tool_ist_keine_altanwendung(
+    client: TestClient, governance, organisation
+) -> None:
     """Wer sein Tool anmeldet, hat den Weg nicht vor sich — er ist ihn gegangen."""
     tool = client.post(
-        "/api/v1/tools", json={"name": "Selbst gemeldet"}, headers=governance.kopf
+        "/api/v1/tools",
+        json={"name": "Selbst gemeldet", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
     ).json()
     eintraege = zeile(client, governance, "altanwendungen")["eintraege"]
     assert not any(e["id"] == tool["id"] for e in eintraege)

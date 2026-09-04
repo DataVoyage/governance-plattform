@@ -88,6 +88,7 @@ SCHRITTE: tuple[tuple[str, object], ...] = (
     ("Compliance-Zustaende und Lenkungsvorgaenge", vorgaenge.lenkungsvorgaenge),
     ("Nachtraegliche Aenderungen der Datenlage", nachtraege.datenlage_hat_sich_bewegt),
     ("Neu erklaertes externes Ziel", nachtraege.neues_externes_ziel),
+    ("Aufstieg auf Tier 3 im Betrieb", nachtraege.aufstieg_im_betrieb),
     ("Alt-Anwendungen im Migrationspfad", nachtraege.altanwendungen),
     ("Ausgeschiedene Beschaeftigte", organisation.deaktiviere_ausgeschiedene),
     ("Erinnerungslauf", nachtraege.erinnerungen),

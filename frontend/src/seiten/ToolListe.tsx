@@ -258,6 +258,8 @@ export function ToolListe() {
                 wert: einheit.id,
                 text: orgBezeichnung(einheit, fachbereiche),
               }))}
+              hilfe={t('tool.einheit.hilfe')}
+              pflicht
             />
             <Auswahl
               beschriftung={t('tool.feld.lauftyp')}

@@ -17,7 +17,7 @@ from sqlalchemy.orm import Session
 
 from app.core.permissions import Principal, verlange
 from app.models.base import now_utc
-from app.models.enums import AlarmTyp
+from app.models.enums import AlarmTyp, ProzessStatus
 from app.models.governance import Alarm, Bewertung, Prozessobjekt
 from app.services import ableitung, konfiguration, vorschlag
 from app.services.bewertungsbaum import (
@@ -378,9 +378,55 @@ def speichere(
     db.flush()
     db.refresh(prozess)
     ableitung.aktualisiere_kette(prozess)
+    _pruefe_freigabe_nach_neubewertung(db, principal, prozess, tier_wert)
     db.flush()
     protokolliere_erstellung(db, bewertung, akteur_user_id=principal.user_id)
     return bewertung
+
+
+def _pruefe_freigabe_nach_neubewertung(
+    db: Session, principal: Principal, prozess: Prozessobjekt, tier_wert: int
+) -> None:
+    """Steigt ein laufender Prozess auf Tier 3, entfaellt seine Freigabe.
+
+    ``pruefe_aktivierung`` haengt am Statuswechsel — wer schon aktiv ist, kommt
+    nie wieder daran vorbei. Ein Prozess konnte damit von Tier 1 auf Tier 3
+    wechseln und ohne Gate weiterlaufen (E-60). Gate 1 ist die
+    Tier-3-Erstfreigabe (A.11); dass sie spaeter faellig wird als ueblich,
+    aendert nichts daran, dass sie faellig ist.
+
+    Der Vorgang entsteht hier von selbst — dieselbe Bauart wie beim dritten
+    Gate-2-Ausloeser (A.11): wer die Bewertung abgibt, meldet damit den Anlass.
+    Ihn zusaetzlich zum Einreichen aufzufordern hiesse, ihm die Regel
+    aufzubuerden, die die Anwendung kennt.
+
+    Unterhalb von Tier 3 passiert nichts: A.11 sieht fuer Tier 1 und 2
+    ausdruecklich kein Gate vor, und einen laufenden Prozess dafuer anzuhalten
+    waere eine Bremse, die das Konzept nicht will.
+    """
+    from app.models.enums import GateTyp
+    from app.services import gate
+
+    if prozess.status != ProzessStatus.AKTIV or tier_wert < 3:
+        return
+    if gate.ist_freigegeben(db, prozess.id, GateTyp.GATE_1):
+        # Schon freigegeben: die Freigabe gilt dem Rahmen, nicht dem Stand
+        # (A.11, Envelope-Modell). Die Selbstverpflichtung ist trotzdem neu
+        # abzugeben — sie haengt an der Bewertung (A.10.4).
+        return
+    prozess.status = ProzessStatus.FREIGABE_AUSSTEHEND
+    db.flush()
+    if gate.offener_vorgang(db, prozess.id, GateTyp.GATE_1) is None:
+        gate.einreichen(
+            db,
+            principal,
+            prozess,
+            gate_typ=GateTyp.GATE_1,
+            begruendung=(
+                f"Automatisch: die Neubewertung hebt den laufenden Prozess auf Tier "
+                f"{tier_wert}. Die Erstfreigabe nach A.11 steht damit aus."
+            ),
+        )
 
 
 def historie(db: Session, prozess_id: uuid.UUID) -> list[Bewertung]:

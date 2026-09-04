@@ -179,6 +179,13 @@ export async function toolAnlegen(
   attestieren = true,
 ): Promise<{ id: string; name: string }> {
   const h = await kopf(anfrage);
+  // Ein Tool-Objekt gehört immer einer Einheit (E-58). Wer keine nennt, bekommt
+  // eine frische — der Durchlauf soll die Regel erfüllen, nicht umgehen, ohne
+  // dass jeder Aufrufer sie buchstabieren muss.
+  if (daten.organisationseinheit_id === undefined) {
+    const org = await organisation(anfrage);
+    daten = { ...daten, organisationseinheit_id: org.deId };
+  }
   const tool = await json<{ id: string; name: string }>(
     await anfrage.post(`${API}/api/v1/tools`, { headers: h, data: daten }),
   );

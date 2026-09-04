@@ -555,14 +555,38 @@ def _pruefe_stammdatenfelder(objekt: Any, werte: dict[str, Any]) -> None:
 
 
 def lege_tool_an(db: Session, principal: Principal, werte: dict[str, Any]) -> ToolObjekt:
+    """Anlegen entscheidet der **Anker**, nie die Nutzlast.
+
+    Bis AP-13 wurde das Objekt erst aus den uebergebenen Werten gebaut und dann
+    gefragt, ob es geschrieben werden darf. Wer sich selbst als technischen
+    Owner eintrug, erfuellte damit die Bedingung, die er gerade erst gesetzt
+    hatte — jeder Angemeldete konnte so ein Tool-Objekt anlegen, attestieren
+    und an einen fremden Prozess haengen (E-58, R-16). Eine Angabe des
+    Antragstellers darf nie die Erlaubnis begruenden, ueber die sie entscheidet.
+
+    Deshalb zwei Aenderungen: die Einheit ist Pflicht, und geprueft wird die
+    Rolle **an dieser Einheit**. Wen der Anlegende als Owner eintraegt, ist
+    danach eine Angabe wie jede andere.
+    """
     org_id = werte.get("organisationseinheit_id")
-    if org_id is not None and db.get(Organisationseinheit, org_id) is None:
+    if org_id is None:
+        raise Ungueltig(
+            "Ein Tool-Objekt gehoert einer Organisationseinheit: ohne sie gehoerte es "
+            "niemandem und waere nur den global lesenden Rollen sichtbar"
+        )
+    einheit = db.get(Organisationseinheit, org_id)
+    if einheit is None:
         raise Ungueltig("Organisationseinheit existiert nicht")
-    tool = ToolObjekt(herkunft=Herkunft.MANUELL, status=AssetStatus.BESTAETIGT, **werte)
     verlange(
-        darf_tool_schreiben(db, principal, tool),
-        "Tool-Objekte legt der technische Owner im eigenen Bereich oder die Governance an",
+        principal.ist_governance
+        or principal.hat_rolle(
+            Rolle.TECHNISCHER_OWNER,
+            organisationseinheit_id=org_id,
+            fachbereich_id=einheit.fachbereich_id,
+        ),
+        "Tool-Objekte legt der technische Owner dieser Einheit oder die Governance an",
     )
+    tool = ToolObjekt(herkunft=Herkunft.MANUELL, status=AssetStatus.BESTAETIGT, **werte)
     db.add(tool)
     db.flush()
     protokolliere_erstellung(db, tool, akteur_user_id=principal.user_id)

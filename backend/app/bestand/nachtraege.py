@@ -157,3 +157,56 @@ def erinnerungen(kontext: Kontext) -> None:
     heute faellig sind. Genau so steht es im Posteingang der Betroffenen.
     """
     erinnerung.lauf(kontext.db)
+
+
+def aufstieg_im_betrieb(kontext: Kontext) -> None:
+    """Ein laufender Prozess steigt auf Tier 3 — und verliert damit seine Freigabe.
+
+    Der haeufigste Weg dorthin ist kein Formfehler, sondern Alltag: der Prozess
+    nimmt eine hoehere Datenkategorie auf, und die Neubewertung hebt ihn. Bis
+    E-60 lief er danach unveraendert weiter, weil ``pruefe_aktivierung`` am
+    Statuswechsel haengt und er den schon hinter sich hatte.
+
+    Jetzt faellt er auf ``freigabe_ausstehend``, und der Gate-1-Vorgang
+    entsteht von selbst. Der Bestand muss diesen Zustand zeigen: er ist der
+    einzige, an dem sichtbar wird, dass „laeuft" und „darf laufen" zwei
+    verschiedene Aussagen sind.
+    """
+    from dataclasses import replace
+
+    from app.bestand.bewertungen import EINSTUFUNGEN, _speichere
+
+    einstufung = next(e for e in EINSTUFUNGEN if e.prozess == "lieferantenbewertung-food")
+    # Die Bewertung greift inzwischen auf die Laborbefunde der Eigenmarke zu
+    # und entscheidet ueber Listung und Auslistung — aus einer Kennzahl ist
+    # eine Entscheidung mit Folgen geworden.
+    with kontext.aktion(24, stunde=9):
+        prozess_service.aendern(
+            kontext.db,
+            kontext.wer(handelnder(kontext, KATALOG["lieferantenbewertung-food"])),
+            kontext.prozess("lieferantenbewertung-food"),
+            ProzessAendern(
+                ausfallfolge=Ausfallfolge.KRITISCH,
+                output="Listungsentscheidung je Lieferant, mit Auslistungsvorschlag",
+            ),
+        )
+    # Die neue Datenlage widerspricht den alten Antworten — der Vorschlagsdienst
+    # merkt das, und jede Abweichung ist zu begruenden (A.8.4). Genau dafuer
+    # gibt es die Begruendung: sie steht danach in der Bewertung.
+    begruendung = (
+        "Die Abschriften werden seit der Umstellung je erfassender Person "
+        "ausgewertet und im Zielgespräch besprochen."
+    )
+    _speichere(
+        kontext,
+        replace(
+            einstufung,
+            ds=3,
+            mb=2,
+            erneuert_vor=None,
+            begruendungen={
+                f"{block}{frage}": begruendung for block in range(1, 7) for frage in ("a", "b", "c")
+            },
+        ),
+        vor_tagen=22,
+    )

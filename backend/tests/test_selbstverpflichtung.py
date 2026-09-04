@@ -282,11 +282,15 @@ def test_eine_verfallene_erklaerung_laesst_sich_nicht_bestaetigen(
 
 
 @pytest.fixture
-def tool(client: TestClient, owner, prozess, attestieren):
+def tool(client: TestClient, owner, prozess, attestieren, organisation):
     bewerte(client, owner, prozess["id"], ds=3)
     angelegt = client.post(
         "/api/v1/tools",
-        json={"name": "Auswertung", "technischer_owner_user_id": owner.user_id},
+        json={
+            "name": "Auswertung",
+            "technischer_owner_user_id": owner.user_id,
+            "organisationseinheit_id": organisation["fin_de"],
+        },
         headers=owner.kopf,
     ).json()
     attestieren(owner.kopf, angelegt["id"])
@@ -329,7 +333,7 @@ def test_der_technische_owner_erklaert_am_tool(client: TestClient, owner, tool) 
 
 
 def test_ein_gestiegenes_tier_entwertet_die_tool_erklaerung(
-    client: TestClient, owner, vertretung, prozess_daten, attestieren
+    client: TestClient, owner, vertretung, prozess_daten, attestieren, organisation
 ) -> None:
     """Das Gegenstueck zur Profilbindung fuer geerbte Einstufungen."""
     niedrig = client.post(
@@ -338,7 +342,11 @@ def test_ein_gestiegenes_tier_entwertet_die_tool_erklaerung(
         headers=owner.kopf,
     ).json()
     bewerte(client, owner, niedrig["id"])  # Tier 1
-    tool = client.post("/api/v1/tools", json={"name": "Erbe"}, headers=owner.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Erbe", "organisationseinheit_id": organisation["fin_de"]},
+        headers=owner.kopf,
+    ).json()
     attestieren(owner.kopf, tool["id"])
     client.post(
         f"/api/v1/tools/{tool['id']}/prozesse",
@@ -458,10 +466,16 @@ def test_tier_1_ohne_erklaerung_ist_kein_befund(client: TestClient, owner, proze
     assert [e for e in treffer["eintraege"] if e["id"] == prozess["id"]] == []
 
 
-def test_alte_attestierung_erscheint_im_cockpit(client: TestClient, owner, db) -> None:
+def test_alte_attestierung_erscheint_im_cockpit(
+    client: TestClient, owner, db, organisation
+) -> None:
     from app.models.governance import ToolObjekt
 
-    tool = client.post("/api/v1/tools", json={"name": "Alt"}, headers=owner.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Alt", "organisationseinheit_id": organisation["fin_de"]},
+        headers=owner.kopf,
+    ).json()
     client.put(
         f"/api/v1/tools/{tool['id']}/attestierungen",
         json={
@@ -483,7 +497,13 @@ def test_alte_attestierung_erscheint_im_cockpit(client: TestClient, owner, db) -
     assert treffer["eintraege"][0]["ziel_modul"] == "tools"
 
 
-def test_ein_nie_attestiertes_tool_ist_hier_kein_befund(client: TestClient, owner) -> None:
+def test_ein_nie_attestiertes_tool_ist_hier_kein_befund(
+    client: TestClient, owner, organisation
+) -> None:
     """Fehlende Attestierung ist eine andere Zeile — hier geht es ums Alter."""
-    client.post("/api/v1/tools", json={"name": "Nie attestiert"}, headers=owner.kopf)
+    client.post(
+        "/api/v1/tools",
+        json={"name": "Nie attestiert", "organisationseinheit_id": organisation["fin_de"]},
+        headers=owner.kopf,
+    )
     assert zeile(client, owner, "attestierungen_veraltet")["anzahl"] == 0

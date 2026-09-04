@@ -652,3 +652,94 @@ def test_freitextfelder_haben_harte_grenzen(
         client, owner, prozess_daten(owner.user_id, vertretung.user_id, supplier="x" * 201)
     )
     assert antwort.status_code == 422, antwort.text
+
+
+def test_kritikalitaet_faellt_zurueck_wenn_die_kante_geloest_wird(
+    client: TestClient, owner, vertretung, prozess_daten
+) -> None:
+    """Eine geloeste Kante muss beide Enden nachrechnen (E-59).
+
+    Die Kritikalitaet flieBt von den Nachfolgern nach oben. Wer den kritischen
+    Nachfolger entfernt, macht den Vorgaenger wieder harmlos — und das gilt
+    unabhaengig davon, an welchem Ende die Kante gepflegt wurde. Bis AP-14 lief
+    die Nachfuehrung nur vom geaenderten Prozess ueber seine *aktuellen*
+    Vorgaenger; der soeben abgehaengte war damit genau der, den sie nicht mehr
+    erreichte, und blieb mit einer zu hohen Stufe stehen.
+    """
+
+    def stufe(prozess_id: str) -> int:
+        return client.get(f"/api/v1/prozesse/{prozess_id}", headers=owner.kopf).json()[
+            "kritikalitaet"
+        ]
+
+    harmlos = anlegen(
+        client,
+        owner,
+        prozess_daten(owner.user_id, vertretung.user_id, name="Harmlos", ausfallfolge="gering"),
+    ).json()
+    kritisch = anlegen(
+        client,
+        owner,
+        prozess_daten(owner.user_id, vertretung.user_id, name="Kritisch", ausfallfolge="kritisch"),
+    ).json()
+    assert stufe(harmlos["id"]) == 1
+
+    # --- Am kritischen Prozess gepflegt ------------------------------------
+    client.patch(
+        f"/api/v1/prozesse/{kritisch['id']}",
+        json={"vorgelagert_ids": [harmlos["id"]]},
+        headers=owner.kopf,
+    )
+    assert stufe(harmlos["id"]) == 3, "Setzen wirkt auch vom Nachfolger aus"
+
+    client.patch(
+        f"/api/v1/prozesse/{kritisch['id']}", json={"vorgelagert_ids": []}, headers=owner.kopf
+    )
+    assert stufe(harmlos["id"]) == 1, "Loesen muss das abgehaengte Ende nachrechnen"
+
+    # --- Und am harmlosen Prozess gepflegt ---------------------------------
+    client.patch(
+        f"/api/v1/prozesse/{harmlos['id']}",
+        json={"nachgelagert_ids": [kritisch["id"]]},
+        headers=owner.kopf,
+    )
+    assert stufe(harmlos["id"]) == 3
+    client.patch(
+        f"/api/v1/prozesse/{harmlos['id']}", json={"nachgelagert_ids": []}, headers=owner.kopf
+    )
+    assert stufe(harmlos["id"]) == 1
+
+
+def test_geloeste_kante_wirkt_transitiv_zurueck(
+    client: TestClient, owner, vertretung, prozess_daten
+) -> None:
+    """Auch der Vorgaenger des Vorgaengers faellt zurueck.
+
+    A -> B -> C(kritisch). Wird C von B geloest, muessen B **und** A wieder
+    harmlos werden — die Nachfuehrung folgt der ganzen Kette, nicht nur einem
+    Glied.
+    """
+
+    def stufe(prozess_id: str) -> int:
+        return client.get(f"/api/v1/prozesse/{prozess_id}", headers=owner.kopf).json()[
+            "kritikalitaet"
+        ]
+
+    def neu(name: str, folge: str) -> dict:
+        return anlegen(
+            client,
+            owner,
+            prozess_daten(owner.user_id, vertretung.user_id, name=name, ausfallfolge=folge),
+        ).json()
+
+    a, b, c = neu("Kette A", "gering"), neu("Kette B", "gering"), neu("Kette C", "kritisch")
+    client.patch(
+        f"/api/v1/prozesse/{a['id']}", json={"nachgelagert_ids": [b["id"]]}, headers=owner.kopf
+    )
+    client.patch(
+        f"/api/v1/prozesse/{c['id']}", json={"vorgelagert_ids": [b["id"]]}, headers=owner.kopf
+    )
+    assert (stufe(a["id"]), stufe(b["id"])) == (3, 3)
+
+    client.patch(f"/api/v1/prozesse/{c['id']}", json={"vorgelagert_ids": []}, headers=owner.kopf)
+    assert (stufe(a["id"]), stufe(b["id"])) == (1, 1)

@@ -642,6 +642,38 @@ HANDLUNGEN: tuple[Handlung, ...] = (
         ),
         SCHREIBT_PROZESS,
     ),
+    # --- Die Nutzlast erteilt keine Erlaubnis --------------------------------
+    #
+    # Die Handlungen oben schicken das, was ein Formular schicken wuerde. Diese
+    # hier schicken, was jemand schicken *koennte*: sich selbst als Owner. Bis
+    # AP-13 genuegte das, um ein Tool-Objekt anzulegen — jeder Angemeldete
+    # erfuellte damit die Bedingung, die er gerade erst gesetzt hatte (E-58).
+    Handlung(
+        "tool_anlegen_mit_sich_selbst_als_owner",
+        lambda w, z: _status(
+            w.client.post(
+                "/api/v1/tools",
+                json={
+                    "name": "Selbst erklaert",
+                    "organisationseinheit_id": w.de_id,
+                    "technischer_owner_user_id": w.zugaenge[z].user_id,  # type: ignore[union-attr]
+                },
+                headers=w.kopf(z),
+            )
+        ),
+        SCHREIBT_TOOL,
+    ),
+    Handlung(
+        "prozess_anlegen_im_fremden_bereich",
+        lambda w, z: _status(
+            w.client.post(
+                "/api/v1/prozesse",
+                json={**_prozess_nutzlast(w, z), "prozessgeber_org_id": w.fremde_int_id},
+                headers=w.kopf(z),
+            )
+        ),
+        frozenset({GOVERNANCE, FREMDER}),
+    ),
     # --- Vorgefundene Objekte: der eine Schreibweg der Plattform -------------
     Handlung(
         "importiertes_tool_bestaetigen",
@@ -945,3 +977,66 @@ def test_rechte_am_objekt_stimmen_mit_den_routen_ueberein(welt: Welt) -> None:
             headers=welt.kopf(zugang),
         )
         assert rechte["kategorisieren"] == (geschrieben.status_code == 200), zugang
+
+
+def test_ein_tool_objekt_ohne_einheit_gibt_es_nicht(welt: Welt) -> None:
+    """Der Anker ist Pflicht — und das ist keine Rechte-, sondern eine Gueltigkeitsfrage.
+
+    Deshalb steht das hier und nicht in der Matrix: die Antwort ist 422, nicht
+    403. Ein Tool-Objekt ohne Einheit gehoerte niemandem, waere nur den global
+    lesenden Rollen sichtbar und haette keinen Bereich, an dem sich eine
+    Berechtigung festmachen liesse (R-9).
+    """
+    for zugang in (GOVERNANCE, TECHNIKER, PLATTFORM):
+        antwort = welt.client.post(
+            "/api/v1/tools",
+            json={"name": "Ohne Anker"},
+            headers=welt.kopf(zugang),
+        )
+        assert antwort.status_code == 422, f"{zugang}: {antwort.status_code}"
+        assert "Organisationseinheit" in antwort.json()["detail"]
+
+    # Der Auditor kommt gar nicht erst bis zur Pruefung der Gueltigkeit: die
+    # Rolle liest ausschliesslich, und das entscheidet sich vor der Route.
+    assert (
+        welt.client.post(
+            "/api/v1/tools", json={"name": "Ohne Anker"}, headers=welt.kopf(AUDITOR)
+        ).status_code
+        == 403
+    )
+
+
+def test_wer_nur_liest_kommt_an_keiner_schreibenden_route_vorbei(welt: Welt) -> None:
+    """Die Zusage aus A.15, zentral gezogen statt in jeder Regel einzeln.
+
+    Sie stand bis AP-13 nur als Menge ``NUR_LESEND`` im Code, ohne dass sie
+    jemand las — und ruhte damit darauf, dass keine positive Regel den Auditor
+    trifft. Eine tat es doch (E-58). Jetzt entscheidet die Methode: was nicht
+    liest, ist ihm verwehrt, gleich an welcher Route.
+    """
+    kopf = welt.kopf(AUDITOR)
+    # Lesen geht ueberall, wo er sehen darf.
+    assert welt.client.get("/api/v1/prozesse", headers=kopf).status_code == 200
+    assert welt.client.get(f"/api/v1/tools/{welt.tool}", headers=kopf).status_code == 200
+    assert welt.client.get("/api/v1/nachweis", headers=kopf).status_code == 200
+
+    # Und keine veraendernde Methode kommt durch — auch nicht an Routen, die es
+    # fuer ihn gar nicht gibt: die Sperre greift vor der Route.
+    for methode, pfad, koerper in (
+        ("post", "/api/v1/tools", {"name": "X", "organisationseinheit_id": welt.de_id}),
+        ("patch", f"/api/v1/tools/{welt.tool}", {"beschreibung": "X"}),
+        ("patch", f"/api/v1/prozesse/{welt.prozess}", {"supplier": "X"}),
+        ("post", "/api/v1/datenobjekte", {"name": "X", "fachbereich_id": welt.fachbereich}),
+        ("delete", f"/api/v1/tools/{welt.tool}", None),
+        (
+            "put",
+            "/api/v1/technologiematrix/apps-script/K1",
+            {"bewertung": "erfuellt", "begruendung": "x"},
+        ),
+    ):
+        aufruf = getattr(welt.client, methode)
+        antwort = (
+            aufruf(pfad, json=koerper, headers=kopf) if koerper else aufruf(pfad, headers=kopf)
+        )
+        assert antwort.status_code == 403, f"{methode.upper()} {pfad}: {antwort.status_code}"
+        assert "liest ausschließlich" in antwort.json()["detail"]

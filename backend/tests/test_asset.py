@@ -240,7 +240,7 @@ def test_importiertes_datenobjekt_behaelt_seine_kategorie(
 
 
 def test_tool_zeigt_die_hoechste_geerbte_einstufung(
-    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren
+    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren, organisation
 ) -> None:
     """Abnahmekriterium 3.3: das Maximum ueber alle Prozesskanten."""
     gering = lege_prozess_an(
@@ -256,7 +256,9 @@ def test_tool_zeigt_die_hoechste_geerbte_einstufung(
         customer="extern",
     )
     tool = client.post(
-        "/api/v1/tools", json={"name": "Gemeinsames Tool"}, headers=governance.kopf
+        "/api/v1/tools",
+        json={"name": "Gemeinsames Tool", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
     ).json()
     attestieren(governance.kopf, tool["id"])
 
@@ -281,7 +283,7 @@ def test_tool_zeigt_die_hoechste_geerbte_einstufung(
 
 
 def test_tool_erbt_tier_und_k_klassen_der_bewertungen(
-    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren
+    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren, organisation
 ) -> None:
     from tests.test_bewertung import nutzlast, profil_von
 
@@ -293,7 +295,11 @@ def test_tool_erbt_tier_und_k_klassen_der_bewertungen(
             json=nutzlast(profil),
             headers=owner.kopf,
         )
-    tool = client.post("/api/v1/tools", json={"name": "Erbe"}, headers=governance.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Erbe", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     attestieren(governance.kopf, tool["id"])
     for prozess in (niedrig, hoch):
         client.post(
@@ -307,8 +313,12 @@ def test_tool_erbt_tier_und_k_klassen_der_bewertungen(
     assert geerbt["k_klassen"] == sorted(geerbt["k_klassen"], key=lambda k: int(k[1:]))
 
 
-def test_tool_ohne_prozess_erbt_nichts(client: TestClient, governance) -> None:
-    tool = client.post("/api/v1/tools", json={"name": "Frei"}, headers=governance.kopf).json()
+def test_tool_ohne_prozess_erbt_nichts(client: TestClient, governance, organisation) -> None:
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Frei", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     assert tool["geerbt"] == {
         "kritikalitaet": 0,
         "reichweite": None,
@@ -321,10 +331,14 @@ def test_tool_ohne_prozess_erbt_nichts(client: TestClient, governance) -> None:
 
 
 def test_verknuepfung_loesen_und_doppelte_verknuepfung(
-    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren
+    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren, organisation
 ) -> None:
     prozess = lege_prozess_an(client, owner, vertretung, prozess_daten)
-    tool = client.post("/api/v1/tools", json={"name": "Tool"}, headers=governance.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Tool", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     attestieren(governance.kopf, tool["id"])
     client.post(
         f"/api/v1/tools/{tool['id']}/prozesse",
@@ -509,8 +523,14 @@ def test_prozess_owner_sieht_tools_seiner_prozesse(
     assert [t["name"] for t in sichtbar] == ["Angehaengt"]
 
 
-def test_nur_governance_entfernt_tools(client: TestClient, governance, techniker) -> None:
-    tool = client.post("/api/v1/tools", json={"name": "Wegwerf"}, headers=governance.kopf).json()
+def test_nur_governance_entfernt_tools(
+    client: TestClient, governance, techniker, organisation
+) -> None:
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Wegwerf", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     assert client.delete(f"/api/v1/tools/{tool['id']}", headers=techniker.kopf).status_code == 403
     assert client.delete(f"/api/v1/tools/{tool['id']}", headers=governance.kopf).status_code == 204
     assert client.get(f"/api/v1/tools/{tool['id']}", headers=governance.kopf).status_code == 404
@@ -627,7 +647,9 @@ def test_filter_ohne_prozess_und_ohne_kategorie(
 ) -> None:
     prozess = lege_prozess_an(client, owner, vertretung, prozess_daten)
     verknuepft = client.post(
-        "/api/v1/tools", json={"name": "Verknuepft"}, headers=governance.kopf
+        "/api/v1/tools",
+        json={"name": "Verknuepft", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
     ).json()
     attestieren(governance.kopf, verknuepft["id"])
     client.post(
@@ -635,7 +657,11 @@ def test_filter_ohne_prozess_und_ohne_kategorie(
         json={"prozessobjekt_id": prozess["id"]},
         headers=governance.kopf,
     )
-    client.post("/api/v1/tools", json={"name": "Waise"}, headers=governance.kopf)
+    client.post(
+        "/api/v1/tools",
+        json={"name": "Waise", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    )
 
     ohne = client.get("/api/v1/tools?ohne_prozess=true", headers=governance.kopf).json()
     assert [t["name"] for t in ohne] == ["Waise"]
@@ -660,9 +686,13 @@ def test_filter_ohne_prozess_und_ohne_kategorie(
     assert [d["name"] for d in unkategorisiert] == ["Ohne Kategorie"]
 
 
-def test_status_filter_auf_tools(client: TestClient, plattform, governance) -> None:
+def test_status_filter_auf_tools(client: TestClient, plattform, governance, organisation) -> None:
     importiere(client, plattform, [{"typ": "tool", "externe_id": "T-9", "name": "Neu"}])
-    client.post("/api/v1/tools", json={"name": "Bestaetigt"}, headers=governance.kopf)
+    client.post(
+        "/api/v1/tools",
+        json={"name": "Bestaetigt", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    )
     unbestaetigt = client.get(
         "/api/v1/tools?status_filter=importiert_unbestaetigt", headers=governance.kopf
     ).json()
@@ -671,7 +701,9 @@ def test_status_filter_auf_tools(client: TestClient, plattform, governance) -> N
 
 def test_tool_liest_und_schreibt_datenobjekte(client: TestClient, governance, organisation) -> None:
     tool = client.post(
-        "/api/v1/tools", json={"name": "Verarbeiter"}, headers=governance.kopf
+        "/api/v1/tools",
+        json={"name": "Verarbeiter", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
     ).json()
     datenobjekt = client.post(
         "/api/v1/datenobjekte",
@@ -735,11 +767,15 @@ def test_datenobjekt_bestaetigen_heisst_zuordnen(
     assert danach.status_code == 403
 
 
-def test_assetaenderungen_landen_im_nachweis(client: TestClient, governance, db) -> None:
+def test_assetaenderungen_landen_im_nachweis(
+    client: TestClient, governance, db, organisation
+) -> None:
     from app.models.audit import ChangeLog
 
     tool = client.post(
-        "/api/v1/tools", json={"name": "Protokolliert"}, headers=governance.kopf
+        "/api/v1/tools",
+        json={"name": "Protokolliert", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
     ).json()
     client.patch(
         f"/api/v1/tools/{tool['id']}", json={"beschreibung": "neu"}, headers=governance.kopf
@@ -853,7 +889,9 @@ def test_wirkung_zeigt_betroffene_prozesse_und_tools(
         input_datenobjekt_ids=[datenobjekt["id"]],
     )
     tool = client.post(
-        "/api/v1/tools", json={"name": "Berichtsskript"}, headers=governance.kopf
+        "/api/v1/tools",
+        json={"name": "Berichtsskript", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
     ).json()
     attestieren(governance.kopf, tool["id"])
     client.post(
@@ -956,11 +994,15 @@ def test_job_rechnet_ableitungen_nach(
 
 
 def test_ohne_attestierung_keine_prozessverknuepfung(
-    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren
+    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren, organisation
 ) -> None:
     """A.6: die drei Erklaerungen tragen die Triage — vorher gibt es keine Kante."""
     prozess = lege_prozess_an(client, owner, vertretung, prozess_daten)
-    tool = client.post("/api/v1/tools", json={"name": "Skript"}, headers=governance.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Skript", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     assert tool["attestierung_vollstaendig"] is False
     assert tool["attest_mensch_dazwischen"] is None
 
@@ -982,10 +1024,14 @@ def test_ohne_attestierung_keine_prozessverknuepfung(
 
 
 def test_attestierung_traegt_person_und_zeitpunkt(
-    client: TestClient, governance, attestieren
+    client: TestClient, governance, attestieren, organisation
 ) -> None:
     """A.6 verlangt die Erklaerung „mit Namen"; beides setzt der Server."""
-    tool = client.post("/api/v1/tools", json={"name": "Skript"}, headers=governance.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Skript", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     erklaert = attestieren(governance.kopf, tool["id"], attest_undeklarierte_quellen=True)
     assert erklaert["attestierung_vollstaendig"] is True
     assert erklaert["attest_undeklarierte_quellen"] is True
@@ -993,9 +1039,15 @@ def test_attestierung_traegt_person_und_zeitpunkt(
     assert erklaert["attestiert_am"] is not None
 
 
-def test_teilweise_attestierung_wird_abgewiesen(client: TestClient, governance) -> None:
+def test_teilweise_attestierung_wird_abgewiesen(
+    client: TestClient, governance, organisation
+) -> None:
     """Eine Erklaerung zu einem Zeitpunkt, keine Sammlung einzelner Felder."""
-    tool = client.post("/api/v1/tools", json={"name": "Skript"}, headers=governance.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Skript", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     antwort = client.put(
         f"/api/v1/tools/{tool['id']}/attestierungen",
         json={"attest_mensch_dazwischen": True},
@@ -1004,8 +1056,19 @@ def test_teilweise_attestierung_wird_abgewiesen(client: TestClient, governance) 
     assert antwort.status_code == 422
 
 
-def test_fremde_duerfen_nicht_attestieren(client: TestClient, governance, techniker) -> None:
-    tool = client.post("/api/v1/tools", json={"name": "Fremd"}, headers=governance.kopf).json()
+def test_fremde_duerfen_nicht_attestieren(
+    client: TestClient, governance, techniker, organisation
+) -> None:
+    """A.10.3: die Erklaerung gibt der technische Owner **dieses** Tools ab.
+
+    Das Tool liegt bewusst in einem anderen Fachbereich als der Techniker —
+    seine Rolle allein genuegt nicht, es zaehlt der Bereich (P-App-3).
+    """
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Fremd", "organisationseinheit_id": organisation["hr_int"]},
+        headers=governance.kopf,
+    ).json()
     antwort = client.put(
         f"/api/v1/tools/{tool['id']}/attestierungen",
         json={
@@ -1022,10 +1085,14 @@ def test_fremde_duerfen_nicht_attestieren(client: TestClient, governance, techni
 
 
 def test_wirkungsart_bleibt_offen_solange_niemand_erklaert_hat(
-    client: TestClient, governance
+    client: TestClient, governance, organisation
 ) -> None:
     """Ohne Attestierung 2 darf niemand „gestaltend" behaupten."""
-    tool = client.post("/api/v1/tools", json={"name": "Unklar"}, headers=governance.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Unklar", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     assert tool["wirkungsart"] is None
     assert tool["wirkungsart_grund"] == "offen"
 
@@ -1033,7 +1100,11 @@ def test_wirkungsart_bleibt_offen_solange_niemand_erklaert_hat(
 def test_nur_lesendes_tool_mit_mensch_dazwischen_gestaltet(
     client: TestClient, governance, attestieren, organisation
 ) -> None:
-    tool = client.post("/api/v1/tools", json={"name": "Bericht"}, headers=governance.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Bericht", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     datenobjekt = client.post(
         "/api/v1/datenobjekte",
         json={"name": "Umsaetze", "fachbereich_id": organisation["fachbereich_finance"]},
@@ -1053,7 +1124,11 @@ def test_kein_mensch_dazwischen_macht_auch_reines_lesen_veraendernd(
     client: TestClient, governance, attestieren, organisation
 ) -> None:
     """Die Warnung aus A.6: das sieht man an keiner Berechtigung."""
-    tool = client.post("/api/v1/tools", json={"name": "Autopilot"}, headers=governance.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Autopilot", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     datenobjekt = client.post(
         "/api/v1/datenobjekte",
         json={"name": "Bewerbungen", "fachbereich_id": organisation["fachbereich_finance"]},
@@ -1072,7 +1147,11 @@ def test_kein_mensch_dazwischen_macht_auch_reines_lesen_veraendernd(
 def test_schreibzugriff_macht_das_tool_veraendernd(
     client: TestClient, governance, attestieren, organisation
 ) -> None:
-    tool = client.post("/api/v1/tools", json={"name": "Bucher"}, headers=governance.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Bucher", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     attestieren(governance.kopf, tool["id"])
     datenobjekt = client.post(
         "/api/v1/datenobjekte",
@@ -1117,7 +1196,11 @@ def test_zweckbindung_erkennt_datenobjekt_ausserhalb_des_prozessrahmens(
     prozess = lege_prozess_an(
         client, owner, vertretung, prozess_daten, input_datenobjekt_ids=[erlaubt["id"]]
     )
-    tool = client.post("/api/v1/tools", json={"name": "Skript"}, headers=governance.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Skript", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     attestieren(governance.kopf, tool["id"])
     client.post(
         f"/api/v1/tools/{tool['id']}/prozesse",
@@ -1169,7 +1252,11 @@ def test_gleiche_kategorie_deckt_das_datenobjekt_nur_schwach(
     prozess = lege_prozess_an(
         client, owner, vertretung, prozess_daten, input_datenobjekt_ids=[erklaert["id"]]
     )
-    tool = client.post("/api/v1/tools", json={"name": "Skript"}, headers=governance.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Skript", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     attestieren(governance.kopf, tool["id"])
     client.post(
         f"/api/v1/tools/{tool['id']}/prozesse",
@@ -1189,7 +1276,11 @@ def test_gleiche_kategorie_deckt_das_datenobjekt_nur_schwach(
 
 
 def test_zugriffsart_aendern_und_kante_loesen(client: TestClient, governance, organisation) -> None:
-    tool = client.post("/api/v1/tools", json={"name": "Skript"}, headers=governance.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Skript", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     datenobjekt = client.post(
         "/api/v1/datenobjekte",
         json={"name": "Belege", "fachbereich_id": organisation["fachbereich_finance"]},
@@ -1234,7 +1325,11 @@ def test_datenkante_steht_im_changelog(client: TestClient, governance, db, organ
     """Architektur 10.4: kein schreibender Vorgang ohne Nachweis."""
     from app.models.audit import ChangeLog
 
-    tool = client.post("/api/v1/tools", json={"name": "Skript"}, headers=governance.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Skript", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     datenobjekt = client.post(
         "/api/v1/datenobjekte",
         json={"name": "Belege", "fachbereich_id": organisation["fachbereich_finance"]},
@@ -1260,7 +1355,7 @@ def test_datenkante_steht_im_changelog(client: TestClient, governance, db, organ
 
 
 def test_geerbtes_maximum_nennt_die_massgebliche_kante(
-    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren
+    client: TestClient, governance, owner, vertretung, prozess_daten, attestieren, organisation
 ) -> None:
     gering = lege_prozess_an(
         client, owner, vertretung, prozess_daten, name="Gering", ausfallfolge="gering"
@@ -1274,7 +1369,11 @@ def test_geerbtes_maximum_nennt_die_massgebliche_kante(
         ausfallfolge="kritisch",
         customer="extern",
     )
-    tool = client.post("/api/v1/tools", json={"name": "Beides"}, headers=governance.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Beides", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     attestieren(governance.kopf, tool["id"])
     for prozess in (gering, kritisch):
         client.post(
@@ -1310,7 +1409,11 @@ def test_attestierung_ueber_personen_macht_den_prozess_mitbestimmungsrelevant(
     )
     assert prozess["mitbestimmung_flag"] is False
 
-    tool = client.post("/api/v1/tools", json={"name": "Bewerter"}, headers=governance.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Bewerter", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     attestieren(governance.kopf, tool["id"], attest_entscheidung_ueber_personen=True)
     client.post(
         f"/api/v1/tools/{tool['id']}/prozesse",
@@ -1369,7 +1472,11 @@ def test_nachtraegliche_attestierung_zieht_die_ableitung_nach(
     prozess = lege_prozess_an(
         client, owner, vertretung, prozess_daten, input_datenobjekt_ids=[datenobjekt["id"]]
     )
-    tool = client.post("/api/v1/tools", json={"name": "Bewerter"}, headers=governance.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Bewerter", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     attestieren(governance.kopf, tool["id"])
     client.post(
         f"/api/v1/tools/{tool['id']}/prozesse",

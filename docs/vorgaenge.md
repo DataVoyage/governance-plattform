@@ -135,6 +135,7 @@ ihn zu hinterlegen, bekommt einen roten Test — und umgekehrt.
 | V-TOO-17 | Einen Compliance-Zustand melden | technischer Owner | Der Zustand steht oben in der Zeitreihe; ältere bleiben stehen | AP-3 | erfüllt |
 | V-TOO-18 | Den Erlaubnisrahmen des Tools ansehen | technischer Owner | Erlaubt, gemessen und Abweichung stehen nebeneinander | AP-6 | erfüllt |
 | V-TOO-19 | Einheit und technischen Owner im eigenen Bereich wählen | technischer Owner | Die Einheitenauswahl endet am eigenen Bereich; die Personen dazu kommen aus dem Bereich, nicht aus der Nutzerverwaltung | AP-11 | erfüllt |
+| V-TOO-20 | Sich selbst als technischen Owner eintragen und anlegen | Prozess-Umsetzer | Abgewiesen: die Erlaubnis entscheidet der Anker, nicht die Nutzlast; ohne Einheit gibt es kein Tool-Objekt | AP-13 | erfüllt |
 
 ## V-BEW — Bewertung
 
@@ -176,6 +177,7 @@ ihn zu hinterlegen, bekommt einen roten Test — und umgekehrt.
 | V-GAT-04 | Gate 2 ohne Auslöser einreichen | Prozess-Owner | Das Einreichen ist nicht möglich | AP-5 | erfüllt |
 | V-GAT-05 | Gate 2 mit einem Auslöser aus A.11 einreichen | Prozess-Owner | Nur die fünf benannten Auslöser stehen zur Wahl, kein freier Grund | AP-5 | erfüllt |
 | V-GAT-06 | Als Nicht-Governance eine Entscheidung suchen | Prozess-Owner | Es gibt keine Entscheidungsmöglichkeit in der Oberfläche | AP-5 | erfüllt |
+| V-GAT-07 | Ein laufender Prozess steigt auf Tier 3 | Prozess-Owner | Die Freigabe entfällt: Status „Freigabe ausstehend“ mit Begründung, und der Gate-1-Vorgang liegt bereits vor | AP-15 | erfüllt |
 
 ## V-RAH — Erlaubnisrahmen und Lenkung
 

@@ -189,7 +189,7 @@ def test_besondere_kategorie_schlaegt_mitbestimmung_vor(
 
 
 def test_attestierung_1_traegt_den_mb_vorschlag(
-    client: TestClient, owner, prozess_mit, datenobjekt, attestieren
+    client: TestClient, owner, prozess_mit, datenobjekt, attestieren, organisation
 ) -> None:
     """A.6-Attestierung 1 ist die zweite Haelfte der Konjunktion aus A.5."""
     kontakt = datenobjekt("Bewerberdaten", "personenbezogen")
@@ -200,7 +200,11 @@ def test_attestierung_1_traegt_den_mb_vorschlag(
     assert vorher["id"] == "3a"
     assert vorher["vorschlag"] is None
 
-    tool = client.post("/api/v1/tools", json={"name": "Vorauswahl"}, headers=owner.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Vorauswahl", "organisationseinheit_id": organisation["fin_de"]},
+        headers=owner.kopf,
+    ).json()
     attestieren(owner.kopf, tool["id"], attest_entscheidung_ueber_personen=True)
     verknuepft = client.post(
         f"/api/v1/tools/{tool['id']}/prozesse",
@@ -216,11 +220,15 @@ def test_attestierung_1_traegt_den_mb_vorschlag(
 
 
 def test_attestierung_2_traegt_den_vorschlag_zum_arbeitsablauf(
-    client: TestClient, owner, prozess_mit, datenobjekt, attestieren
+    client: TestClient, owner, prozess_mit, datenobjekt, attestieren, organisation
 ) -> None:
     buchungen = datenobjekt("Buchungen", "intern")
     prozess = prozess_mit(input_datenobjekt_ids=[buchungen["id"]])
-    tool = client.post("/api/v1/tools", json={"name": "Autobucher"}, headers=owner.kopf).json()
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Autobucher", "organisationseinheit_id": organisation["fin_de"]},
+        headers=owner.kopf,
+    ).json()
     attestieren(owner.kopf, tool["id"], attest_mensch_dazwischen=False)
     client.post(
         f"/api/v1/tools/{tool['id']}/prozesse",

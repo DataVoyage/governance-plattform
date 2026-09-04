@@ -248,11 +248,13 @@ def test_technischer_owner_verpflichtet_sich_fuer_sein_tool(
 
 
 def test_tool_selbstverpflichtung_erbt_die_befristung_des_prozesses(
-    client: TestClient, governance, owner, prozess, attestieren
+    client: TestClient, governance, owner, prozess, attestieren, organisation
 ) -> None:
     bewerte(client, owner, prozess["id"], ds=3)
     tool = client.post(
-        "/api/v1/tools", json={"name": "Tier-3-Tool"}, headers=governance.kopf
+        "/api/v1/tools",
+        json={"name": "Tier-3-Tool", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
     ).json()
     attestieren(governance.kopf, tool["id"])
     client.post(
@@ -561,7 +563,7 @@ def test_unbefristete_selbstverpflichtung_laeuft_nicht_ab(
 
 
 def test_erinnerung_geht_an_den_technischen_owner(
-    client: TestClient, governance, owner, prozess, db, attestieren
+    client: TestClient, governance, owner, prozess, db, attestieren, organisation
 ) -> None:
     from app.models.governance import Benachrichtigung, Selbstverpflichtung
     from app.services import erinnerung
@@ -569,7 +571,11 @@ def test_erinnerung_geht_an_den_technischen_owner(
     bewerte(client, owner, prozess["id"], ds=3)
     tool = client.post(
         "/api/v1/tools",
-        json={"name": "Tier-3-Tool", "technischer_owner_user_id": governance.user_id},
+        json={
+            "name": "Tier-3-Tool",
+            "technischer_owner_user_id": governance.user_id,
+            "organisationseinheit_id": organisation["fin_de"],
+        },
         headers=governance.kopf,
     ).json()
     attestieren(governance.kopf, tool["id"])
@@ -606,3 +612,81 @@ def test_job_laesst_sich_starten(client: TestClient, owner, prozess, db) -> None
     gib_selbstverpflichtung(client, owner, prozess["id"])
     db.commit()
     assert jobs.main(["erinnerungen"]) == 0
+
+
+def test_aufstieg_auf_tier_3_entzieht_dem_laufenden_prozess_die_freigabe(
+    client: TestClient, owner, governance, prozess, db
+) -> None:
+    """Gate 1 ist die Tier-3-Erstfreigabe — auch wenn sie spaeter faellig wird (E-60).
+
+    ``pruefe_aktivierung`` haengt am Statuswechsel: wer schon aktiv ist, kam nie
+    wieder daran vorbei. Ein Prozessobjekt konnte damit von Tier 1 auf Tier 3
+    wechseln und ohne Gate weiterlaufen — die Freigabe deckte eine Einstufung,
+    die es nicht mehr hatte.
+    """
+    bewerte(client, owner, prozess["id"])  # Tier 1
+    assert (
+        client.patch(
+            f"/api/v1/prozesse/{prozess['id']}", json={"status": "aktiv"}, headers=owner.kopf
+        ).status_code
+        == 200
+    )
+
+    bewerte(client, owner, prozess["id"], ds=3)  # hebt auf Tier 3
+    nach = client.get(f"/api/v1/prozesse/{prozess['id']}", headers=owner.kopf).json()
+    assert nach["tier"] == 3
+    assert nach["status"] == "freigabe_ausstehend", "laeuft, aber nicht mehr freigegeben"
+
+    # Der Vorgang entsteht von selbst — dieselbe Bauart wie beim dritten
+    # Gate-2-Ausloeser (A.11): wer bewertet, meldet damit den Anlass.
+    gates = client.get(f"/api/v1/prozesse/{prozess['id']}/gates", headers=owner.kopf).json()
+    offene = [g for g in gates if g["gate_typ"] == "1" and g["status"] == "eingereicht"]
+    assert len(offene) == 1, gates
+    assert "Tier 3" in offene[0]["begruendung"]
+
+    # Und zurueck geht es nur ueber denselben Torwaechter wie beim ersten Mal.
+    verweigert = client.patch(
+        f"/api/v1/prozesse/{prozess['id']}", json={"status": "aktiv"}, headers=owner.kopf
+    )
+    assert verweigert.status_code == 422
+    assert "Selbstverpflichtung" in verweigert.text or "Gate 1" in verweigert.text
+
+
+def test_aufstieg_auf_tier_2_haelt_den_prozess_nicht_an(client: TestClient, owner, prozess) -> None:
+    """A.11: fuer Tier 1 und 2 gibt es ausdruecklich kein Gate.
+
+    Einen laufenden Prozess dafuer anzuhalten waere eine Bremse, die das
+    Konzept nicht will — der goldene Pfad ist ausdruecklich gateweise definiert.
+    """
+    bewerte(client, owner, prozess["id"])
+    client.patch(f"/api/v1/prozesse/{prozess['id']}", json={"status": "aktiv"}, headers=owner.kopf)
+    bewerte(client, owner, prozess["id"], it=2)
+    nach = client.get(f"/api/v1/prozesse/{prozess['id']}", headers=owner.kopf).json()
+    assert nach["tier"] == 2
+    assert nach["status"] == "aktiv"
+
+
+def test_erneute_tier_3_bewertung_behaelt_die_freigabe(
+    client: TestClient, owner, governance, prozess, db
+) -> None:
+    """Die Freigabe gilt dem Rahmen, nicht dem Stand (A.11, Envelope-Modell).
+
+    Wer schon einmal durch Gate 1 ging, geht nach einer Neubewertung auf
+    derselben Stufe nicht erneut hindurch. Die Selbstverpflichtung dagegen
+    haengt an der Bewertung und ist neu abzugeben (A.10.4) — das ist der
+    Unterschied, den die beiden Regeln machen.
+    """
+    bewerte(client, owner, prozess["id"], ds=3)
+    gib_selbstverpflichtung(client, owner, prozess["id"])
+    vorgang = gate_einreichen(client, owner, prozess["id"], gate_typ="1").json()
+    client.post(
+        f"/api/v1/gates/{vorgang['id']}/entscheidung",
+        json={"status": "freigegeben", "kommentar": "Auflagen umgesetzt"},
+        headers=governance.kopf,
+    )
+    client.patch(f"/api/v1/prozesse/{prozess['id']}", json={"status": "aktiv"}, headers=owner.kopf)
+
+    bewerte(client, owner, prozess["id"], ds=3)
+    nach = client.get(f"/api/v1/prozesse/{prozess['id']}", headers=owner.kopf).json()
+    assert nach["tier"] == 3
+    assert nach["status"] == "aktiv", "die Freigabe deckt den Rahmen weiter"

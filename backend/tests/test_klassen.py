@@ -200,9 +200,17 @@ def test_unbekannte_technologie_oder_klasse(client: TestClient, governance) -> N
 # --- Abgleich (A.9.3) -----------------------------------------------------
 
 
-def test_ohne_prozesskante_gibt_es_nichts_abzugleichen(client: TestClient, governance) -> None:
+def test_ohne_prozesskante_gibt_es_nichts_abzugleichen(
+    client: TestClient, governance, organisation
+) -> None:
     tool = client.post(
-        "/api/v1/tools", json={"name": "Frei", "technologie": "appsheet"}, headers=governance.kopf
+        "/api/v1/tools",
+        json={
+            "name": "Frei",
+            "technologie": "appsheet",
+            "organisationseinheit_id": organisation["fin_de"],
+        },
+        headers=governance.kopf,
     ).json()
     inhalt = befund(client, governance, tool["id"])
     assert inhalt["k_klassen"] == []

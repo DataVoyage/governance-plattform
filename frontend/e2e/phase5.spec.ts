@@ -91,7 +91,11 @@ async function tier3Tool(anfrage: APIRequestContext) {
   const tool = await (
     await anfrage.post(`${API}/api/v1/tools`, {
       headers: h,
-      data: { name: `Tool ${kennung}`, technischer_owner_user_id: ich.id },
+      data: {
+        name: `Tool ${kennung}`,
+        technischer_owner_user_id: ich.id,
+        organisationseinheit_id: int.id,
+      },
     })
   ).json();
   // Ohne die drei Erklaerungen aus A.6 gibt es keine Prozesskante — und ohne
@@ -154,9 +158,7 @@ test.describe('Phase 5 in der Oberflaeche', () => {
     await page.getByLabel('Art der Abweichung').fill('datenobjekt_ausserhalb_rahmen');
     await page.getByRole('button', { name: 'Zustand melden' }).click();
 
-    await expect(page.getByTestId('aktueller-zustand')).toContainText(
-      'Rot — Rahmenüberschreitung',
-    );
+    await expect(page.getByTestId('aktueller-zustand')).toContainText('Rot — Rahmenüberschreitung');
 
     await page.getByRole('link', { name: 'Lenkung', exact: true }).click();
     const meine = karte(page, toolName);

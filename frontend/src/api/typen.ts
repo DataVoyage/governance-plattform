@@ -2,7 +2,12 @@
 
 export type Kundenkreis = 'persoenlich' | 'team' | 'bereich' | 'unternehmen' | 'extern';
 export type Ausfallfolge = 'keine' | 'gering' | 'spuerbar' | 'kritisch';
-export type ProzessStatus = 'entwurf' | 'aktiv' | 'stillgelegt';
+/**
+ * Vier Zustände, und der vierte ist der wichtigste: `freigabe_ausstehend`
+ * heißt **läuft, ist aber für seine jetzige Einstufung nicht freigegeben** —
+ * anders als `entwurf`, das „noch nie in Betrieb" heißt (E-60).
+ */
+export type ProzessStatus = 'entwurf' | 'aktiv' | 'freigabe_ausstehend' | 'stillgelegt';
 export type Ebene = 'INT' | 'LAND';
 
 /** Die acht Rollen aus Leitdokument A.15. */

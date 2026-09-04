@@ -499,6 +499,28 @@ zeigten fremde Bereiche und alle Nutzernamen; wer sich selbst als Owner eintrug,
       für den Prozess-Owner durchgängig
 - [x] `docs/rollen-und-scopes.md` Abschnitt 9 ohne offene Punkte
 
+### AP-13 — Die Nutzlast erteilt keine Erlaubnis *(E-58)*
+
+**Anwendervorgänge:** V-TOO-20.
+
+- [x] `lege_tool_an` entscheidet am Anker: Einheit ist Pflicht, geprüft wird die Rolle dort
+      (R-16, damit auch R-9)
+- [x] `NUR_LESEND` wird durchgesetzt — zentral in `deps.py`, nicht in jeder Regel (R-17)
+- [x] Die Rollenmatrix prüft neben jeder Anlage auch die manipulierte Nutzlast
+- [x] `docs/rollen-und-scopes.md`: „Die Erlaubnis entscheidet der Anker, nie die Nutzlast"
+      als Regel für jede anlegende Route
+
+### AP-15 — Freigabe folgt dem Tier, nicht dem Statuswechsel *(E-60)*
+
+**Anwendervorgänge:** V-GAT-07.
+
+- [x] Vierter Prozessstatus `freigabe_ausstehend` (Migration `e1b6f3d27a94`): läuft, ist aber
+      für seine jetzige Einstufung nicht freigegeben
+- [x] Ein Aufstieg auf Tier 3 im Betrieb entzieht die Freigabe und reicht den Gate-1-Vorgang
+      von selbst ein; Tier 1/2 hält nichts an, eine bestehende Gate-1-Freigabe bleibt
+- [x] Oberfläche: rotes Abzeichen und ein Satz, was zu tun ist
+- [x] Beispielbestand zeigt den Fall (Lieferantenbewertung Food, Tier 1 → 3 im Betrieb)
+
 ---
 
 ## 3. Reihenfolge und Meilensteine

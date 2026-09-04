@@ -101,7 +101,10 @@ async function landschaft(anfrage: APIRequestContext) {
     data: { erlaubte_externe_ziele: ['sftp.partner.example'] },
   });
   const tool = await json(
-    await anfrage.post(`${API}/api/v1/tools`, { headers: h, data: { name: `Tool ${kennung}` } }),
+    await anfrage.post(`${API}/api/v1/tools`, {
+      headers: h,
+      data: { name: `Tool ${kennung}`, organisationseinheit_id: int.id },
+    }),
   );
   // Ohne die drei Erklaerungen aus A.6 gibt es keine Prozesskante.
   await anfrage.put(`${API}/api/v1/tools/${tool.id}/attestierungen`, {

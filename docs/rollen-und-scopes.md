@@ -153,7 +153,7 @@ Leitdokument eine persönliche Verantwortung verlangt.
 |---|---|---|---|
 | **Prozessobjekt** | Prozessgeber-Einheit (Pflicht) | Owner + Stellvertretung (Pflicht) | A.5/A.10.2: der Prozesseigner erklärt persönlich |
 | **Umsetzung** | Landes-Einheit (Pflicht) | — | gehört zum Prozess, nur die Abweichung ist lokal |
-| **Tool-Objekt** | Einheit (Pflicht, s. R-9) | Technischer Owner + Stellvertretung | A.6/A.10.3: der Entwickler attestiert persönlich |
+| **Tool-Objekt** | Einheit (Pflicht) | Technischer Owner + Stellvertretung | A.6/A.10.3: der Entwickler attestiert persönlich |
 | **Datenobjekt** | **Fachbereich** (Pflicht, s. Abschnitt 7) | **keine** | A.7: eine Quelle gehört einer datenhaltenden Stelle |
 | Bewertung, Selbstverpflichtung, Gate | erben vom Prozessobjekt | — | sind Zustände des Prozesses |
 | Lenkungsvorgang | erbt vom Tool-Objekt | zugewiesen an | A.13.5: der Owner des Tools löst auf |
@@ -421,8 +421,18 @@ sie standen so im Dokument, aber nicht im Code:
 | **R-13** | Der Prozess-Owner einer Kante durfte das Tool-Objekt vollständig schreiben — bis hin zur Attestierung | `darf_tool_schreiben` endet beim technischen Owner; für die Kante gibt es `darf_tool_verknuepfen` |
 | **R-14** | Der Prozess-Owner durfte eine Umsetzung anlegen, ihre lokale Abweichung aber nicht ändern | Beide Wege prüfen jetzt dasselbe |
 | **R-15** | Der App-Administrator durfte Assets importieren, entgegen dem eigenen Docstring | Import ausschließlich Plattform |
+| **R-16** | Beim Anlegen eines Tool-Objekts entschied die **Nutzlast**: wer sich selbst als technischen Owner eintrug, erfüllte die Bedingung, die er gerade gesetzt hatte — jeder Angemeldete konnte anlegen, attestieren und an einen fremden Prozess hängen | Der Anker entscheidet: Einheit ist Pflicht, geprüft wird die Rolle dort (R-9 damit ebenfalls erledigt) |
+| **R-17** | `NUR_LESEND` war unbenutzt — die Zusage „der Auditor ändert nichts" ruhte allein darauf, dass keine Regel ihn trifft | Zentral in `deps.py`: wer nur lesende Rollen trägt, kommt an keiner verändernden Methode vorbei |
 
 Die Matrix aus Abschnitt 5 ist als ausführbare Tabelle hinterlegt:
-`backend/tests/test_rollen_und_scopes.py` fährt **jede Zelle** an — 39
+`backend/tests/test_rollen_und_scopes.py` fährt **jede Zelle** an — 41
 Handlungen mal 11 Zugänge — und prüft für jede einzeln, ob sie erlaubt oder
 verweigert wird. Ein Recht, das nirgends verweigert wird, fällt dort auf.
+
+**Eine Regel für jede Route, die anlegt.** Die Erlaubnis entscheidet der
+**Anker**, nie die Nutzlast. Wer ein Objekt anlegt, gibt darin an, wem es
+gehören soll — und diese Angabe darf niemals die Erlaubnis begründen, über die
+sie entscheidet. Sonst erteilt sich jeder die Rechte selbst, indem er seinen
+Namen einträgt. Deshalb steht in der Tabelle neben jeder Anlage auch die
+Fassung mit **manipulierter** Nutzlast: die Matrix prüfte anfangs nur, was ein
+Formular schickt, und übersah damit R-16.

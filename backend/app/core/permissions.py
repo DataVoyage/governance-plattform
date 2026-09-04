@@ -24,6 +24,12 @@ from app.models.enums import Rolle, ScopeTyp
 GLOBAL_LESEND: frozenset[Rolle] = frozenset({Rolle.GOVERNANCE, Rolle.AUDITOR, Rolle.PLATTFORM})
 
 #: Ausschliesslich lesende Rollen — nie schreibberechtigt.
+#:
+#: Durchgesetzt wird das in ``app.api.deps``: wer **nur** solche Rollen traegt,
+#: kommt an keiner veraendernden Route vorbei. Bis AP-13 war diese Menge
+#: unbenutzt und die Zusage ruhte allein darauf, dass keine positive Regel den
+#: Auditor traf — bis eine es doch tat (E-58). Eine Zusage, die sich aus der
+#: Abwesenheit von Gegenbeispielen ergibt, ist keine.
 NUR_LESEND: frozenset[Rolle] = frozenset({Rolle.AUDITOR})
 
 
@@ -116,6 +122,15 @@ class Principal:
     @property
     def ist_administrator(self) -> bool:
         return self.hat_rolle(Rolle.APP_ADMINISTRATOR)
+
+    @property
+    def ist_nur_lesend(self) -> bool:
+        """Traegt er ausschliesslich lesende Rollen?
+
+        Wer neben dem Auditor noch eine andere Rolle hat, ist kein reiner
+        Auditor mehr — dann gilt, was diese andere Rolle hergibt.
+        """
+        return bool(self.rollen) and self.rollen <= NUR_LESEND
 
     @property
     def sieht_global(self) -> bool:

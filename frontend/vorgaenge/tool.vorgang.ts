@@ -498,3 +498,54 @@ vorgang('V-TOO-19', async ({ page, request }) => {
   const personen = await blatt.getByLabel('Technischer Owner').locator('option').allTextContents();
   expect(personen).toContain(`Technischer Owner ${marke}`);
 });
+
+vorgang('V-TOO-20', async ({ request }) => {
+  // Ein Vorgang ohne Oberfläche, mit Absicht: geprüft wird nicht, was ein
+  // Formular schickt, sondern was jemand schicken könnte. Wer sich selbst als
+  // technischen Owner einträgt, erfüllte damit früher die Bedingung, über die
+  // entschieden wird — und konnte anlegen, attestieren und sein Werkzeug an
+  // einen fremden Prozess hängen (E-58).
+  const marke = kennzeichen();
+  const org: Organisation = await organisation(request, marke);
+  const prozess = await prozessAnlegen(request, org, {
+    name: `Fremd gefuehrt ${marke}`,
+    umsetzung_land_org_ids: [org.deId],
+  });
+
+  // Ein Prozess-Umsetzer: sein einziges Recht ist die lokale Abweichung.
+  const kennung = `umsetzer-${marke}`;
+  const ich = await anwenderMitRolle(
+    request,
+    kennung,
+    `Umsetzer ${marke}`,
+    'prozess_umsetzer',
+    'organisationseinheit',
+    org.deId,
+  );
+  const h = await kopf(request, kennung, `Umsetzer ${marke}`);
+
+  // Er sieht den Prozess — das ist richtig so.
+  expect((await request.get(`${API}/api/v1/prozesse/${prozess.id}`, { headers: h })).status()).toBe(
+    200,
+  );
+
+  // Aber kein Tool-Objekt anlegen, auch nicht mit sich selbst als Owner.
+  for (const daten of [
+    { name: `Ohne Owner ${marke}`, organisationseinheit_id: org.deId },
+    {
+      name: `Mit sich selbst ${marke}`,
+      organisationseinheit_id: org.deId,
+      technischer_owner_user_id: ich,
+    },
+  ]) {
+    const antwort = await request.post(`${API}/api/v1/tools`, { headers: h, data: daten });
+    expect(antwort.status(), `angelegt mit ${JSON.stringify(daten)}`).toBe(403);
+  }
+
+  // Und ohne Einheit gibt es kein Tool-Objekt — auch nicht für die Governance.
+  const ohneAnker = await request.post(`${API}/api/v1/tools`, {
+    headers: await kopf(request),
+    data: { name: `Ohne Anker ${marke}` },
+  });
+  expect(ohneAnker.status()).toBe(422);
+});

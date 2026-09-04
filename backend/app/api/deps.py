@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Annotated
 
-from fastapi import Depends, Header, HTTPException, status
+from fastapi import Depends, Header, HTTPException, Request, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
@@ -92,7 +92,12 @@ def lade_principal(db: Session, user: User) -> Principal:
     )
 
 
+#: Anfragen, die nichts veraendern. Alles andere ist ein Schreibzugriff.
+LESENDE_METHODEN = frozenset({"GET", "HEAD", "OPTIONS"})
+
+
 def get_principal(
+    request: Request,
     db: DbSession,
     settings: Konfig,
     authorization: Annotated[str | None, Header()] = None,
@@ -111,7 +116,17 @@ def get_principal(
     gewaehre_erstzugang(db, user, settings)
     if not user.ist_aktiv:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Nutzer ist deaktiviert")
-    return lade_principal(db, user)
+    principal = lade_principal(db, user)
+    # Die eine Zusage, die nicht von einer einzelnen Regel abhaengen darf: der
+    # Auditor aendert nichts (A.15). Sie hier zu ziehen ist Absicht — an einer
+    # Stelle, die jede Route passiert, statt in jeder Schreibregel einzeln.
+    # Genau das hatte gefehlt, als eine Anlageroute ihn durchliess (E-58).
+    if principal.ist_nur_lesend and request.method not in LESENDE_METHODEN:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Diese Rolle liest ausschließlich; sie ändert nichts",
+        )
+    return principal
 
 
 AktuellerNutzer = Annotated[Principal, Depends(get_principal)]

@@ -175,6 +175,9 @@ describe('Tool-Liste', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Tool-Objekt anlegen' }));
     const blatt = screen.getByRole('dialog');
     await userEvent.type(within(blatt).getByLabelText('Name'), 'X');
+    // Die Einheit ist Pflicht — ohne sie kommt das Formular gar nicht bis zum
+    // Server, und geprüft werden soll die Antwort des Servers.
+    await userEvent.selectOptions(within(blatt).getByLabelText('Organisationseinheit'), 'org-de');
     await userEvent.click(within(blatt).getByRole('button', { name: 'Speichern' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Keine Berechtigung');
   });

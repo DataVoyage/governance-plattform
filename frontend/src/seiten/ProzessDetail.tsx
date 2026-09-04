@@ -10,6 +10,7 @@ import type {
   Prozess,
   Technologie,
   ToolObjekt,
+  ProzessStatus,
 } from '@/api/typen';
 import { ProzessGovernance } from '@/komponenten/ProzessGovernance';
 import { ProzessKlassen } from '@/komponenten/ProzessKlassen';
@@ -54,6 +55,14 @@ function kette(
   }
   return [...gefunden.values()];
 }
+
+/** „Läuft ohne Deckung" ist kein neutraler Zustand — er sieht auch nicht so aus. */
+const STATUS_TON: Record<ProzessStatus, Ton> = {
+  entwurf: 'neutral',
+  aktiv: 'gruen',
+  freigabe_ausstehend: 'rot',
+  stillgelegt: 'neutral',
+};
 
 export function ProzessDetail() {
   const { id } = useParams();
@@ -151,7 +160,7 @@ export function ProzessDetail() {
         rueckweg={{ ziel: pfad('/prozesse'), text: t('prozess.liste.titel') }}
         aktionen={
           <>
-            <Abzeichen ton={prozess.status === 'aktiv' ? 'gruen' : 'neutral'}>
+            <Abzeichen ton={STATUS_TON[prozess.status]}>
               {t(`status.${prozess.status}` as never)}
             </Abzeichen>
             {prozess.tier !== null && (
@@ -181,6 +190,9 @@ export function ProzessDetail() {
       />
 
       {fehler !== null && <Hinweis art="fehler">{fehler}</Hinweis>}
+      {prozess.status === 'freigabe_ausstehend' && (
+        <Hinweis art="warnung">{t('prozess.freigabeAusstehend')}</Hinweis>
+      )}
 
       {/* Eine fehlende Schaltfläche erklärt sich nicht von selbst. Wer nichts
           ändern darf, soll wissen warum — und wen er fragen kann. */}
@@ -233,7 +245,9 @@ export function ProzessDetail() {
         />
       </Gruppe>
 
-      {prozess.schritte_zu_viele && <Hinweis art="warnung">{t('prozess.schritte.warnung')}</Hinweis>}
+      {prozess.schritte_zu_viele && (
+        <Hinweis art="warnung">{t('prozess.schritte.warnung')}</Hinweis>
+      )}
 
       <Karte titel={t('prozess.abgeleitet.titel')} beischrift={t('prozess.abgeleitet.hinweis')}>
         <Werteliste
@@ -241,9 +255,7 @@ export function ProzessDetail() {
             {
               beschriftung: t('prozess.feld.reichweite'),
               wert:
-                prozess.reichweite === null
-                  ? '—'
-                  : t(`reichweite.${prozess.reichweite}` as never),
+                prozess.reichweite === null ? '—' : t(`reichweite.${prozess.reichweite}` as never),
               herkunft:
                 prozess.umsetzungen.length > 1
                   ? t('prozess.herkunft.reichweiteUmsetzung')
@@ -373,7 +385,9 @@ export function ProzessDetail() {
               }
               wert={
                 tool.geerbt.tier === null ? undefined : (
-                  <Abzeichen ton={tierTon(tool.geerbt.tier)}>{`Tier ${tool.geerbt.tier}`}</Abzeichen>
+                  <Abzeichen
+                    ton={tierTon(tool.geerbt.tier)}
+                  >{`Tier ${tool.geerbt.tier}`}</Abzeichen>
                 )
               }
             />

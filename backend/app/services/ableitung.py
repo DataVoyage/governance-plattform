@@ -161,15 +161,22 @@ def aktualisiere_ableitungen(prozess: Prozessobjekt) -> None:
     prozess.mitbestimmung_flag = leite_mitbestimmung_ab(prozess)
 
 
-def aktualisiere_kette(prozess: Prozessobjekt) -> list[Prozessobjekt]:
-    """Aktualisiert den Prozess und alle transitiven Vorgaenger.
+def aktualisiere_kette(*prozesse: Prozessobjekt) -> list[Prozessobjekt]:
+    """Aktualisiert die genannten Prozesse und alle ihre transitiven Vorgaenger.
 
     Eine geaenderte Ausfallfolge wirkt entlang der Kette nach oben; ohne diese
     Nachfuehrung waere die Kritikalitaet eines Vorgaengers nach einer Aenderung
     still veraltet.
+
+    **Mehrere Wurzeln, und warum das noetig ist.** Beim *Setzen* einer Kante
+    genuegt der geaenderte Prozess: der neue Vorgaenger haengt jetzt an ihm und
+    wird mitgelaufen. Beim *Loesen* nicht — der ehemalige Vorgaenger ist genau
+    der, der nicht mehr erreichbar ist, und bliebe mit einer zu hohen
+    Kritikalitaet stehen (E-59). Wer eine Kante loest, uebergibt deshalb auch
+    das abgehaengte Ende.
     """
     betroffen: dict = {}
-    stapel = [prozess]
+    stapel = list(prozesse)
     while stapel:
         aktuell = stapel.pop()
         if aktuell.id in betroffen:

@@ -122,6 +122,8 @@ async function toolAnlegen(seite: Page, name: string, technologie = 'Apps Script
   await blatt.getByLabel('Name').fill(name);
   await blatt.getByLabel('Technologie').selectOption({ label: technologie });
   await blatt.getByLabel('Lauftyp').selectOption('geplant');
+  // Die Einheit ist Pflicht: sie entscheidet, wem das Werkzeug gehoert (E-58).
+  await blatt.getByLabel('Organisationseinheit').selectOption({ index: 1 });
   await blatt.getByRole('button', { name: 'Speichern' }).click();
   await seite.getByRole('link', { name: new RegExp(name) }).click();
   await expect(seite.getByRole('heading', { name })).toBeVisible();

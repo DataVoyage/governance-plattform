@@ -9,10 +9,12 @@
 import { expect, type Page } from '@playwright/test';
 
 import {
+  API,
   anmelden,
   anwenderMitRolle,
   bewerten,
   kennzeichen,
+  kopf,
   organisation,
   prozessAnlegen,
   vorgang,
@@ -186,4 +188,36 @@ vorgang('V-GAT-06', async ({ page, request }) => {
   await expect(karte.getByRole('button', { name: 'Freigeben' })).toHaveCount(0);
   await expect(karte.getByRole('button', { name: 'Ablehnen' })).toHaveCount(0);
   await expect(karte.getByLabel(/^Entscheidungskommentar/)).toHaveCount(0);
+});
+
+vorgang('V-GAT-07', async ({ page, request }) => {
+  // Ein laufender Prozess steigt auf Tier 3. Bis E-60 lief er unverändert
+  // weiter: die Prüfung hing am Statuswechsel, und den hatte er hinter sich.
+  const marke = kennzeichen();
+  const org = await organisation(request, marke);
+  const prozess = await prozessAnlegen(request, org, { name: `Aufstieg ${marke}` });
+
+  // Erst harmlos, aktiviert — der reguläre Weg für Tier 1.
+  await bewerten(request, prozess.id);
+  const aktiviert = await request.patch(`${API}/api/v1/prozesse/${prozess.id}`, {
+    headers: await kopf(request),
+    data: { status: 'aktiv' },
+  });
+  expect(aktiviert.status()).toBe(200);
+
+  await anmelden(page);
+  await page.goto(`/de/prozesse/${prozess.id}`);
+  await expect(page.getByText('Aktiv')).toBeVisible();
+
+  // Neubewertung hebt ihn auf Tier 3.
+  await bewerten(request, prozess.id, true);
+  await page.reload();
+
+  // Er läuft — aber er ist nicht mehr freigegeben, und die Seite sagt warum.
+  await expect(page.getByText('Freigabe ausstehend')).toBeVisible();
+  await expect(page.getByText(/nicht freigegeben/)).toBeVisible();
+
+  // Der Gate-1-Vorgang liegt schon vor; niemand musste ihn einreichen.
+  await page.goto('/de/gates');
+  await expect(vorratskarte(page, prozess.name)).toHaveCount(1);
 });

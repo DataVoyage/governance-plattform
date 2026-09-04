@@ -148,7 +148,10 @@ const de = {
 
   'status.entwurf': 'Entwurf',
   'status.aktiv': 'Aktiv',
+  'status.freigabe_ausstehend': 'Freigabe ausstehend',
   'status.stillgelegt': 'Stillgelegt',
+  'prozess.freigabeAusstehend':
+    'Dieses Prozessobjekt läuft, ist aber für seine jetzige Einstufung nicht freigegeben: die Neubewertung hat es auf Tier 3 gehoben. Ein Gate-1-Vorgang liegt bereits vor. Nach der Freigabe und einer neuen Selbstverpflichtung lässt es sich wieder aktivieren.',
 
   'bewertung.titel': 'Bewertung',
   'bewertung.untertitel': 'Eine Frage je Schritt. Das Ergebnis erscheint am Ende.',
@@ -319,6 +322,8 @@ const de = {
   'tool.feld.owner': 'Technischer Owner',
   'tool.feld.stellvertretung': 'Stellvertretung',
   'tool.feld.organisationseinheit': 'Organisationseinheit',
+  'tool.einheit.hilfe':
+    'Der Bereich, dem dieses Werkzeug gehört. Er entscheidet, wer es sehen und ändern darf — und lässt sich später nur von der Governance wechseln.',
   'tool.feld.lauftyp': 'Lauftyp',
   'tool.owner.hilfe': 'Adressat für Selbstverpflichtung und Lenkungsvorgänge.',
   'tool.lauftyp.hilfe':
@@ -953,7 +958,10 @@ const fr: Record<Schluessel, string> = {
 
   'status.entwurf': 'Brouillon',
   'status.aktiv': 'Actif',
+  'status.freigabe_ausstehend': 'Validation en attente',
   'status.stillgelegt': 'Désactivé',
+  'prozess.freigabeAusstehend':
+    "Cet objet de processus fonctionne, mais n'est pas validé pour son niveau actuel : la réévaluation l'a porté au niveau 3. Une procédure Gate 1 existe déjà. Après la validation et un nouvel engagement, il peut être réactivé.",
 
   'bewertung.titel': 'Évaluation',
   'bewertung.untertitel': 'Une question par étape. Le résultat apparaît à la fin.',
@@ -1126,6 +1134,8 @@ const fr: Record<Schluessel, string> = {
   'tool.feld.owner': 'Responsable technique',
   'tool.feld.stellvertretung': 'Suppléance',
   'tool.feld.organisationseinheit': 'Unité organisationnelle',
+  'tool.einheit.hilfe':
+    'Le domaine auquel appartient cet outil. Il détermine qui peut le voir et le modifier — et seule la gouvernance peut le changer par la suite.',
   'tool.feld.lauftyp': 'Mode d’exécution',
   'tool.owner.hilfe': 'Destinataire de l’engagement et des procédures de pilotage.',
   'tool.lauftyp.hilfe':

@@ -11,8 +11,20 @@ class Ebene(StrEnum):
 
 
 class ProzessStatus(StrEnum):
+    """Vier Zustaende, und der vierte ist der wichtigste (A.11, E-60).
+
+    ``entwurf`` heisst: noch nie in Betrieb. ``freigabe_ausstehend`` heisst:
+    laeuft, ist aber fuer seine jetzige Einstufung nicht freigegeben — der
+    Fall, der entsteht, wenn eine Neubewertung einen aktiven Prozess auf Tier 3
+    hebt. Beides in einen Topf zu werfen waere bequem und falsch: das eine wird
+    gerade gebaut, das andere laeuft ohne Deckung, und nur das zweite ist
+    dringend.
+    """
+
     ENTWURF = "entwurf"
     AKTIV = "aktiv"
+    #: Laeuft, aber die Freigabe deckt die jetzige Einstufung nicht.
+    FREIGABE_AUSSTEHEND = "freigabe_ausstehend"
     STILLGELEGT = "stillgelegt"
 
 

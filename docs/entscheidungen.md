@@ -1713,3 +1713,128 @@ einmal? Bekommt der Anfragende weniger Daten oder nur weniger Anzeige? Wer sie
 beantworten kann, trägt die Antwort in die Tabelle ein — und erst dann in den
 Code.
 
+## E-58 — Die Nutzlast erteilt keine Erlaubnis
+
+*Datum: 2026-09-04 — Status: umgesetzt (AP-13)*
+
+Die Frage kam von außen und in einem Satz: *ist es richtig, dass ein
+Datenobjekt-Owner ein Tool anlegen kann?* Nein — und gemessen war es schlimmer
+als gefragt.
+
+**Der Befund.** `POST /api/v1/tools` baute das Objekt zuerst aus der
+übergebenen Nutzlast und fragte **danach** `darf_tool_schreiben`. Diese Regel
+bejaht unter anderem, wenn der Anfragende der technische Owner des Objekts ist
+— und genau das hatte er soeben selbst hineingeschrieben. Wer sich als
+`technischer_owner_user_id` einträgt, erfüllt damit die Bedingung, über die
+entschieden wird.
+
+Gemessen am laufenden Bestand:
+
+| Zugang | ohne Owner-Angabe | mit sich selbst als Owner |
+|---|---|---|
+| ohne Rolle | 403 | **201** |
+| Datenobjekt-Owner | 403 | **201** |
+| Prozess-Umsetzer | 403 | **201** |
+| Auditor | 403 | **201** |
+
+Und es blieb nicht beim Anlegen. Ein Prozess-Umsetzer — dessen einziges Recht
+die lokale Abweichung ist — konnte die ganze Kette gehen: Tool anlegen (201),
+es attestieren (200) und an ein fremdes Prozessobjekt hängen, das er lediglich
+*sehen* darf (201). Das Tool erbte daraufhin Kritikalität 3 und Reichweite
+„unternehmen". Der Prozess-Owner hatte dem nie zugestimmt und stand mit einem
+fremden Werkzeug an seinem Objekt da.
+
+Bestehende Objekte waren nie betroffen: `PATCH` prüft gegen den **vorhandenen**
+Stand, ein fremdes Tool ließ sich nicht übernehmen (403). Die Lücke lag
+ausschließlich in der Neuanlage — dort, wo es noch keinen Stand gibt, gegen den
+sich prüfen ließe.
+
+**Die Regel, die daraus folgt.** *Die Erlaubnis entscheidet der Anker, nie die
+Nutzlast.* Wer ein Objekt anlegt, gibt darin an, wem es gehören soll; diese
+Angabe darf niemals die Erlaubnis begründen, über die sie entscheidet. Beim
+Tool-Objekt heißt das: die Organisationseinheit ist **Pflicht**, und geprüft
+wird die Rolle *an dieser Einheit*. Wen der Anlegende als Owner einträgt, ist
+danach eine Angabe wie jede andere. Damit ist zugleich R-9 erledigt — ein
+Tool-Objekt ohne Anker gehörte niemandem und wäre nur den global lesenden
+Rollen sichtbar.
+
+Dieselbe Form hatte E-55 für Datenobjekte bereits aufgelöst (R-2: „wer sich
+selbst als Owner einträgt, darf jedes Datenobjekt anlegen"). Dass sie am
+Tool-Objekt stehen blieb, ist der eigentliche Fehler: eine Klasse zu beheben
+heißt, sie überall zu suchen, nicht nur dort, wo sie aufgefallen ist.
+
+**Warum die Matrix es nicht fand.** `test_rollen_und_scopes.py` fährt jede
+Zelle an — aber die Handlung „Tool anlegen" schickte, was ein Formular schickt:
+Name und Einheit. Die Tabelle prüfte die *gutwillige* Nutzlast. Sie enthält
+jetzt neben jeder Anlage auch die **manipulierte**: mit sich selbst als Owner,
+und im fremden Bereich. Das ist die eigentliche Lehre aus diesem Fund — eine
+vollständige Rollenmatrix ist nicht vollständig, solange sie nur die Eingaben
+prüft, die vorgesehen sind.
+
+**Und eine Zusage, die keine war.** `NUR_LESEND` stand seit Beginn im Code und
+wurde **nirgends gelesen**. Dass der Auditor nichts ändert, ruhte allein
+darauf, dass keine positive Regel ihn trifft — bis eine es tat. Eine Zusage,
+die sich aus der Abwesenheit von Gegenbeispielen ergibt, ist keine. Sie wird
+jetzt zentral gezogen: `app.api.deps` weist jede verändernde Methode ab, wenn
+der Anfragende ausschließlich lesende Rollen trägt, unabhängig von der Route.
+Das ist bewusst eine zweite Schicht neben den Einzelregeln — sie hätte diesen
+Fund allein verhindert.
+
+## E-60 — „Läuft" und „darf laufen" sind zwei Aussagen
+
+*Datum: 2026-09-04 — Status: umgesetzt (AP-15)*
+
+Beobachtet und gemeldet: ein Prozessobjekt kann von Tier 2 auf Tier 3 wechseln,
+und obwohl A.11 für Tier 3 eine Erstfreigabe vorschreibt, greift sie nicht —
+der Prozess läuft ohne Gate weiter.
+
+**Der Grund war eine Stelle, nicht eine Regel.** `pruefe_aktivierung` prüft
+Selbstverpflichtung und Gate 1 beim **Statuswechsel** nach `aktiv`. Wer den
+schon hinter sich hat, kommt nie wieder daran vorbei. Gemessen: erste Bewertung
+Tier 1, aktiviert, neu bewertet auf Tier 3 — Status unverändert `aktiv`, Zahl
+der Gate-Vorgänge null.
+
+Die Anwendung *merkte* es übrigens: das Cockpit führte den Prozess sofort unter
+„Selbstverpflichtungen ohne Deckung", denn die Erklärung ist an die Bewertung
+gebunden und verfällt mit ihr (A.10.4). Sie sah das Problem und handelte nicht
+— der Unterschied zwischen einem Befund und einer Regel.
+
+**Warum Gate 1 und nicht Gate 2.** Gate 2 ist für Rahmenverletzungen, und seine
+Auslöserliste ist abschließend; „Tier gestiegen" steht nicht darin. Gate 1 ist
+die Tier-3-**Erst**freigabe — und „Erst" meint das erste Mal auf Tier 3, nicht
+die Erstanlage des Objekts. Dass sie später fällig wird als üblich, ändert
+nichts daran, dass sie fällig ist.
+
+**Warum ein vierter Status und nicht „Entwurf".** Der naheliegende Weg wäre
+gewesen, den Prozess in den Entwurf zurückfallen zu lassen; die Mechanik dafür
+liegt fertig da. Er wäre falsch gewesen: der Prozess läuft ja. „Entwurf" heißt
+„noch nie in Betrieb", und im Cockpit wie in jedem Filter verschmilzt er dann
+mit echten Neuanlagen. Das eine wird gerade gebaut, das andere läuft ohne
+Deckung — und nur das zweite ist dringend. Ein Register, das beides gleich
+benennt, verliert genau die Unterscheidung, für die es da ist.
+
+`freigabe_ausstehend` sagt, was ist: **läuft, ist aber für seine jetzige
+Einstufung nicht freigegeben.** Der Status trägt in der Oberfläche ein rotes
+Abzeichen und einen Satz dazu, was zu tun ist; zurück nach `aktiv` geht es nur
+über denselben Torwächter wie beim ersten Mal.
+
+**Der Vorgang entsteht von selbst.** Präzedenzfall ist der dritte
+Gate-2-Auslöser aus A.11: *„Wer am aktiven Prozessobjekt ein externes Ziel
+ergänzt, meldet damit den Auslöser — der Gate-2-Vorgang entsteht beim Speichern
+von selbst."* Dieselbe Überlegung gilt hier: wer die Bewertung abgibt, meldet
+damit den Anlass. Ihn zusätzlich zum Einreichen aufzufordern hieße, ihm die
+Regel aufzubürden, die die Anwendung kennt.
+
+**Drei Abgrenzungen.** Ein Aufstieg auf Tier 2 hält nichts an — A.11 sieht dort
+ausdrücklich kein Gate vor, und eine Bremse wäre gegen den goldenen Pfad. Wer
+Gate 1 schon hat, behält es bei erneuter Tier-3-Bewertung: die Freigabe gilt
+dem Rahmen, nicht dem Stand (Envelope-Modell). Die Selbstverpflichtung ist
+davon unberührt und in beiden Fällen neu abzugeben — sie hängt an der Bewertung.
+Das ist genau der Unterschied, den die beiden Regeln machen.
+
+**Im Beispielbestand** gibt es den Fall jetzt, sonst wäre er in einer
+Vorführung unsichtbar: *Lieferantenbewertung Food* steigt im laufenden Betrieb
+von Tier 1 auf 3, weil aus einer Kennzahl eine Listungsentscheidung mit
+Auslistungsvorschlag geworden ist. Der Auslöser ist kein Formfehler, sondern
+Alltag — und genau deshalb gehört er hinein.
+

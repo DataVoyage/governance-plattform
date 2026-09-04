@@ -177,8 +177,14 @@ def test_zweite_meldung_verdoppelt_den_vorgang_nicht(client: TestClient, governa
     assert len(offen) == 1
 
 
-def test_vorgang_ohne_owner_bleibt_unzugewiesen(client: TestClient, governance) -> None:
-    tool = client.post("/api/v1/tools", json={"name": "Ohne Owner"}, headers=governance.kopf).json()
+def test_vorgang_ohne_owner_bleibt_unzugewiesen(
+    client: TestClient, governance, organisation
+) -> None:
+    tool = client.post(
+        "/api/v1/tools",
+        json={"name": "Ohne Owner", "organisationseinheit_id": organisation["fin_de"]},
+        headers=governance.kopf,
+    ).json()
     vorgang = melde(client, governance, tool["id"], "rot").json()["lenkungsvorgang"]
     assert vorgang["zugewiesen_an"] is None
 

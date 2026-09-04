@@ -72,10 +72,16 @@ def prozess(client: TestClient, owner, anmelden, prozess_daten):
 
 
 @pytest.fixture
-def tool(client: TestClient, governance, attestieren):
+def tool(client: TestClient, governance, attestieren, organisation):
     def _anlegen(attest: dict | None = None, **felder) -> dict:
         angelegt = client.post(
-            "/api/v1/tools", json={"name": "Rechnungs-Skript", **felder}, headers=governance.kopf
+            "/api/v1/tools",
+            json={
+                "name": "Rechnungs-Skript",
+                **felder,
+                "organisationseinheit_id": organisation["fin_de"],
+            },
+            headers=governance.kopf,
         ).json()
         attestieren(governance.kopf, angelegt["id"], **(attest or {}))
         return angelegt
@@ -246,12 +252,16 @@ def test_ohne_mensch_dazwischen_bleibt_nur_die_interaktive_ausfuehrung(
 
 
 def test_ohne_attestierung_deckt_der_rahmen_keine_ausfuehrungsart(
-    client: TestClient, governance
+    client: TestClient, governance, organisation
 ) -> None:
     """Ohne Erklaerung ist nichts gedeckt — nicht alles."""
     ohne = client.post(
         "/api/v1/tools",
-        json={"name": "Unerklaert", "lauftyp": "interaktiv"},
+        json={
+            "name": "Unerklaert",
+            "lauftyp": "interaktiv",
+            "organisationseinheit_id": organisation["fin_de"],
+        },
         headers=governance.kopf,
     ).json()
     eintrag = element(rahmen(client, governance, ohne["id"]), "ausfuehrungsart")

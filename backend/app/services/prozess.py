@@ -417,10 +417,21 @@ def aendern(
         prozess.input_datenobjekte = _lade_datenobjekte(db, werte.pop("input_datenobjekt_ids"))
     if "output_datenobjekt_ids" in werte:
         prozess.output_datenobjekte = _lade_datenobjekte(db, werte.pop("output_datenobjekt_ids"))
+    # Wer eine Kette-Kante loest, muss das abgehaengte Ende nachrechnen: die
+    # Kritikalitaet flieBt von den Nachfolgern nach oben, und ein ehemaliger
+    # Vorgaenger ist nach dem Loesen von hier aus nicht mehr erreichbar (E-59).
+    abgehaengt: list[Prozessobjekt] = []
     if "vorgelagert_ids" in werte:
+        vorher_vorgelagert = list(prozess.vorgelagert)
         prozess.vorgelagert = _lade_prozesse(db, werte.pop("vorgelagert_ids"))
+        abgehaengt += [p for p in vorher_vorgelagert if p not in prozess.vorgelagert]
     if "nachgelagert_ids" in werte:
+        vorher_nachgelagert = list(prozess.nachgelagert)
         prozess.nachgelagert = _lade_prozesse(db, werte.pop("nachgelagert_ids"))
+        # Der abgehaengte Nachfolger selbst aendert sich nicht — seine
+        # Kritikalitaet haengt an *seinen* Nachfolgern. Aber der Prozess hier
+        # verliert eine Quelle, und das laeuft ueber ihn ohnehin mit.
+        del vorher_nachgelagert
     if {"vorgelagert_ids", "nachgelagert_ids"} & set(daten.model_dump(exclude_unset=True)):
         _pruefe_zyklenfrei(prozess)
     if werte.get("status") == ProzessStatus.AKTIV and prozess.status != ProzessStatus.AKTIV:
@@ -437,7 +448,7 @@ def aendern(
         setattr(prozess, feld, wert)
     db.flush()
 
-    ableitung.aktualisiere_kette(prozess)
+    ableitung.aktualisiere_kette(prozess, *abgehaengt)
     db.flush()
     protokolliere_aenderung(db, prozess, vorher, akteur_user_id=principal.user_id)
 
