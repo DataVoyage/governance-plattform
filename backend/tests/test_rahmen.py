@@ -353,6 +353,55 @@ def test_statische_zugangsdaten_werden_selbst_erkannt(client: TestClient, govern
     ]
 
 
+def test_die_beiden_erklaerten_verbote_kommen_zurueck(client: TestClient, governance, tool) -> None:
+    """Was gespeichert wird, muss auch wieder herauskommen (E-64).
+
+    Die Antwort des Tool-Endpunkts wird Feld fuer Feld gebaut. Ein neues Feld,
+    das in der Datenbank steht und dort fehlt, laesst jeden Schalter in der
+    Oberflaeche zurueckspringen: das PATCH gelingt, die Antwort sagt ``null``,
+    und die Oberflaeche zeigt den alten Wert. Der Test prueft deshalb den
+    Rueckweg, nicht nur die Wirkung.
+    """
+    werkzeug = tool()
+    for feld, verbot in (
+        ("protokollierung_umgangen", "protokollierung_umgangen"),
+        ("daten_ins_offene_netz", "daten_ins_offene_netz"),
+    ):
+        antwort = client.patch(
+            f"/api/v1/tools/{werkzeug['id']}", json={feld: True}, headers=governance.kopf
+        )
+        assert antwort.status_code == 200, antwort.text
+        assert antwort.json()[feld] is True, f"{feld} fehlt in der Antwort"
+        # Und beim naechsten Laden steht es immer noch da.
+        gelesen = client.get(f"/api/v1/tools/{werkzeug['id']}", headers=governance.kopf).json()
+        assert gelesen[feld] is True
+        assert verbot in rahmen(client, governance, werkzeug["id"])["schicht2_befunde"]
+
+        client.patch(f"/api/v1/tools/{werkzeug['id']}", json={feld: False}, headers=governance.kopf)
+        assert (
+            client.get(f"/api/v1/tools/{werkzeug['id']}", headers=governance.kopf).json()[feld]
+            is False
+        )
+
+
+def test_jedes_aenderbare_feld_kommt_auch_zurueck(client: TestClient, governance, tool) -> None:
+    """Die Gegenprobe als Regel, nicht als Einzelfall.
+
+    ``ToolAendern`` sagt, was sich aendern laesst; ``ToolAus`` sagt, was
+    herauskommt. Ein Feld, das nur in der ersten Liste steht, ist ein Schalter
+    ohne Rueckmeldung — genau der Fehler, den E-64 hinterlassen hat.
+    """
+    from app.schemas.asset import ToolAendern, ToolAus
+
+    aenderbar = set(ToolAendern.model_fields)
+    sichtbar = set(ToolAus.model_fields)
+    # ``metadaten`` und die Referenzfelder stehen bewusst nicht als Einzelwerte
+    # in der Ausgabe; alles Uebrige muss zurueckkommen.
+    fehlt = aenderbar - sichtbar
+    assert not fehlt, f"aenderbar, aber nicht in der Antwort: {sorted(fehlt)}"
+    del client, governance, tool
+
+
 def test_entscheidung_ueber_personen_ohne_mensch_ist_ein_verbot(
     client: TestClient, governance, tool
 ) -> None:

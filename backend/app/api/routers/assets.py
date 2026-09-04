@@ -68,6 +68,8 @@ def _tool_aus(db: Session, principal: Principal, tool: ToolObjekt) -> ToolAus:
         lauftyp=tool.lauftyp,
         ausfuehrungsidentitaet=tool.ausfuehrungsidentitaet,
         statische_zugangsdaten=tool.statische_zugangsdaten,
+        protokollierung_umgangen=tool.protokollierung_umgangen,
+        daten_ins_offene_netz=tool.daten_ins_offene_netz,
         externe_ziele=list(tool.externe_ziele or []),
         herkunft=tool.herkunft,
         quelle=tool.quelle,
