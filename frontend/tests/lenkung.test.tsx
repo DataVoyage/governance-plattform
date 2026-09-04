@@ -39,6 +39,8 @@ function vorgang(ueberschreibungen: Partial<Lenkungsvorgang> = {}): Lenkungsvorg
     aufloesung_bewertung_id: null,
     aufgeloest_am: null,
     beschreibung: 'Schreibt ausserhalb des Rahmens',
+    aufloesungskommentar: '',
+    offene_abweichungen: [],
     erstellt_am: '2026-09-01T10:00:00Z',
     rechte: { aufloesen: true, abbrechen: true },
     ...ueberschreibungen,
@@ -214,6 +216,27 @@ describe('Lenkungsvorgaenge', () => {
       await screen.findByText(/Ausführung unter umgangener Unternehmensidentität/),
     ).toBeInTheDocument();
     expect(screen.getByText(/ohne erste Stufe/)).toBeInTheDocument();
+  });
+
+  it('nennt die stehende Abweichung, bevor jemand vergeblich klickt', async () => {
+    // E-63: „Angepasst" schliesst nur, wenn die Messung es hergibt. Das gehoert
+    // vor den Klick — eine Fehlermeldung danach erklaert nichts.
+    fetchAttrappe(
+      lenkungsrouten([
+        vorgang({ offene_abweichungen: ['Verbot identitaet_umgangen', 'datenobjekte'] }),
+      ]),
+    );
+    zeichne('/de/lenkung');
+    const hinweis = await screen.findByTestId('abweichungen-lv-1');
+    expect(hinweis).toHaveTextContent('Verbot identitaet_umgangen, datenobjekte');
+    expect(hinweis).toHaveTextContent('schließen erst, wenn sie behoben ist');
+  });
+
+  it('schweigt, wo die Anwendung nichts misst', async () => {
+    fetchAttrappe(lenkungsrouten([vorgang()]));
+    zeichne('/de/lenkung');
+    await screen.findByTestId('stufe-lv-1');
+    expect(screen.queryByTestId('abweichungen-lv-1')).not.toBeInTheDocument();
   });
 
   it('weist in Stufe 3 auf die technische Massnahme hin', async () => {

@@ -9,7 +9,8 @@ die Anwendung nichts aussagt.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from collections.abc import Mapping
+from dataclasses import dataclass, field
 
 from sqlalchemy import select
 
@@ -178,6 +179,13 @@ class Meldung:
     aufloesungskommentar: str = ""
     #: Der Vorgang war eine Fehlmeldung und wurde von der Governance abgebrochen.
     abgebrochen: bool = False
+    #: Was am Werkzeug tatsaechlich geaendert wurde, bevor der Vorgang als
+    #: „angepasst" schliesst. Seit E-63 ist das keine Beigabe: die Aufloesung
+    #: wird nachgemessen, und ein Bestand, der „angepasst" behauptet, ohne dass
+    #: sich etwas geaendert hat, kaeme nicht mehr durch. Schluessel mit
+    #: ``attest_`` gehen ueber die Attestierung (A.6), die uebrigen ueber die
+    #: Aenderung des Tool-Objekts.
+    anpassung: Mapping[str, object] = field(default_factory=dict)
 
 
 MELDUNGEN: tuple[Meldung, ...] = (
@@ -213,6 +221,18 @@ MELDUNGEN: tuple[Meldung, ...] = (
         aufgeloest_vor=126,
         aufloesungskommentar="Die beiden Zuarbeiten sind als Datenobjekte "
         "aufgenommen und verknüpft; die Mappe liest nichts anderes mehr.",
+        # Und damit faellt die Erklaerung aus A.6, die das Verbot belegt hat.
+        anpassung={"attest_undeklarierte_quellen": False},
+    ),
+    Meldung(
+        "artikelauswertung-mappe",
+        ComplianceFarbe.ROT,
+        "Die Mappe zieht neben den beiden Datenobjekten Zahlen aus einer privaten "
+        "Tabelle des Bearbeiters.",
+        vor_tagen=34,
+        melder="renner",
+        abweichung_art="undeklarierte_quellen",
+        schicht2_verbot=Schicht2Verbot.UNDEKLARIERTE_QUELLEN,
     ),
     Meldung(
         "schwundcockpit",
@@ -250,6 +270,7 @@ MELDUNGEN: tuple[Meldung, ...] = (
         aufgeloest_vor=52,
         aufloesungskommentar="Die öffentliche Ablage ist entfernt; der Versand "
         "geht nur noch an die Filialpostfächer.",
+        anpassung={"externe_ziele": []},
     ),
     Meldung(
         "frischeverlust-mappe",
@@ -733,6 +754,32 @@ def kompensationen(kontext: Kontext) -> None:
 # --- Compliance-Zustaende und Lenkung ------------------------------------
 
 
+def _passe_werkzeug_an(kontext: Kontext, meldung: Meldung) -> None:
+    """Die Anpassung, die der Aufloesungskommentar behauptet — wirklich ausgefuehrt.
+
+    Vor E-63 stand sie nur im Text. Seit die Aufloesung nachgemessen wird, muss
+    der Bestand tun, was er sagt: sonst faellt er ueber seinen eigenen Riegel.
+    Das ist kein Umweg, sondern der Beleg, dass der Riegel greift.
+    """
+    tool = kontext.tool(meldung.tool)
+    handelnder = kontext.wer(meldung.melder)
+    attest = {s: w for s, w in meldung.anpassung.items() if s.startswith("attest_")}
+    uebrige = {s: w for s, w in meldung.anpassung.items() if not s.startswith("attest_")}
+    if uebrige:
+        asset.aendere_tool(kontext.db, handelnder, tool, dict(uebrige))
+    if attest:
+        werte = {
+            feld: getattr(tool, feld)
+            for feld in (
+                "attest_entscheidung_ueber_personen",
+                "attest_mensch_dazwischen",
+                "attest_undeklarierte_quellen",
+            )
+        }
+        werte.update(attest)
+        asset.attestiere(kontext.db, handelnder, tool, werte)
+
+
 def lenkungsvorgaenge(kontext: Kontext) -> None:
     """Meldungen, Eskalationslaeufe und Aufloesungen — in der Reihenfolge der Zeit.
 
@@ -765,6 +812,8 @@ def lenkungsvorgaenge(kontext: Kontext) -> None:
             vorgang = vorgaenge.get(meldung.tool)
             if vorgang is None:
                 return
+            if meldung.anpassung:
+                _passe_werkzeug_an(kontext, meldung)
             if meldung.abgebrochen:
                 lenkung.brich_ab(
                     kontext.db, kontext.wer("wilms"), vorgang, meldung.aufloesungskommentar

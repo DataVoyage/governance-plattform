@@ -538,6 +538,24 @@ der Bestand dahinter nicht.
       Umgewöhnen, ein Test hält sie gleich
 - [x] Anmeldemaske: das Namensfeld darf frei bleiben, und sie sagt es
 
+### AP-17 — Der Compliance-Zustand folgt der Messung *(E-63)*
+
+**Anwendervorgänge:** V-RAH-11.
+
+- [x] Ein Weg in die Zeitreihe: `_trage_zustand_ein` trägt die Farbregel aus A.13.3
+      genau einmal; die Auflösung schreibt den Zustand nicht mehr selbst
+- [x] Weder Grün noch Gelb ist meldbar, solange ein Verbot aus Schicht 2 in den
+      Daten steht — auch ohne dass der Meldende es danebenschreibt; Rot bleibt
+      jederzeit meldbar
+- [x] „Anpassen" und „Rahmen erweitern" schließen nur, wenn der Erlaubnisrahmen
+      wieder hält; Stilllegen schließt immer
+- [x] Die Grenze: wo die Anwendung nichts misst, blockiert sie nicht — die beiden
+      nicht erkennbaren Verbote bleiben eine Aussage des Menschen
+- [x] Die stehende Abweichung steht vor dem Klick an der Karte, nicht als Fehler danach
+- [x] Auflösungskommentar als eigenes Feld (Migration `f7c3a5e91d24`); die
+      Feststellung gehört dem Melder und ändert sich nicht mehr
+- [x] Beide Bestände zeigen keinen Zustand mehr, der der Messung widerspricht
+
 ---
 
 ## 3. Reihenfolge und Meilensteine

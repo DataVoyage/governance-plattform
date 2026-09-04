@@ -152,7 +152,9 @@ export function Lenkung() {
                   )}
                 </Hinweis>
               )}
-              {vorgang.eskalationsstufe >= 3 && <Hinweis art="warnung">{t('lenkung.stufe3')}</Hinweis>}
+              {vorgang.eskalationsstufe >= 3 && (
+                <Hinweis art="warnung">{t('lenkung.stufe3')}</Hinweis>
+              )}
 
               {/* Der Countdown steht groß und in Arbeitstagen — die Einheit,
                   in der die Frist gesetzt wurde. Wer rechnen muss, um zu
@@ -174,6 +176,20 @@ export function Lenkung() {
                   {t('lenkung.frist')} {vorgang.frist.slice(0, 10)}
                 </span>
               </div>
+
+              {/* Was die Anwendung gerade selbst misst. „Angepasst" setzt
+                  voraus, dass hier nichts mehr steht (E-63) — das gehört vor
+                  den Klick, nicht in eine Fehlermeldung danach. */}
+              {vorgang.offene_abweichungen.length > 0 && (
+                <Hinweis art="warnung">
+                  <span data-testid={`abweichungen-${vorgang.id}`}>
+                    {t('lenkung.stehtNoch').replace(
+                      '{elemente}',
+                      vorgang.offene_abweichungen.join(', '),
+                    )}
+                  </span>
+                </Hinweis>
+              )}
 
               {/* Ein Verweis, kein zweiter Name: die Überschrift nennt das
                   Tool bereits. Er steht abseits der drei Auflösungen, damit er

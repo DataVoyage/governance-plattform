@@ -383,6 +383,26 @@ Im Bestand offen: **1 · 2 · 2** über die drei Stufen.
 
 ---
 
+## Ein Zustand folgt aus einer Messung
+
+Zwei der drei Auswege behaupten, die Abweichung sei weg. Beide werden
+**nachgemessen**, bevor der Vorgang schließt:
+
+* hält der Erlaubnisrahmen wieder — alle sieben Elemente?
+* steht kein Verbot aus Schicht 2 mehr?
+
+Steht noch etwas, **schließt der Vorgang nicht**. Die Oberfläche sagt vorher,
+was aussteht; wer nicht anpassen kann, hat den dritten Weg. *Stilllegen*
+schließt immer — ein stillgelegtes Werkzeug ist nicht „wieder konform",
+sondern außer Betrieb.
+
+**Die Grenze zählt mehr als der Riegel.** Zwei der sechs Verbote sieht die
+Anwendung nicht; sie werden gemeldet. Dort bleibt „angepasst" die Aussage
+eines Menschen. Verweigert wird nicht die Behauptung, sondern der
+**Widerspruch zur eigenen Messung**.
+
+---
+
 <!-- _class: eng -->
 
 ## Der ganze Weg, an einem Objekt

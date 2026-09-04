@@ -190,6 +190,11 @@ WERKZEUGE: tuple[Werkzeug, ...] = (
         False,
         prozesse=("persoenliche-artikelauswertung",),
         daten=(("artikelstamm-food", Z.LESEN), ("abverkauf-filiale", Z.LESEN)),
+        # Erklaerte undeklarierte Quellen: Schicht 2, und dieser Fall bleibt
+        # stehen. Der zweite Fall derselben Art (budgetkonsolidierung) wird
+        # angepasst — ein Bestand braucht beides, sonst zeigt er entweder nur
+        # geloeste oder nur offene Verstoesse.
+        attest=(False, True, True),
         angelegt_vor=175,
         attestiert_vor=168,
         letzte_aktivitaet_vor=6,

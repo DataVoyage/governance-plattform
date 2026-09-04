@@ -8,6 +8,7 @@ from fastapi import APIRouter, status
 
 from app.api.deps import AktuellerNutzer, DbSession
 from app.models.enums import Schicht2Verbot
+from app.models.governance import ToolObjekt
 from app.schemas.lenkung import (
     Abbrechen,
     Aufloesen,
@@ -32,6 +33,9 @@ def _vorgang_aus(db, principal, vorgang) -> LenkungAus:
     ausgabe.rechte = LenkungsrechteAus(
         **vars(rechte_service.fuer_lenkungsvorgang(db, principal, vorgang))
     )
+    tool = db.get(ToolObjekt, vorgang.tool_objekt_id)
+    if tool is not None:
+        ausgabe.offene_abweichungen = lenkung_service.offene_abweichungen(db, tool)
     return ausgabe
 
 

@@ -413,7 +413,12 @@ class Lenkungsvorgang(Base, TimestampMixin):
         GUID, ForeignKey("bewertungen.id"), nullable=True
     )
     aufgeloest_am: Mapped[datetime | None] = mapped_column(TZDateTime, nullable=True)
+    #: Was festgestellt wurde. Gehoert dem, der gemeldet hat, und aendert sich
+    #: nicht mehr — sonst waere spaeter nicht mehr zu lesen, worum es ging.
     beschreibung: Mapped[str] = mapped_column(Text, default="")
+    #: Was der Aufloesende dazu sagt. Ein zweites Feld, kein Anhaengsel an die
+    #: Feststellung: zwei Aussagen von zwei Menschen zu zwei Zeitpunkten (E-63).
+    aufloesungskommentar: Mapped[str] = mapped_column(Text, default="")
 
 
 class Technologiebewertung(Base, TimestampMixin):

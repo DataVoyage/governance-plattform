@@ -1924,3 +1924,63 @@ prüft, dass Kennung und Name übereinstimmen.
 
 **Anwendervorgang:** V-ANM-10.
 
+---
+
+## E-63 — Ein Zustand folgt aus einer Messung, nicht aus einem Klick
+
+**Beobachtung.** Ein technischer Owner löste im Betrieb einen Lenkungsvorgang
+als „angepasst" auf. Der Vorgang schloss, und das Tool-Objekt stand auf grün.
+Gemessen war zur selben Sekunde: drei Rahmenelemente verletzt (`datenobjekte`,
+`zugriffsart`, `ausfuehrungsart`) und **drei Verbote aus Schicht 2** in Kraft.
+Der Zustand sagte das Gegenteil dessen, was die Anwendung selbst sah.
+
+**Zwei Wege, einer prüfte.** `melde_zustand` weist Grün zurück, solange ein
+Verbot aus Schicht 2 steht — *„Ein Verstoß gegen Schicht 2 ist kein gelber
+Befund; er ist rot, weil ihn keine Bewertung freischaltet"* (A.13.3).
+`loese_auf` baute den `ComplianceZustand` aber selbst und lief an dieser Regel
+vorbei. Eine Regel, die ein zweiter Weg umgeht, ist keine Regel. Es gibt jetzt
+nur noch einen Weg in die Zeitreihe: `_trage_zustand_ein`.
+
+**Und die Regel gilt gemessen, nicht mitgeteilt.** Sie griff bisher nur, wenn
+der Meldende das Verbot selbst danebenschrieb. Steht es in den Daten — ein
+geteiltes Konto, statische Zugangsdaten, erklärte undeklarierte Quellen, eine
+Entscheidung über Personen ohne Menschen dazwischen —, dann gilt sie auch ohne
+Hinweis, und zwar für **beide** milderen Farben. Gelb heißt „beobachtet, noch
+nicht belegt"; ein Verbot in den Daten ist belegt. Gesperrt ist damit nicht die
+Meldung, sondern die Verharmlosung: Rot bleibt jederzeit meldbar.
+
+**„Angepasst" ist eine prüfbare Aussage.** A.13.6 kennt drei Auflösungen.
+„Rahmen erweitern" verlangte schon immer einen Nachweis — eine Bewertung, die
+nach der Eröffnung entstand. „Anpassen" verlangte keinen, obwohl gerade das
+die Aussage ist, die sich in einem Aufruf nachmessen lässt: hält der
+Erlaubnisrahmen wieder, und steht kein Verbot mehr? Beide Wege werden jetzt
+gemessen. Wer nicht anpassen **kann**, hat den dritten Weg; Stilllegen schließt
+immer, denn ein stillgelegtes Werkzeug ist nicht „wieder konform", sondern
+außer Betrieb.
+
+**Die Grenze ist wichtiger als der Riegel.** Zwei der sechs Verbote aus A.13.2
+sieht diese Anwendung nicht — sie werden gemeldet, nicht gemessen. Für sie
+bleibt „angepasst" die Aussage eines Menschen, und der Vorgang schließt. Die
+Anwendung verweigert nicht die Behauptung, sondern den **Widerspruch zur
+eigenen Messung**. Ein Riegel, der auch dort zugeht, wo nichts gemessen wird,
+machte gemeldete Vorgänge unschließbar und triebe sie in die Stilllegung.
+
+**Vor den Klick, nicht danach.** Die offene Abweichung steht an der Ausgabe des
+Vorgangs (`offene_abweichungen`) und damit auf der Karte in der Lenkungsansicht.
+Eine Ablehnung, die man erst nach dem Klicken erfährt, erklärt nichts.
+
+**Feststellung und Kommentar sind zwei Aussagen.** Der Kommentar beim Auflösen
+wurde an `beschreibung` angehängt — an das Feld, in dem der Befund steht.
+Danach las sich die Feststellung als „Zugriff auf ein Datenobjekt, das der
+Prozess nicht erklärt. Test", und es war nicht mehr zu trennen, was gemeldet
+und was erwidert worden war. Zwei Menschen, zwei Zeitpunkte, zwei Felder:
+`aufloesungskommentar` (Migration `f7c3a5e91d24`). Was festgestellt wurde,
+gehört dem Melder und ändert sich nicht mehr.
+
+**Der Bestand log mit.** Im kleinen Bestand stand ein Werkzeug grün, dessen
+Schreibzugriff kein Prozess deckte: es hing an Kette 1 und Kette 3, während
+„vertraulich" das Ergebnis von Kette 2 ist — und geschrieben werden darf nur,
+was ein Prozess als Ergebnis führt (A.4.1). Die Kante entscheidet, nicht die
+Absicht. Das Werkzeug hängt jetzt an Kette 2 und Kette 3.
+
+**Anwendervorgang:** V-RAH-11.

@@ -42,6 +42,7 @@ from app.models.governance import (
 )
 from app.models.organisation import User
 from app.services import konfiguration
+from app.services import rahmen as rahmen_service
 from app.services.asset import darf_tool_lesen, darf_tool_schreiben, erbe_klassifikation
 from app.services.changelog import (
     protokolliere_aenderung,
@@ -122,26 +123,17 @@ def melde_zustand(
         darf_tool_schreiben(db, principal, tool),
         "Compliance-Meldungen erfasst der technische Owner oder die Governance-Rolle",
     )
-    if schicht2_verbot is not None and schicht2_verbot not in set(Schicht2Verbot):
-        raise Ungueltig(f"Unzulässiges Schicht-2-Verbot: {schicht2_verbot}")
-    if schicht2_verbot is not None and farbe != ComplianceFarbe.ROT:
-        raise Ungueltig(
-            "Ein Verstoß gegen Schicht 2 ist kein gelber Befund — er ist rot, "
-            "weil ihn keine Bewertung freischaltet"
-        )
     zeitpunkt = jetzt or now_utc()
-    zustand = ComplianceZustand(
-        tool_objekt_id=tool.id,
+    zustand = _trage_zustand_ein(
+        db,
+        tool,
         farbe=farbe,
         begruendung=begruendung,
         abweichung_art=abweichung_art,
         schicht2_verbot=schicht2_verbot,
-        festgestellt_am=zeitpunkt,
-        festgestellt_von=principal.user_id,
+        zeitpunkt=zeitpunkt,
+        akteur_user_id=principal.user_id,
     )
-    db.add(zustand)
-    db.flush()
-    protokolliere_erstellung(db, zustand, akteur_user_id=principal.user_id)
 
     if farbe != ComplianceFarbe.ROT:
         return zustand, None
@@ -152,6 +144,61 @@ def melde_zustand(
             _hebe_auf_stufe(db, principal, bestehend, tool, zustand, zeitpunkt)
         return zustand, bestehend
     return zustand, _eroeffne_lenkungsvorgang(db, principal, tool, zustand, zeitpunkt, stufe=stufe)
+
+
+def _trage_zustand_ein(
+    db: Session,
+    tool: ToolObjekt,
+    *,
+    farbe: ComplianceFarbe,
+    begruendung: str,
+    abweichung_art: str | None = None,
+    schicht2_verbot: str | None = None,
+    zeitpunkt: datetime,
+    akteur_user_id: uuid.UUID | None,
+) -> ComplianceZustand:
+    """Der **einzige** Weg zu einem Eintrag in der Zeitreihe.
+
+    Hier steht die Farbregel aus A.13.3, und zwar genau einmal. Bis E-63 gab es
+    zwei Wege zu einem Zustand — die Meldung und die Aufloesung eines
+    Lenkungsvorgangs —, und nur der erste pruefte. Ein aufgeloester Vorgang
+    schrieb gruen, auch wenn ein Verbot aus Schicht 2 stand. Eine Regel, die
+    ein zweiter Weg umgeht, ist keine Regel.
+    """
+    if schicht2_verbot is not None and schicht2_verbot not in set(Schicht2Verbot):
+        raise Ungueltig(f"Unzulässiges Schicht-2-Verbot: {schicht2_verbot}")
+    if schicht2_verbot is not None and farbe != ComplianceFarbe.ROT:
+        raise Ungueltig(
+            "Ein Verstoß gegen Schicht 2 ist kein gelber Befund — er ist rot, "
+            "weil ihn keine Bewertung freischaltet"
+        )
+    if farbe != ComplianceFarbe.ROT:
+        # Dieselbe Regel, gemessen statt mitgeteilt. Oben greift sie nur, wenn
+        # der Meldende das Verbot selbst danebenschreibt; steht es in den
+        # Daten, gilt sie auch ohne Hinweis — sonst waere sie wieder eine
+        # Regel mit einem Weg daran vorbei. Gelb ist dabei kein milderer Fall
+        # als Gruen: „beobachtet, noch nicht belegt" ist eine Aussage ueber
+        # etwas Ungeklaertes, und ein Verbot in den Daten ist geklaert.
+        stehende = rahmen_service.pruefe_schicht2(tool)
+        if stehende:
+            raise Ungueltig(
+                f"„{farbe}“ ist nicht meldbar, solange ein Verbot aus Schicht 2 "
+                "steht: " + ", ".join(sorted(stehende)) + ". Es ist rot, weil es "
+                "keine Bewertung freischaltet"
+            )
+    zustand = ComplianceZustand(
+        tool_objekt_id=tool.id,
+        farbe=farbe,
+        begruendung=begruendung,
+        abweichung_art=abweichung_art,
+        schicht2_verbot=schicht2_verbot,
+        festgestellt_am=zeitpunkt,
+        festgestellt_von=akteur_user_id,
+    )
+    db.add(zustand)
+    db.flush()
+    protokolliere_erstellung(db, zustand, akteur_user_id=akteur_user_id)
+    return zustand
 
 
 def _hebe_auf_stufe(
@@ -440,29 +487,80 @@ def loese_auf(
         db.flush()
         protokolliere_aenderung(db, tool, tool_vorher, akteur_user_id=principal.user_id)
 
+    # Anpassen und Rahmen erweitern fuehren das Tool zurueck auf gruen;
+    # Stilllegen nicht — ein stillgelegtes Tool ist nicht "wieder konform",
+    # es ist ausser Betrieb. Deshalb wird auch nur bei den ersten beiden
+    # nachgemessen: sie behaupten, die Abweichung sei weg.
+    if art in (Aufloesungsart.ANPASSEN, Aufloesungsart.RAHMEN_ERWEITERN):
+        _verlange_abweichungsfrei(db, tool, art)
+
     vorgang.aufloesungsart = art
     vorgang.status = LenkungStatus.AUFGELOEST
     vorgang.aufgeloest_am = zeitpunkt
+    # Der Befund ist die Feststellung des einen, der Kommentar die Erklaerung
+    # des anderen. Bis E-63 landete der Kommentar in ``beschreibung`` — danach
+    # stand am Objekt nicht mehr, was eigentlich festgestellt worden war.
     if kommentar:
-        vorgang.beschreibung = f"{vorgang.beschreibung}\n{kommentar}".strip()
+        vorgang.aufloesungskommentar = kommentar.strip()
     db.flush()
     protokolliere_aenderung(db, vorgang, vorher, akteur_user_id=principal.user_id)
 
-    # Anpassen und Rahmen erweitern fuehren das Tool zurueck auf gruen;
-    # Stilllegen nicht — ein stillgelegtes Tool ist nicht "wieder konform",
-    # es ist ausser Betrieb.
     if art in (Aufloesungsart.ANPASSEN, Aufloesungsart.RAHMEN_ERWEITERN):
-        zustand = ComplianceZustand(
-            tool_objekt_id=tool.id,
+        _trage_zustand_ein(
+            db,
+            tool,
             farbe=ComplianceFarbe.GRUEN,
             begruendung=f"Lenkungsvorgang aufgelöst: {AUFLOESUNG_TEXT[art]}",
-            festgestellt_am=zeitpunkt,
-            festgestellt_von=principal.user_id,
+            zeitpunkt=zeitpunkt,
+            akteur_user_id=principal.user_id,
         )
-        db.add(zustand)
-        db.flush()
-        protokolliere_erstellung(db, zustand, akteur_user_id=principal.user_id)
     return vorgang
+
+
+def offene_abweichungen(db: Session, tool: ToolObjekt) -> list[str]:
+    """Was die Anwendung an diesem Werkzeug gerade selbst sieht.
+
+    Dieselbe Messung, die eine Aufloesung als „angepasst" verlangt. Sie steht
+    auch an der Ausgabe, damit die Oberflaeche vorher sagen kann, was noch
+    aussteht — ein Riegel, den man erst nach dem Klicken bemerkt, erklaert
+    nichts.
+    """
+    verbote = rahmen_service.pruefe_schicht2(tool)
+    rahmen = rahmen_service.erlaubnisrahmen(db, tool)
+    return [*(f"Verbot {v}" for v in sorted(verbote)), *rahmen.verletzte_elemente]
+
+
+def _verlange_abweichungsfrei(db: Session, tool: ToolObjekt, art: Aufloesungsart) -> None:
+    """„Angepasst" ist eine pruefbare Aussage — also wird sie geprueft.
+
+    Bis E-63 genuegte das Anklicken: der Vorgang schloss, das Tool-Objekt wurde
+    gruen, und ob sich am Werkzeug etwas geaendert hatte, sah niemand nach. Ein
+    Zustand, der aus einer Behauptung folgt statt aus einer Messung, traegt die
+    Anwendung nicht — er beschreibt nur, was jemand angeklickt hat.
+
+    Beide Wege werden gemessen, nicht nur der eine. „Rahmen erweitern" verlangt
+    zwar schon eine neue Bewertung; ob diese Bewertung den Zugriff tatsaechlich
+    deckt, sagt aber erst der Rahmen. Wer nicht anpassen **kann**, hat den
+    dritten Weg: Stilllegen schliesst immer.
+
+    Entscheidend ist, was hier **nicht** geprueft wird. Zwei der sechs Verbote
+    aus A.13.2 sieht diese Anwendung nicht — sie werden gemeldet, nicht
+    gemessen (``AUTOMATISCH_ERKENNBAR``). Fuer sie bleibt „angepasst" eine
+    Aussage des Menschen, und das ist richtig so: die Anwendung hat kein
+    Signal, dem sie widersprechen koennte. Der Riegel greift nur dort, wo sie
+    selbst etwas sieht. Sie verweigert also nicht die Behauptung, sondern den
+    Widerspruch zur eigenen Messung.
+    """
+    steht = offene_abweichungen(db, tool)
+    if not steht:
+        return
+    offen = ", ".join(steht)
+    weg = AUFLOESUNG_TEXT[art].capitalize()
+    raise Ungueltig(
+        f"„{weg}“ setzt voraus, dass die Abweichung behoben ist; gemessen steht "
+        f"sie noch: {offen}. Solange sie steht, bleibt Stilllegen — oder der "
+        "Vorgang bleibt offen, bis das Werkzeug wirklich angepasst ist."
+    )
 
 
 def _pruefe_neue_bewertung(

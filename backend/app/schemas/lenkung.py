@@ -54,6 +54,11 @@ class LenkungAus(BaseModel):
     aufloesung_bewertung_id: uuid.UUID | None = None
     aufgeloest_am: datetime | None = None
     beschreibung: str
+    #: Getrennt von der Feststellung (E-63): zwei Aussagen, zwei Felder.
+    aufloesungskommentar: str = ""
+    #: Was die Anwendung am Werkzeug gerade selbst misst. Leer heisst: sie
+    #: sieht nichts mehr, was einer Aufloesung als „angepasst" widerspraeche.
+    offene_abweichungen: list[str] = Field(default_factory=list)
     erstellt_am: datetime
 
     rechte: LenkungsrechteAus = Field(default_factory=LenkungsrechteAus)

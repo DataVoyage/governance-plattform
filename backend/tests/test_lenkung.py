@@ -441,6 +441,193 @@ def test_anpassen_schliesst_und_setzt_gruen(client: TestClient, governance, tool
     assert verlauf[0]["farbe"] == "gruen"
 
 
+# --- E-63: Aufloesen ist eine pruefbare Aussage --------------------------
+
+
+@pytest.fixture
+def datenobjekt(client: TestClient, governance, organisation):
+    """Ein Datenobjekt im selben Fachbereich wie das Werkzeug."""
+
+    def _anlegen(name: str, kategorie: str | None = "intern") -> dict:
+        antwort = client.post(
+            "/api/v1/datenobjekte",
+            json={
+                "name": name,
+                "kategorie": kategorie,
+                "fachbereich_id": organisation["fachbereich_finance"],
+            },
+            headers=governance.kopf,
+        )
+        assert antwort.status_code == 201, antwort.text
+        return antwort.json()
+
+    return _anlegen
+
+
+def _verknuepfe_daten(client: TestClient, anmeldung, tool_id: str, objekt_id: str, art: str):
+    return client.post(
+        f"/api/v1/tools/{tool_id}/datenobjekte",
+        json={"datenobjekt_id": objekt_id, "zugriffsart": art},
+        headers=anmeldung.kopf,
+    )
+
+
+def test_anpassen_verlangt_dass_die_abweichung_wirklich_weg_ist(
+    client: TestClient, governance, tool, datenobjekt
+) -> None:
+    """E-63: „angepasst" ist pruefbar — also wird es geprueft.
+
+    Vorher genuegte das Anklicken: der Vorgang schloss, das Werkzeug wurde
+    gruen, und ob sich etwas geaendert hatte, sah niemand nach.
+    """
+    fremd = datenobjekt("Nicht erklaerte Ablage")
+    verknuepft = _verknuepfe_daten(client, governance, tool["id"], fremd["id"], "lesen")
+    assert verknuepft.status_code in (200, 201), verknuepft.text
+    vorgang = melde(client, governance, tool["id"], "rot").json()["lenkungsvorgang"]
+
+    abgelehnt = loese_auf(client, governance, vorgang["id"], "anpassen")
+    assert abgelehnt.status_code == 422
+    assert "datenobjekte" in abgelehnt.json()["detail"]
+
+    # Nichts hat sich geaendert: der Vorgang ist offen, das Werkzeug rot.
+    assert (
+        client.get(f"/api/v1/lenkungsvorgaenge/{vorgang['id']}", headers=governance.kopf).json()[
+            "status"
+        ]
+        == "offen"
+    )
+    verlauf = client.get(f"/api/v1/tools/{tool['id']}/compliance", headers=governance.kopf).json()
+    assert verlauf[0]["farbe"] == "rot"
+
+    # Erst die tatsaechliche Anpassung oeffnet den Weg.
+    client.delete(f"/api/v1/tools/{tool['id']}/datenobjekte/{fremd['id']}", headers=governance.kopf)
+    angenommen = loese_auf(client, governance, vorgang["id"], "anpassen")
+    assert angenommen.status_code == 200, angenommen.text
+    assert (
+        client.get(f"/api/v1/tools/{tool['id']}/compliance", headers=governance.kopf).json()[0][
+            "farbe"
+        ]
+        == "gruen"
+    )
+
+
+def test_aufloesen_umgeht_die_schicht2_regel_nicht(
+    client: TestClient, governance, techniker, tool
+) -> None:
+    """Der Kern des Fehlers: es gab zwei Wege zu einem Zustand, einer pruefte.
+
+    ``melde_zustand`` weist Gruen bei einem stehenden Verbot zurueck. Die
+    Aufloesung schrieb den Zustand selbst — und lief an der Regel vorbei.
+    """
+    client.patch(
+        f"/api/v1/tools/{tool['id']}",
+        json={"ausfuehrungsidentitaet": "geteiltes_konto"},
+        headers=governance.kopf,
+    )
+    vorgang = melde(
+        client,
+        governance,
+        tool["id"],
+        "rot",
+        schicht2_verbot="identitaet_umgangen",
+    ).json()["lenkungsvorgang"]
+
+    abgelehnt = loese_auf(client, governance, vorgang["id"], "anpassen")
+    assert abgelehnt.status_code == 422
+    assert "identitaet_umgangen" in abgelehnt.json()["detail"]
+    verlauf = client.get(f"/api/v1/tools/{tool['id']}/compliance", headers=governance.kopf).json()
+    assert all(eintrag["farbe"] != "gruen" for eintrag in verlauf)
+
+
+@pytest.mark.parametrize("farbe", ["gruen", "gelb"])
+def test_nur_rot_ist_meldbar_solange_ein_verbot_steht(
+    client: TestClient, governance, tool, farbe: str
+) -> None:
+    """Dieselbe Regel auf dem anderen Weg — gemessen, nicht mitgeteilt.
+
+    Bis E-63 griff die Regel nur, wenn der Meldende das Verbot selbst
+    danebenschrieb. Steht es in den Daten, gilt sie auch ohne Hinweis — und
+    zwar fuer beide milderen Farben. Gelb heisst „beobachtet, noch nicht
+    belegt"; ein Verbot in den Daten ist belegt.
+    """
+    client.patch(
+        f"/api/v1/tools/{tool['id']}",
+        json={"ausfuehrungsidentitaet": "geteiltes_konto"},
+        headers=governance.kopf,
+    )
+    antwort = melde(client, governance, tool["id"], farbe, begruendung="Alles in Ordnung")
+    assert antwort.status_code == 422
+    assert "identitaet_umgangen" in antwort.json()["detail"]
+
+
+def test_rot_bleibt_meldbar(client: TestClient, governance, tool) -> None:
+    """Der Gegenbeleg: die Regel sperrt nicht die Meldung, nur die Verharmlosung."""
+    client.patch(
+        f"/api/v1/tools/{tool['id']}",
+        json={"ausfuehrungsidentitaet": "geteiltes_konto"},
+        headers=governance.kopf,
+    )
+    assert (
+        melde(client, governance, tool["id"], "rot", begruendung="Geteiltes Konto").status_code
+        == 201
+    )
+
+
+def test_stilllegen_schliesst_auch_bei_stehender_abweichung(
+    client: TestClient, governance, tool, datenobjekt
+) -> None:
+    """Der Ausweg bleibt offen — sonst waere ein Vorgang unschliessbar.
+
+    Wer nicht anpassen kann und den Rahmen nicht erweitert bekommt, legt
+    still. Genau dafuer ist der dritte Weg da.
+    """
+    fremd = datenobjekt("Nicht erklaerte Ablage")
+    _verknuepfe_daten(client, governance, tool["id"], fremd["id"], "lesen")
+    vorgang = melde(client, governance, tool["id"], "rot").json()["lenkungsvorgang"]
+
+    assert loese_auf(client, governance, vorgang["id"], "stilllegen").status_code == 200
+    assert (
+        client.get(f"/api/v1/tools/{tool['id']}", headers=governance.kopf).json()["status"]
+        == "inaktiv"
+    )
+
+
+def test_ohne_messbare_abweichung_bleibt_anpassen_eine_aussage(
+    client: TestClient, governance, tool
+) -> None:
+    """Zwei der sechs Verbote sieht die Anwendung nicht — sie werden gemeldet.
+
+    Fuer sie hat sie kein Signal, dem sie widersprechen koennte. Der Riegel
+    greift nur gegen die eigene Messung, nicht gegen jede Behauptung; sonst
+    waere ein gemeldeter Vorgang nie zu schliessen.
+    """
+    vorgang = melde(
+        client,
+        governance,
+        tool["id"],
+        "rot",
+        schicht2_verbot="daten_ins_offene_netz",
+    ).json()["lenkungsvorgang"]
+    assert loese_auf(client, governance, vorgang["id"], "anpassen").status_code == 200
+
+
+def test_kommentar_steht_neben_der_feststellung_nicht_darin(
+    client: TestClient, governance, tool
+) -> None:
+    """E-63: zwei Aussagen von zwei Menschen zu zwei Zeitpunkten, zwei Felder."""
+    vorgang = melde(
+        client, governance, tool["id"], "rot", begruendung="Zugriff ausserhalb des Rahmens."
+    ).json()["lenkungsvorgang"]
+    befund = vorgang["beschreibung"]
+
+    antwort = loese_auf(
+        client, governance, vorgang["id"], "anpassen", kommentar="Schreibzugriff entfernt"
+    )
+    assert antwort.status_code == 200
+    assert antwort.json()["beschreibung"] == befund
+    assert antwort.json()["aufloesungskommentar"] == "Schreibzugriff entfernt"
+
+
 def test_rahmen_erweitern_verlangt_eine_neue_bewertung(
     client: TestClient, governance, owner, prozess, tool
 ) -> None:

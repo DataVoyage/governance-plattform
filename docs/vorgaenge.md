@@ -194,6 +194,7 @@ ihn zu hinterlegen, bekommt einen roten Test — und umgekehrt.
 | V-RAH-08 | Den Vorgang durch Stilllegung auflösen | Governance | Das Tool gilt als inaktiv | AP-6 | erfüllt |
 | V-RAH-09 | Die Frist im Countdown ablesen | technischer Owner | Die verbleibende Zeit ist ohne Rechnen erkennbar | AP-6 | erfüllt |
 | V-RAH-10 | Fristen und Schwellen konfigurieren | Governance | Die Änderung wirkt auf neue Vorgänge, nicht rückwirkend | AP-6 | erfüllt |
+| V-RAH-11 | Einen Vorgang auflösen wollen, dessen Abweichung noch steht | technischer Owner | Die Oberfläche nennt die gemessene Abweichung vorher; „Anpassen“ wird abgelehnt, der Zustand bleibt rot, Stilllegen bleibt möglich | AP-17 | erfüllt |
 
 ## V-KLA — Anforderungsklassen und Technologiematrix
 

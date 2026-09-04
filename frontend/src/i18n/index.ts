@@ -491,6 +491,8 @@ const de = {
   'lenkung.status.offen': 'Offen',
   'lenkung.status.aufgeloest': 'Aufgelöst',
   'lenkung.status.abgebrochen': 'Abgebrochen',
+  'lenkung.stehtNoch':
+    'Gemessen steht die Abweichung noch: {elemente}. „Angepasst“ und „Rahmen erweitert“ schließen erst, wenn sie behoben ist.',
   'lenkung.aufloesen': 'Auflösen',
   'lenkung.art': 'Auflösungsart',
   'lenkung.art.anpassen': 'Anpassen',
@@ -1308,6 +1310,8 @@ const fr: Record<Schluessel, string> = {
   'lenkung.status.offen': 'Ouverte',
   'lenkung.status.aufgeloest': 'Résolue',
   'lenkung.status.abgebrochen': 'Annulée',
+  'lenkung.stehtNoch':
+    "L'écart est toujours mesuré : {elemente}. « Adapté » et « Cadre élargi » ne clôturent qu'une fois l'écart corrigé.",
   'lenkung.aufloesen': 'Résoudre',
   'lenkung.art': 'Mode de résolution',
   'lenkung.art.anpassen': 'Adapter',

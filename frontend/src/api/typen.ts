@@ -609,7 +609,12 @@ export interface Lenkungsvorgang {
   aufloesungsart: Aufloesungsart | null;
   aufloesung_bewertung_id: string | null;
   aufgeloest_am: string | null;
+  /** Was festgestellt wurde — gehört dem Melder und ändert sich nicht. */
   beschreibung: string;
+  /** Was der Auflösende dazu sagt. Getrennt von der Feststellung (E-63). */
+  aufloesungskommentar: string;
+  /** Was die Anwendung am Werkzeug gerade selbst misst. Leer heißt: nichts. */
+  offene_abweichungen: string[];
   erstellt_am: string;
   rechte: Lenkungsrechte;
 }

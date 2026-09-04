@@ -92,8 +92,12 @@ WERKZEUGE: tuple[Werkzeug, ...] = (
         "An zwei Prozessen — erbt das Maximum",
         "python-kubernetes",
         "logistik-de",
-        prozesse=("kette1", "kette3"),
-        # Schreibend — und erlaubt: „vertraulich" ist Ergebnis von Kette 2.
+        # Kette 2 und Kette 3, nicht Kette 1: geschrieben werden darf nur, was
+        # ein Prozess als **Ergebnis** fuehrt (A.4.1), und „vertraulich" ist das
+        # Ergebnis von Kette 2. Haenge das Werkzeug stattdessen an Kette 1, ist
+        # derselbe Zugriff eine Abweichung — die Kante entscheidet, nicht die
+        # Absicht.
+        prozesse=("kette2", "kette3"),
         daten=(("vertraulich", Zugriffsart.LESEN_SCHREIBEN),),
     ),
     Werkzeug(

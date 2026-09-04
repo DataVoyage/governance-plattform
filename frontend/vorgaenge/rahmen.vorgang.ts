@@ -18,6 +18,7 @@ import {
   anmelden,
   anwenderMitRolle,
   bewerten,
+  datenobjektAnlegen,
   geplanterLauf,
   kennzeichen,
   kopf,
@@ -321,4 +322,52 @@ vorgang('V-RAH-10', async ({ page, request }) => {
   } finally {
     await einstellen(request, 'lenkung_frist_tage_tier3', '5');
   }
+});
+
+vorgang('V-RAH-11', async ({ page, request }) => {
+  // E-63: „Angepasst" ist eine prüfbare Aussage — also wird sie geprüft. Der
+  // Bezug ist echt: das Werkzeug liest eine Quelle, die sein Prozess nicht
+  // erklärt. Vorher schloss ein Klick den Vorgang und färbte das Werkzeug
+  // grün, während die Messung das Gegenteil sagte.
+  const marke = kennzeichen();
+  const { org, tool } = await aufbau(request, marke);
+  const h = await kopf(request);
+  const quelle = await datenobjektAnlegen(request, {
+    name: `Nicht erklärte Ablage ${marke}`,
+    fachbereich_id: org.fachbereichId,
+  });
+  const verknuepft = await request.post(`${API}/api/v1/tools/${tool.id}/datenobjekte`, {
+    headers: h,
+    data: { datenobjekt_id: quelle.id, zugriffsart: 'lesen' },
+  });
+  if (verknuepft.status() >= 400) throw new Error(`Datenkante: ${await verknuepft.text()}`);
+
+  await anmelden(page);
+  await melden(page, tool.id, 'Greift auf eine Quelle zu, die niemand erklärt hat');
+
+  await page.goto('/de/lenkung');
+  const karte = page.locator('.k-karte').filter({ hasText: `Werkzeug ${marke}` });
+  // Vor dem Klick steht da, was noch aussteht.
+  await expect(karte.getByText(/Gemessen steht die Abweichung noch/)).toBeVisible();
+  await expect(karte.getByText(/datenobjekte/)).toBeVisible();
+
+  await karte.getByRole('button', { name: 'Anpassen' }).click();
+  await page.getByLabel('Kommentar').fill('Ist erledigt.');
+  await page.getByTestId('aufloesen').click();
+
+  // Abgelehnt — und nichts hat sich geändert.
+  await expect(page.getByText(/setzt voraus, dass die Abweichung behoben ist/)).toBeVisible();
+  await page.goto(`/de/tools/${tool.id}`);
+  await expect(page.getByTestId('aktueller-zustand')).toContainText('Rot');
+
+  // Der dritte Weg bleibt offen: wer nicht anpassen kann, legt still.
+  await page.goto('/de/lenkung');
+  await page
+    .locator('.k-karte')
+    .filter({ hasText: `Werkzeug ${marke}` })
+    .getByRole('button', { name: 'Stilllegen' })
+    .click();
+  await page.getByTestId('aufloesen').click();
+  await page.goto(`/de/tools/${tool.id}`);
+  await expect(page.getByTestId('status')).toContainText('Inaktiv');
 });
