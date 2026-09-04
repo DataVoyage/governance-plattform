@@ -521,6 +521,23 @@ zeigten fremde Bereiche und alle Nutzernamen; wer sich selbst als Owner eintrug,
 - [x] Oberfläche: rotes Abzeichen und ein Satz, was zu tun ist
 - [x] Beispielbestand zeigt den Fall (Lieferantenbewertung Food, Tier 1 → 3 im Betrieb)
 
+### AP-16 — Ein zweiter, kleiner Bestand für Entwicklung und Prüfung *(E-61)*
+
+**Anwendervorgänge:** V-ANM-10 — die Zugänge selbst sind ein Anwendervorgang,
+der Bestand dahinter nicht.
+
+- [x] `app.lehrbestand`: acht Prozessobjekte, sechs Werkzeuge, acht Quellen; jede
+      Aufzählung, jeder Status und jede Cockpit-Zeile genau einmal belegt
+- [x] Sprechende Namen — jedes Objekt sagt, welchen Fall es zeigt
+- [x] `test_lehrbestand.py` prüft die Vollständigkeit **und** die Obergrenze
+- [x] README: beide Bestände nebeneinander, mit ihrem jeweiligen Zweck
+- [x] Zugangsdaten: Kennung **ist** der Name, sonst benennt die erste Anmeldung den
+      Nutzer um und derselbe Mensch erscheint unter zwei Namen; die Beschreibung des
+      Zugangs steht in `docs/demo-zugaenge.md`, nicht im Datensatz
+- [x] Beide Bestände bieten dieselben elf Zugänge — der Wechsel verlangt kein
+      Umgewöhnen, ein Test hält sie gleich
+- [x] Anmeldemaske: das Namensfeld darf frei bleiben, und sie sagt es
+
 ---
 
 ## 3. Reihenfolge und Meilensteine

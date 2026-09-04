@@ -177,6 +177,31 @@ Im Bestand: **8 · 15 · 30**. Die Mehrheit der Kernprozesse eines Handels­unte
 
 ---
 
+<!-- _class: eng -->
+
+## Kritikalität und Tier sind **nicht** dasselbe
+
+Beide laufen von 1 bis 3, und genau deshalb werden sie verwechselt.
+
+| | **Kritikalität** | **Tier** |
+|---|---|---|
+| Frage | Was passiert, wenn er ausfällt? | Wie streng wird er behandelt? |
+| Herkunft | eine Größe, gerechnet | Gesamturteil über **sechs** Dimensionen |
+| Gilt für | nur Prozessobjekte | nur Bewertungen |
+
+Es gibt **genau eine** Verbindung: die Kritikalität ist der **Vorschlag für die
+Dimension UR** — unternehmerisches Risiko. Sie ist die einzige der sechs, die
+sich vollständig ableiten lässt, weil die Ausfallfolge ein Pflichtfeld ist und
+die Vererbung entlang der Kette gerechnet wird.
+
+*Ausfallfolge + Kette → Kritikalität → Vorschlag UR → höchste von sechs → Tier*
+
+Ein Vorschlag, kein Zwang: wer abweicht, begründet. Und umgekehrt kann ein
+hohes Tier ganz ohne Kritikalität entstehen — aus Datenschutz, aus KI, aus
+Nachweispflicht.
+
+---
+
 ## Vorschlag statt Verhör
 
 Die Anwendung **schlägt Antworten vor** und nennt den Beleg:
@@ -245,6 +270,33 @@ Im Bestand: **26 Ausschlüsse**, **26 fehlende Maßnahmen**, 30 dokumentierte,
 
 ---
 
+<!-- _class: eng -->
+
+## Was ein Werkzeug erbt — und was es selbst mitbringt
+
+Ein Tool-Objekt hat **weder Tier noch Kritikalität als eigene Angabe**. Es
+erbt das **Maximum** über alle Prozesse, an denen es hängt: Kritikalität,
+Reichweite, Tier, Mitbestimmungsflag und die Anforderungsklassen.
+
+Warum das Maximum: ein Werkzeug an zwei Prozessen wäre sonst über die
+schwächere Kante zu umgehen. Und damit eine Zahl nicht ohne Adresse dasteht,
+wird die **maßgebliche Kante benannt** — im Bestand etwa die
+„Filialkennzahlen-Tafel", die an zwei Prozessen hängt und ihr Tier 3 aus dem
+Bestellvorschlag bezieht.
+
+| Werkzeuge im Bestand | |
+|---|---|
+| erben Tier 1 · 2 · 3 | 8 · 16 · 39 |
+| ohne Prozesskante — erben **nichts** | 7 |
+
+Die sieben ohne Kante sind nicht regelwidrig, sondern **unbewertet**: kein
+Prozess, also kein Rahmen, also nichts, wogegen zu prüfen wäre. Für den
+Altbestand ist das der Ausgangszustand und die Arbeitsliste.
+
+> Bewertet wird der Prozess, nie das Werkzeug.
+
+---
+
 ## Der Erlaubnisrahmen: was ein Werkzeug darf
 
 ![w:820](bilder/erlaubnisrahmen.png)
@@ -265,6 +317,28 @@ Zugriffsart · Ausführungsart · Ausführungsidentität*
 
 Im Bestand weichen **11 Werkzeuge** in mindestens einem Element ab — jedes
 davon ein Fall, den vorher niemand gesehen hätte.
+
+---
+
+## Der Abgleich: wer liefert welche Seite
+
+| | liefert |
+|---|---|
+| **Prozessobjekt** | was **erlaubt** ist — aus SIPOC, Bewertung, Deklaration |
+| **Tool-Objekt** | was **gemessen** wird — aus Telemetrie und Attestierungen |
+
+Eine Abweichung ist damit keine Eigenschaft eines der beiden, sondern das
+Ergebnis eines Vergleichs. Deshalb kann ein Werkzeug eine Abweichung auslösen,
+ohne selbst eine Einstufung zu haben: es liefert die eine Hälfte.
+
+Und es muss dafür nichts Verbotenes tun. Es gilt das **Positivlistenprinzip** —
+was nicht ausdrücklich erlaubt ist, ist nicht erlaubt. Es genügt, dass ein
+Werkzeug etwas tut, das im Rahmen nicht steht.
+
+**Der Abgleich läuft von selbst.** Ausgelöst durch Telemetrieänderung, nicht
+durch Kalender oder Stichprobe. Solange grün, sieht niemand etwas und es
+entsteht kein Vorgang: **der grüne Zustand ist kostenlos.** Genau das macht das
+Modell skalierbar — Aufwand entsteht nur dort, wo etwas abweicht.
 
 ---
 
@@ -306,6 +380,32 @@ Genau **drei Auswege**, keine vierte Möglichkeit: *anpassen* · *Rahmen
 erweitern* (verlangt eine neue Bewertung) · *stilllegen*.
 
 Im Bestand offen: **1 · 2 · 2** über die drei Stufen.
+
+---
+
+<!-- _class: eng -->
+
+## Der ganze Weg, an einem Objekt
+
+| Schritt | Was geschieht | Wer |
+|---|---|---|
+| 1 | Prozessobjekt anlegen: zehn Felder, Kanten setzen | Prozess-Owner |
+| 2 | **Kritikalität** ergibt sich aus Ausfallfolge und Kette | gerechnet |
+| 3 | Bewertung: achtzehn Fragen, sechs Dimensionen, Vorschläge mit Beleg | Prozess-Owner |
+| 4 | **Tier** = höchste Stufe · **K-Klassen** aus dem Profil | gerechnet |
+| 5 | Ab Tier 3: Selbstverpflichtung und **Gate 1** vor Inbetriebnahme | Owner · Governance |
+| 6 | Werkzeug an den Prozess hängen: es **erbt** das Maximum | technischer Owner |
+| 7 | **Erlaubnisrahmen** entsteht — sieben Elemente, abgeleitet | gerechnet |
+| 8 | **Abgleich** erlaubt gegen gemessen, fortlaufend | niemand |
+| 9 | Bei Abweichung: **Lenkungsvorgang** mit Frist nach Tier | technischer Owner |
+| 10 | Drei Auswege: anpassen · Rahmen erweitern · stilllegen | technischer Owner |
+
+Vier der zehn Schritte rechnet die Anwendung. An **zwei** Stellen wartet
+jemand — Gate 1 und Gate 2. Alles andere läuft ungebremst.
+
+**Und steigt ein laufender Prozess auf Tier 3**, entfällt seine Freigabe: er
+läuft weiter, ist aber nicht mehr freigegeben, und der Gate-1-Vorgang liegt
+sofort vor. „Läuft" und „darf laufen" sind zwei Aussagen.
 
 ---
 
@@ -470,17 +570,24 @@ es dürfte.
 
 Sechs der zehn Zugänge des gezeigten Bestands, unverändert abgefragt:
 
+Fünf davon tragen **dieselbe Rolle nicht**, sitzen aber im **selben
+Fachbereich** — der Logistik. Nur so sieht man, woher ein Unterschied kommt:
+
 | Zugang | Prozesse | Werkzeuge | Datenobjekte | Katalog | Nachweis |
 |---|---|---|---|---|---|
 | Governance | 56 | 73 | 93 | 87 | ja |
-| Prozess-Owner Vertrieb | 11 | 14 | 19 | 87 | nein |
-| Prozess-Umsetzer | 5 | 9 | 10 | 87 | nein |
-| Datenobjekt-Owner | 0 | 0 | 12 | 87 | nein |
+| Prozess-Owner, ganze Logistik | 6 | 9 | 11 | 87 | nein |
+| Prozess-Owner, nur Logistik DE | 4 | 7 | 8 | 87 | nein |
+| Datenobjekt-Owner, ganze Logistik | **0** | **0** | 11 | 87 | nein |
 | App-Administrator | 0 | 0 | 0 | 87 | ja |
 | ohne Rolle | 0 | 0 | 0 | – | nein |
 
+Zeile 2 gegen 3: **dieselbe Rolle, engerer Bereich.** Zeile 2 gegen 4:
+**derselbe Bereich, andere Rolle** — der Datenobjekt-Owner sitzt in derselben
+Logistik und sieht kein einziges Prozessobjekt.
+
 Der **Katalog** ist die eine, bewusste Ausnahme: Name, Fachbereich, Kategorie
-und Quellsystem jeder Quelle, damit ein Prozess im Vertrieb die
+und Quellsystem jeder Quelle, damit ein Prozess der Logistik die
 Personalstammdaten überhaupt als Eingang benennen kann. Vier Felder, mehr
 nicht — und ohne Rolle auch die nicht.
 

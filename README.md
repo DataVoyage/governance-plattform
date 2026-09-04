@@ -115,16 +115,43 @@ docker compose exec backend python -m app.bestand --leeren
 `--leeren` verwirft den vorhandenen Inhalt; ohne die Option läuft der Aufbau
 nur auf einer leeren Datenbank. Er dauert wenige Sekunden.
 
+### Zwei Bestände, zwei Zwecke
+
+Für Entwicklung und eigenes Prüfen ist der grosse Bestand zu voll: wer sehen
+will, ob eine Rolle richtig greift, sucht sich in sechsundfünfzig
+Prozessobjekten das eine heraus, an dem es sich zeigt — und übersieht dabei,
+dass die Zahl daneben falsch ist. Deshalb gibt es einen zweiten:
+
+```bash
+docker compose exec backend python -m app.lehrbestand --leeren
+```
+
+| | `app.bestand` | `app.lehrbestand` |
+|---|---|---|
+| Zweck | beurteilen, vorführen | entwickeln, prüfen |
+| Umfang | 56 Prozesse, 73 Werkzeuge, 93 Quellen | 8 · 6 · 8 |
+| Namen | aus der Fachwelt — nichts verrät, dass er erfunden ist | sagen, welchen Fall sie zeigen |
+| Zusage | jeder Zustand kommt vor, breit verteilt | jeder Zustand kommt **genau einmal** vor |
+
+Der kleine Bestand trägt trotz seiner Grösse jede Aufzählung, jeden Status und
+**jede der vierzehn Cockpit-Zeilen** aus A.14 belegt. `test_lehrbestand.py`
+prüft das — ein Bestand, der Vollständigkeit behauptet und sie nicht hat, wäre
+schlechter als einer, der nichts behauptet.
+
+Die elf Zugänge sind in beiden dieselben (siehe
+[Zugänge](docs/demo-zugaenge.md)); der kleine Bestand ergänzt sie um einen
+ausgeschiedenen Owner, der kein Zugang ist.
+
 | Was | Anzahl |
 |---|---|
 | Fachbereiche, Organisationseinheiten, Teams | 10 · 41 · 17 |
-| Menschen und Rollenzuweisungen | 70 · 72 |
+| Menschen und Rollenzuweisungen | 81 · 82 |
 | Datenobjekte (alle fünf Kategorien aus A.7, dazu die ohne) | 93 |
-| Prozessobjekte (Entwurf, aktiv, stillgelegt; Tier 1 bis 3) | 55 |
-| Tool-Objekte (vier Technologien, dazu eine ohne) | 72 |
-| Bewertungen, Selbstverpflichtungen, Gate-Vorgänge | 76 · 120 · 34 |
+| Prozessobjekte (Entwurf, aktiv, freigabe ausstehend, stillgelegt; Tier 1 bis 3) | 56 |
+| Tool-Objekte (vier Technologien, dazu eine ohne) | 73 |
+| Bewertungen, Selbstverpflichtungen, Gate-Vorgänge | 78 · 122 · 35 |
 | Compliance-Zustände, Lenkungsvorgänge, Kompensationen | 28 · 10 · 30 |
-| Protokolleinträge über gut zwei Jahre | ~1100 |
+| Protokolleinträge über gut zwei Jahre | ~1150 |
 
 Jeder Datensatz entsteht über dieselbe Geschäftslogik wie im Betrieb, unter der
 Kennung des Menschen, der die Handlung täte — mit Berechtigungsprüfung,
@@ -134,10 +161,12 @@ Rahmenelement wird irgendwo verletzt, alle sechs Verbote aus A.13.2 Schicht 2
 kommen vor, und alle drei Eskalationsstufen sind belegt. `tests/test_bestand.py`
 hält das fest.
 
-Er legt zugleich **zehn Zugänge für Vorführung und Entwicklung** an — einen je
-Rolle, dazu dieselbe Rolle mit zwei Geltungsbereichen und einen ganz ohne
-Rolle. Kennung und Name sind jeweils dasselbe eine Wort
-(`governance`, `auditor`, `prozessowner`, …); die Tabelle steht in
+Er legt zugleich **elf Zugänge für Vorführung und Entwicklung** an — einen je
+Rolle, dazu dieselbe Rolle in zwei Geltungsbereichen, dieselbe Rolle im fremden
+Fachbereich und einen ganz ohne Rolle. Kennung und Name sind jeweils dasselbe
+eine Wort (`governance`, `auditor`, `prozessowner`, …): die Anwendung übernimmt
+den Namen aus der Identität, ein abweichender Name würde bei der ersten
+Anmeldung überschrieben. Die Tabelle steht in
 [`docs/demo-zugaenge.md`](docs/demo-zugaenge.md). Sie funktionieren
 ausschließlich im Entwicklungsmodus und haben keine Sonderrechte.
 

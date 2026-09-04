@@ -63,6 +63,7 @@ ihn zu hinterlegen, bekommt einen roten Test — und umgekehrt.
 | V-ANM-07 | Einen geteilten Link öffnen, ohne angemeldet zu sein | alle | Nach der Anmeldung erscheint die verlangte Ansicht samt ihrem Filter — nicht die Prozessliste | AP-0 | erfüllt |
 | V-ANM-08 | Das Konzept als Vortrag durchgehen | alle | Der Vortrag erscheint in der Anwendung, lässt sich blättern, und die Foliennummer steht in der Adresse | AP-0 | erfüllt |
 | V-ANM-09 | Jede Folie des Vortrags passt in die Darstellung | alle | Keine Folie ist unten abgeschnitten — geprüft wird jede einzelne, nicht die erste | AP-12 | erfüllt |
+| V-ANM-10 | Sich mit einem Wort anmelden und die Sicht wechseln | alle | Kennung eintragen, Namensfeld frei lassen: der Zugang heißt überall gleich, und ein zweiter Zugang zeigt dieselben Objekte nach seinen eigenen Rechten | AP-16 | erfüllt |
 
 ## V-PRO — Prozessobjekt
 

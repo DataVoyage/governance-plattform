@@ -31,6 +31,9 @@ export function Anmeldung() {
     ereignis.preventDefault();
     setFehler(null);
     try {
+      // Ohne Namensangabe gilt die Kennung. Das ist der Regelfall: die
+      // Anwendung übernimmt den Namen aus der Identität (Architektur 10.1) —
+      // wer hier etwas anderes einträgt, benennt den Nutzer im Bestand um.
       await anmelden(kennung, name || kennung);
       navigiere(weiter, { replace: true });
     } catch {
@@ -50,7 +53,12 @@ export function Anmeldung() {
         <div className="entwicklungsmodus">
           <span className="etikett">{t('anmeldung.entwicklungsmodus')}</span>
           <Feld beschriftung={t('anmeldung.kennung')} wert={kennung} aendern={setKennung} pflicht />
-          <Feld beschriftung={t('anmeldung.name')} wert={name} aendern={setName} />
+          <Feld
+            beschriftung={t('anmeldung.name')}
+            hilfe={t('anmeldung.namehilfe')}
+            wert={name}
+            aendern={setName}
+          />
           <Knopf type="submit" art="gefuellt" gross breit>
             {t('anmeldung.absenden')}
           </Knopf>

@@ -19,8 +19,10 @@ Eine Berechtigung entsteht **nie aus einer Rolle allein** und **nie aus einem
 Bereich allein**, sondern immer aus der Kombination (P-App-3). „Prozess-Owner"
 sagt, *was* jemand darf; der Bereich sagt, *woran*. Dieselbe Rolle mit zwei
 Bereichen ergibt zwei verschiedene Berechtigungen — der Beispielbestand zeigt
-das an `prozessowner` (ganzer Vertrieb) und `bereichsowner` (nur Logistik
-International).
+das an `prozessowner` (ganze Logistik, 6 Prozessobjekte) und `bereichsowner`
+(nur Logistik DE, 4). Alle fünf bereichsgebundenen Demo-Zugänge liegen deshalb
+im selben Fachbereich — sonst ließe sich nicht unterscheiden, ob ein
+Unterschied von der Rolle oder vom Bereich kommt.
 
 Daraus folgen drei Sätze, die an jeder Stelle gelten:
 

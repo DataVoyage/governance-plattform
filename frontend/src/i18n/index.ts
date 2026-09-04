@@ -48,6 +48,7 @@ const de = {
   'anmeldung.entwicklungsmodus': 'Entwicklungsmodus: lokale Anmeldung',
   'anmeldung.kennung': 'Kennung',
   'anmeldung.name': 'Name',
+  'anmeldung.namehilfe': 'Frei lassen — dann gilt die Kennung auch als Name.',
   'anmeldung.absenden': 'Anmelden',
 
   'nav.prozesse': 'Prozesse',
@@ -858,6 +859,7 @@ const fr: Record<Schluessel, string> = {
   'anmeldung.entwicklungsmodus': 'Mode développement : connexion locale',
   'anmeldung.kennung': 'Identifiant',
   'anmeldung.name': 'Nom',
+  'anmeldung.namehilfe': "Laisser vide — l'identifiant sert alors aussi de nom.",
   'anmeldung.absenden': 'Se connecter',
 
   'nav.prozesse': 'Processus',

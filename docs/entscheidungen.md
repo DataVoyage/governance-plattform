@@ -1838,3 +1838,89 @@ von Tier 1 auf 3, weil aus einer Kennzahl eine Listungsentscheidung mit
 Auslistungsvorschlag geworden ist. Der Auslöser ist kein Formfehler, sondern
 Alltag — und genau deshalb gehört er hinein.
 
+## E-61 — Ein zweiter Bestand, klein und vollständig
+
+*Datum: 2026-09-04 — Status: umgesetzt (AP-16)*
+
+`app.bestand` baut ein ganzes Unternehmen. Das ist richtig, um die Anwendung zu
+**beurteilen**: eine Liste mit drei Einträgen und eine Zeitreihe aus einem
+Balken lassen sich bedienen, aber nicht bewerten.
+
+Zum **Entwickeln und Prüfen** ist er zu voll, und das ist keine Geschmacksfrage.
+Wer sehen will, ob eine Rolle richtig greift, sucht sich in sechsundfünfzig
+Prozessobjekten das eine heraus, an dem es sich zeigt — und übersieht dabei,
+dass die Zahl daneben falsch ist. Die Fülle, die den einen Zweck trägt,
+verhindert den anderen.
+
+**Deshalb ein zweiter Bestand statt eines Kompromisses.** `app.lehrbestand`
+hat acht Prozessobjekte, sechs Werkzeuge, acht Quellen — und trägt trotzdem
+jede Aufzählung, jeden Status und **jede der vierzehn Cockpit-Zeilen** belegt.
+Die Zusage ist nicht „klein", sondern **alles einmal, nichts zweimal**. Beides
+zusammen: ohne die Vollständigkeit wäre er nutzlos, ohne die Knappheit wäre er
+der grosse Bestand.
+
+**Die Namen sagen, wofür ein Objekt da ist.** „Tier 3 — Freigabe ausstehend"
+ist kein Handelsprozess; es ist der Fall, den man sehen will. Das ist die
+bewusste Gegenentscheidung zum grossen Bestand, wo jeder Name aus der Fachwelt
+kommt und kein Datensatz verrät, dass er erfunden ist. Beide Regeln haben
+denselben Grund: ein Bestand soll sagen, wofür er da ist.
+
+**Die Vollständigkeit wird geprüft, nicht behauptet.** `test_lehrbestand.py`
+hält fünfundzwanzig Zusagen fest — jeder Prozessstatus, jede Tier-Stufe, jede
+Reichweite, jede Datenkategorie, jede Rolle, beide Scope-Arten, beide
+Gate-Arten und -Ausgänge, offene und aufgelöste Lenkung, Rahmen eingehalten
+und verletzt, ein stehender Schicht-2-Verstoss, und keine leere Cockpit-Zeile.
+Dazu eine **Obergrenze**: wächst der Bestand darüber hinaus, ist er kein
+Lehrbestand mehr, und der neue Fall gehört in den grossen.
+
+**Was dabei aufgefallen ist.** Zwei Dinge, die der Aufbau selbst zutage
+förderte, weil er über die Dienstschicht schreibt und bei jeder verletzten
+Regel laut scheitert:
+
+* Ein Prozess-Owner mit **Landes-Scope kann kein Prozessobjekt anlegen** — der
+  Prozessgeber ist immer eine INT-Einheit. Er sieht die Prozesse, die in
+  seinem Land umgesetzt werden, und pflegt deren lokale Abweichung. Das ist
+  keine Lücke, sondern die Regel; sie stand nur nirgends.
+* Der **Erstzugang trägt zwei Rollen** (App-Administrator und Governance). Er
+  taugt deshalb nicht als Demo-Zugang: an ihm liesse sich keine der beiden für
+  sich zeigen. Im Lehrbestand ist er ein eigener, elfter Nutzer.
+
+**Kein Vorgangskatalog-Eintrag.** Der Katalog führt Anwendervorgänge über die
+Oberfläche; ein Entwicklungswerkzeug ist keiner. Die Zusage dieses Bestands
+steht stattdessen als Test.
+
+---
+
+## E-62 — Ein Zugang trägt seine Kennung als Namen
+
+**Beobachtung.** Im kleinen Bestand hieß der Zugang `prozessowner` im Datensatz
+„Prozess-Owner, ganze Logistik" — beschreibend und gut gemeint. Wer sich dann
+anmeldete, sah denselben Menschen unter zwei Namen: im Protokoll noch unter der
+Beschreibung, in der Objektliste bereits unter der Kennung.
+
+**Ursache, und sie ist kein Fehler.** Die Anwendung führt keine eigene
+Nutzerverwaltung. Sie übernimmt Namen und Adresse aus der Identität, mit der
+man sich anmeldet, und schreibt eine Abweichung zurück (Architektur 10.1). Das
+ist richtig so: im Betrieb ist das Identitätssystem die Quelle, nicht die
+Anwendung — sonst liefe der Bestand nach der ersten Namensänderung im
+Unternehmen auseinander, und niemand wüsste, welcher der beiden Namen gilt.
+Im Entwicklungsmodus tippt der Anmeldende diese Identität selbst; damit ist
+jeder Name, den der Seed vergibt, nur so lange gültig, bis sich jemand anmeldet.
+
+**Entscheidung.** Ein Zugang trägt seine Kennung als Namen. Was ihn
+beschreibt — Rolle, Geltungsbereich, wofür er im Vortrag steht — steht in
+`docs/demo-zugaenge.md` und im Quelltext, nicht im Datensatz. Die Anmeldemaske
+sagt dazu, dass das Namensfeld frei bleiben darf; bleibt es frei, gilt die
+Kennung. Damit ist die Anmeldung ein Wort in einem Feld, und der Bestand ändert
+sich durch das Anmelden nicht mehr.
+
+**Zwei Bestände, dieselben elf Zugänge.** Der große Vorführbestand hielt diese
+Regel schon; ihm fehlte umgekehrt der `fremdowner` — dieselbe Rolle im fremden
+Fachbereich —, der im kleinen Bestand die wichtigste negative Aussage trägt.
+Beide bieten jetzt dieselben elf Zugänge. Wer den Bestand wechselt, um dieselbe
+Sache einmal knapp und einmal in voller Breite zu sehen, soll sich nicht
+umgewöhnen müssen. `test_lehrbestand.py` hält die beiden Listen gleich und
+prüft, dass Kennung und Name übereinstimmen.
+
+**Anwendervorgang:** V-ANM-10.
+

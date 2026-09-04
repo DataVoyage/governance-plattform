@@ -135,28 +135,37 @@ DEMOZUGAENGE: tuple[Person, ...] = (
         None,
         "app_administrator@global",
     ),
-    # Zweimal dieselbe Rolle, zwei Geltungsbereiche. Daran zeigt sich, dass
-    # eine Berechtigung nie aus der Rolle allein entsteht (P-App-3).
+    # Alle fuenf bereichsgebundenen Zugaenge liegen im **selben** Fachbereich,
+    # der Logistik. Das ist Absicht: verteilt man sie ueber verschiedene
+    # Bereiche, sieht jeder etwas anderes und man kann nicht unterscheiden, ob
+    # der Unterschied von der Rolle oder vom Bereich kommt. Nebeneinander im
+    # selben Bereich zeigen sie beide Haelften der Regel (P-App-3):
+    #
+    #   prozessowner  gegen  bereichsowner     dieselbe Rolle, engerer Bereich
+    #   prozessowner  gegen  toolowner/datenowner  gleicher Bereich, andere Rolle
+    #
+    # Die zweite Zeile ist die, die am leichtesten vergessen wird — sie war bis
+    # E-57 auch falsch umgesetzt (R-7).
     Person(
         "prozessowner",
         "prozessowner",
-        "Prozess-Owner, Fachbereich Vertrieb",
+        "Prozess-Owner, Fachbereich Logistik",
         None,
-        "prozess_owner@fb:vertrieb",
+        "prozess_owner@fb:logistik",
     ),
     Person(
         "bereichsowner",
         "bereichsowner",
-        "Prozess-Owner, nur Einheit Logistik International",
+        "Prozess-Owner, nur Landesgesellschaft Logistik DE",
         None,
-        "prozess_owner@oe:logistik",
+        "prozess_owner@oe:logistik-de",
     ),
     Person(
         "prozessumsetzer",
         "prozessumsetzer",
-        "Prozess-Umsetzer, Einheit Vertrieb DE",
+        "Prozess-Umsetzer, Landesgesellschaft Logistik DE",
         None,
-        "prozess_umsetzer@oe:vertrieb-de",
+        "prozess_umsetzer@oe:logistik-de",
     ),
     Person(
         "toolowner",
@@ -168,9 +177,19 @@ DEMOZUGAENGE: tuple[Person, ...] = (
     Person(
         "datenowner",
         "datenowner",
-        "Datenobjekt-Owner, Fachbereich Personal",
+        "Datenobjekt-Owner, Fachbereich Logistik",
         None,
-        "datenobjekt_owner@fb:personal",
+        "datenobjekt_owner@fb:logistik",
+    ),
+    # Das Gegenueber: dieselbe Rolle wie `prozessowner`, anderer Fachbereich.
+    # Ohne ihn liesse sich nur zeigen, dass ein engerer Bereich weniger sieht —
+    # nicht, dass eine Rolle allein ueberhaupt nichts traegt.
+    Person(
+        "fremdowner",
+        "fremdowner",
+        "Prozess-Owner, Fachbereich Personal",
+        None,
+        "prozess_owner@fb:personal",
     ),
     # Angemeldet, aber ohne Rolle: der Fall, in dem die Anwendung nichts zeigt
     # und nichts anbietet.

@@ -7,7 +7,16 @@
 
 import { expect } from '@playwright/test';
 
-import { ADMIN, anmelden, vorgang } from './hilfen';
+import {
+  ADMIN,
+  anmelden,
+  anwenderMitRolle,
+  kennzeichen,
+  organisation,
+  prozessAnlegen,
+  vorgang,
+  type Organisation,
+} from './hilfen';
 
 vorgang('V-ANM-01', async ({ page }) => {
   await page.goto('/de/anmeldung');
@@ -169,4 +178,59 @@ vorgang('V-ANM-09', async ({ page }) => {
     }
   }
   expect(zuLang, `Diese Folien laufen über:\n${zuLang.join('\n')}`).toEqual([]);
+});
+
+vorgang('V-ANM-10', async ({ page, request }) => {
+  // Zwei Zusagen in einem Durchlauf. Erstens: die Anmeldung ist ein Wort in
+  // einem Feld — das Namensfeld darf frei bleiben, dann gilt die Kennung auch
+  // als Name. Das ist keine Bequemlichkeit: die Anwendung übernimmt den Namen
+  // aus der Identität (Architektur 10.1), und ein abweichender Name im Bestand
+  // würde beim ersten Anmelden überschrieben (E-62). Zweitens: wer die Sicht
+  // wechselt, sieht dasselbe Objekt mit den Rechten des neuen Zugangs.
+  const marke = kennzeichen();
+  const org: Organisation = await organisation(request, marke);
+  const prozess = await prozessAnlegen(request, org, {
+    name: `Zwei Sichten ${marke}`,
+    umsetzung_land_org_ids: [org.deId],
+  });
+
+  const eigner = `eigner-${marke}`;
+  const umsetzer = `umsetzer-${marke}`;
+  await anwenderMitRolle(
+    request,
+    eigner,
+    eigner,
+    'prozess_owner',
+    'fachbereich',
+    org.fachbereichId,
+  );
+  await anwenderMitRolle(
+    request,
+    umsetzer,
+    umsetzer,
+    'prozess_umsetzer',
+    'organisationseinheit',
+    org.deId,
+  );
+
+  await page.goto('/de/anmeldung');
+  await page.getByLabel('Kennung').fill(eigner);
+  await page.getByRole('button', { name: 'Anmelden' }).click();
+  await expect(page.getByRole('heading', { name: 'Prozessobjekte' })).toBeVisible();
+  // Der Zugang heisst, wie er sich anmeldet — nicht anders.
+  await expect(page.getByText(eigner)).toBeVisible();
+
+  await page.goto(`/de/prozesse/${prozess.id}`);
+  await expect(page.getByRole('link', { name: 'Bearbeiten' })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Abmelden' }).click();
+  await expect(page).toHaveURL(/\/de\/anmeldung/);
+  await page.getByLabel('Kennung').fill(umsetzer);
+  await page.getByRole('button', { name: 'Anmelden' }).click();
+  await expect(page.getByText(umsetzer)).toBeVisible();
+
+  // Dasselbe Objekt, andere Rechte: sichtbar, aber nicht zu bearbeiten.
+  await page.goto(`/de/prozesse/${prozess.id}`);
+  await expect(page.getByRole('heading', { name: `Zwei Sichten ${marke}` })).toBeVisible();
+  await expect(page.getByRole('link', { name: 'Bearbeiten' })).toHaveCount(0);
 });
