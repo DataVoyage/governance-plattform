@@ -1,20 +1,18 @@
 # Mehrstufiger Build (Architektur 6.5): eine Build-Stage mit `uv sync` gegen die
 # Lockfile, ein schlankes Runtime-Image ohne Build-Werkzeuge.
-# Woher die Basisimages kommen. Leer heisst Docker Hub beziehungsweise ghcr.io;
-# in einer Umgebung ohne Zugang dorthin zeigen beide auf den internen Spiegel:
+# Woher die Basisimages kommen. Leer heisst Docker Hub; in einer Umgebung ohne
+# Zugang dorthin zeigt die Variable auf den internen Spiegel:
 #
 #   GP_BASIS_PRAEFIX=artifactory.beispiel-ag.de/docker-remote/
-#   GP_GHCR_PRAEFIX=artifactory.beispiel-ag.de/ghcr-remote/
 #
 # Der abschliessende Schraegstrich gehoert zum Wert — nur so bleibt der
-# Vorgabewert leer und der Name unveraendert. Zwei Variablen, weil Docker Hub
-# und ghcr.io in Artifactory ueblicherweise getrennte Remote-Repositories sind;
-# bei einem virtuellen Repository, das beide buendelt, bekommen sie denselben
-# Wert. Analog zu GP_IMAGE_REGISTRY steht keine Adresse im Code.
+# Vorgabewert leer und der Name unveraendert. Analog zu GP_IMAGE_REGISTRY steht
+# keine Adresse im Code. Es ist bewusst **eine** Quelle: jede weitere waere ein
+# weiteres Remote-Repository, das im Zielhaus eingerichtet und gefuellt sein
+# muss.
 ARG GP_BASIS_PRAEFIX=""
-ARG GP_GHCR_PRAEFIX="ghcr.io/"
 
-FROM ${GP_GHCR_PRAEFIX}astral-sh/uv:python3.12-bookworm-slim AS build
+FROM ${GP_BASIS_PRAEFIX}python:3.12-slim-bookworm AS build
 
 WORKDIR /app
 ENV UV_COMPILE_BYTECODE=1 UV_LINK_MODE=copy
@@ -28,6 +26,15 @@ RUN if [ -n "$EXTRA_CA_BUNDLE" ] && [ -f "/tmp/ca/$EXTRA_CA_BUNDLE" ]; then \
       cp "/tmp/ca/$EXTRA_CA_BUNDLE" /usr/local/share/ca-certificates/intern.crt && \
       update-ca-certificates; \
     fi
+
+# uv kommt aus derselben Paketquelle, aus der gleich alle Abhaengigkeiten
+# kommen — nicht aus einem zweiten Registry. Das spart kein Byte, aber ein
+# ganzes Remote-Repository: wo nur Docker Hub gespiegelt ist, laesst sich sonst
+# nichts bauen. Die Version ist gepinnt, damit derselbe Quellstand denselben
+# Aufloeser benutzt; sie steht hier und nicht in der Lockfile, weil uv das
+# Werkzeug ist, das die Lockfile liest.
+ARG UV_VERSION=0.9.30
+RUN pip install --no-cache-dir "uv==${UV_VERSION}"
 
 COPY pyproject.toml uv.lock ./
 RUN uv sync --frozen --no-install-project --no-dev

@@ -74,10 +74,7 @@ if [ "$MIT_IMAGES" = "--images" ]; then
   # Ohne Codeaenderung, nur ueber das Ziel: derselbe Build, zwei Adressen.
   # Die Herkunft der Basisimages wird durchgereicht — sonst liefe die Pruefung
   # in einer Umgebung ohne Zugang zu Docker Hub gar nicht erst an.
-  HERKUNFT=(
-    --build-arg "GP_BASIS_PRAEFIX=${GP_BASIS_PRAEFIX:-}"
-    --build-arg "GP_GHCR_PRAEFIX=${GP_GHCR_PRAEFIX:-ghcr.io/}"
-  )
+  HERKUNFT=(--build-arg "GP_BASIS_PRAEFIX=${GP_BASIS_PRAEFIX:-}")
   for registry in "localhost:5000" "registry.intern.beispiel-ag.de/governance"; do
     docker build "${HERKUNFT[@]}" -t "$registry/governance-backend:pruefung" "$WURZEL/backend"
     docker build "${HERKUNFT[@]}" -f "$WURZEL/backend/Dockerfile.worker" \

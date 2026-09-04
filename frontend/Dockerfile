@@ -5,19 +5,17 @@
 # in `docs/` — lesbar im Repository, projizierbar ueber Marp, und dieselbe
 # Datei traegt die Ansicht in der Anwendung. Eine Kopie im Frontend waere
 # genau die Doppelpflege, die dieses Vorhaben sonst ueberall vermeidet.
-# Woher die Basisimages kommen. Leer heisst Docker Hub beziehungsweise ghcr.io;
-# in einer Umgebung ohne Zugang dorthin zeigen beide auf den internen Spiegel:
+# Woher die Basisimages kommen. Leer heisst Docker Hub; in einer Umgebung ohne
+# Zugang dorthin zeigt die Variable auf den internen Spiegel:
 #
 #   GP_BASIS_PRAEFIX=artifactory.beispiel-ag.de/docker-remote/
-#   GP_GHCR_PRAEFIX=artifactory.beispiel-ag.de/ghcr-remote/
 #
 # Der abschliessende Schraegstrich gehoert zum Wert — nur so bleibt der
-# Vorgabewert leer und der Name unveraendert. Zwei Variablen, weil Docker Hub
-# und ghcr.io in Artifactory ueblicherweise getrennte Remote-Repositories sind;
-# bei einem virtuellen Repository, das beide buendelt, bekommen sie denselben
-# Wert. Analog zu GP_IMAGE_REGISTRY steht keine Adresse im Code.
+# Vorgabewert leer und der Name unveraendert. Analog zu GP_IMAGE_REGISTRY steht
+# keine Adresse im Code. Es ist bewusst **eine** Quelle: jede weitere waere ein
+# weiteres Remote-Repository, das im Zielhaus eingerichtet und gefuellt sein
+# muss.
 ARG GP_BASIS_PRAEFIX=""
-ARG GP_GHCR_PRAEFIX="ghcr.io/"
 
 FROM ${GP_BASIS_PRAEFIX}node:22-bookworm-slim AS build
 

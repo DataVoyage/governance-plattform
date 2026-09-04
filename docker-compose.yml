@@ -1,13 +1,12 @@
 # Entwicklungsumgebung mit denselben getrennten Containern wie in Produktion
 # (Architektur 6.5) — keine abweichende, monolithische lokale Umgebung.
 
-# Die Basisimages kommen aus Docker Hub und ghcr.io, sofern nichts anderes
-# gesetzt ist. In einer Umgebung ohne Zugang dorthin zeigen zwei Variablen auf
-# den internen Spiegel — mit abschliessendem Schraegstrich, damit der Vorgabewert
-# leer bleiben kann:
+# Alle Basisimages kommen aus Docker Hub, sofern nichts anderes gesetzt ist —
+# python, node, nginx und postgres, und sonst nichts. In einer Umgebung ohne
+# Zugang dorthin zeigt eine Variable auf den internen Spiegel, mit
+# abschliessendem Schraegstrich, damit der Vorgabewert leer bleiben kann:
 #
 #   GP_BASIS_PRAEFIX=artifactory.beispiel-ag.de/docker-remote/
-#   GP_GHCR_PRAEFIX=artifactory.beispiel-ag.de/ghcr-remote/
 #
 # Compose liest sie aus der Umgebung oder aus einer `.env` neben dieser Datei;
 # `.env.beispiel` zeigt, wie sie aussieht. GP_IMAGE_REGISTRY bleibt davon
@@ -37,7 +36,6 @@ services:
       dockerfile: Dockerfile
       args:
         GP_BASIS_PRAEFIX: ${GP_BASIS_PRAEFIX:-}
-        GP_GHCR_PRAEFIX: ${GP_GHCR_PRAEFIX:-ghcr.io/}
     image: ${GP_IMAGE_REGISTRY:-localhost:5000}/governance-backend:${GP_IMAGE_TAG:-dev}
     depends_on:
       datenbank:
@@ -65,7 +63,6 @@ services:
       args:
         VITE_API_BASIS: http://localhost:8000
         GP_BASIS_PRAEFIX: ${GP_BASIS_PRAEFIX:-}
-        GP_GHCR_PRAEFIX: ${GP_GHCR_PRAEFIX:-ghcr.io/}
     image: ${GP_IMAGE_REGISTRY:-localhost:5000}/governance-frontend:${GP_IMAGE_TAG:-dev}
     depends_on:
       - backend
@@ -78,7 +75,6 @@ services:
       dockerfile: Dockerfile.worker
       args:
         GP_BASIS_PRAEFIX: ${GP_BASIS_PRAEFIX:-}
-        GP_GHCR_PRAEFIX: ${GP_GHCR_PRAEFIX:-ghcr.io/}
     image: ${GP_IMAGE_REGISTRY:-localhost:5000}/governance-sync-worker:${GP_IMAGE_TAG:-dev}
     depends_on:
       - backend
