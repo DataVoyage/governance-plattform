@@ -69,9 +69,6 @@ async function tier3Prozess(anfrage: APIRequestContext) {
         '5a': false,
         '5b': false,
         '5c': false,
-        '6a': false,
-        '6b': false,
-        '6c': false,
       },
     },
   });

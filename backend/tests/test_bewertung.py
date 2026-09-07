@@ -65,15 +65,51 @@ def nutzlast(profil: dict[str, int]) -> dict:
 
 
 def test_bloecke_stehen_in_der_festgelegten_reihenfolge() -> None:
-    """Abnahmekriterium 2.1: KI, DS, MB, IT, RG, UR — serverseitig fest."""
+    """Abnahmekriterium 2.1: KI, DS, MB, IT, RG — serverseitig fest.
+
+    UR steht seit AP-19 nicht mehr im Baum: die Dimension ist aus zwei
+    erklaerten Erwartungen gerechnet und wird nach P1 nicht erfragt (E-65).
+    Teil des Profils bleibt sie — das prueft
+    ``test_ur_bleibt_teil_des_profils_obwohl_es_nicht_gefragt_wird``.
+    """
     assert [b.block for b in BAUM] == [
         Block.KI,
         Block.DS,
         Block.MB,
         Block.IT,
         Block.RG,
-        Block.UR,
     ]
+    assert Block.UR not in [b.block for b in BAUM]
+
+
+def test_ur_bleibt_teil_des_profils_obwohl_es_nicht_gefragt_wird() -> None:
+    """Die Dimension verschwindet aus dem Baum, nicht aus dem Profil."""
+    stand = bewertung_service.durchlaufe(ALLES_NEIN, ur_stufe=2)
+    assert stand.abgeschlossen
+    assert bewertung_service.profil(stand)["ur"] == 2
+    assert set(bewertung_service.profil(stand)) == {"ki", "ds", "mb", "it", "rg", "ur"}
+
+
+def test_eigenes_betriebsrisiko_hebt_allein_nicht_auf_tier_drei() -> None:
+    """A.8.5 Schritt 6a — die Kappung, die bis AP-19 fehlte."""
+    stand = bewertung_service.durchlaufe(ALLES_NEIN, ur_stufe=3)
+    assert bewertung_service.profil(stand)["ur"] == 3
+    assert bewertung_service.tier(stand) == 2
+    assert bewertung_service.tier_herkunft(stand) == "ur"
+
+
+def test_die_prozesskette_hebt_ungekappt_auf_tier_drei() -> None:
+    """Abhaengigkeit ist kein eigenes Betriebsrisiko und wird nicht gekappt."""
+    stand = bewertung_service.durchlaufe(ALLES_NEIN, ur_stufe=0)
+    assert bewertung_service.tier(stand, ur_kette=3) == 3
+    assert bewertung_service.tier_herkunft(stand, ur_kette=3) == "kette"
+
+
+def test_die_kette_hebt_nur_wenn_sie_ueber_das_profil_hinausgeht() -> None:
+    """Eine Kette unterhalb des eigenen Profils veraendert nichts."""
+    stand = bewertung_service.durchlaufe(antworten_fuer(profil_von(ds=3)), ur_stufe=0)
+    assert bewertung_service.tier(stand, ur_kette=1) == 3
+    assert bewertung_service.tier_herkunft(stand, ur_kette=1) == "profil"
 
 
 def test_wizard_fragt_die_bloecke_der_reihe_nach() -> None:
@@ -100,13 +136,24 @@ def test_jede_antwortkombination_ergibt_das_tabellierte_tier(
 ) -> None:
     """Abnahmekriterium 2.1: Verifikation ueber alle 4096 Kombinationen.
 
-    Das tabellierte Tier ist die hoechste erreichte Stufe, mindestens 1.
+    Das Tier ist die hoechste erreichte Stufe, mindestens 1 — mit der einen
+    Ausnahme, die A.8.5 Schritt 6a ausdruecklich verlangt: das **eigene**
+    unternehmerische Risiko hebt allein nicht auf Tier 3, es zaehlt hoechstens
+    als Stufe 2 (E-67). Bis AP-19 stand hier ``max(1, max(kombination))`` —
+    und schrieb damit das Fehlen der Kappung fest.
+
+    Der Kettenanteil ist hier null; er wird getrennt geprueft.
     """
     profil = dict(zip(["ki", "ds", "mb", "it", "rg", "ur"], kombination, strict=True))
-    stand = bewertung_service.durchlaufe(antworten_fuer(profil))
+    stand = bewertung_service.durchlaufe(antworten_fuer(profil), ur_stufe=profil["ur"])
     assert stand.abgeschlossen
     assert bewertung_service.profil(stand) == profil
-    assert bewertung_service.tier(stand) == max(1, max(kombination))
+    erwartet = max(
+        1,
+        max(kombination[:5]),
+        min(profil["ur"], bewertung_service.UR_KAPPUNG),
+    )
+    assert bewertung_service.tier(stand) == erwartet
 
 
 def test_ohne_ki_einsatz_bleibt_der_block_auf_null() -> None:
@@ -252,7 +299,8 @@ def test_wizard_zeigt_keinen_zwischenstand(client: TestClient, owner, prozess) -
     assert koerper["naechste_frage"]["id"] == "3a"
     assert koerper["naechste_frage"]["block"] == "mb"
     assert koerper["naechste_frage"]["nummer"] == 3
-    assert koerper["naechste_frage"]["anzahl_bloecke"] == 6
+    # Fuenf Bloecke werden gefragt; UR wird gerechnet und zaehlt hier nicht mit.
+    assert koerper["naechste_frage"]["anzahl_bloecke"] == 5
 
 
 def test_wizard_liefert_am_ende_die_vorschau(client: TestClient, owner, prozess) -> None:
@@ -366,7 +414,12 @@ def test_neubewertung_erzeugt_neuen_datensatz(client: TestClient, owner, prozess
     ).json()
     assert [b["id"] for b in historie] == [zweite["id"], erste["id"]]
     assert historie[1]["ds_stufe"] == 1
-    assert historie[1]["tier"] == 1
+    # Seit AP-19 ist UR gerechnet statt erfragt: dieses Prozessobjekt erklaert
+    # Kundenkreis „Bereich" und Ausfallfolge „spuerbar" — nach der
+    # Kompositionstabelle Stufe 2 (E-66). Das Tier folgt daraus und nicht mehr
+    # aus drei Antworten, die jeder auf „nein" setzen konnte.
+    assert historie[1]["ur_stufe"] == 2
+    assert historie[1]["tier"] == 2
 
 
 def test_bewertung_landet_im_nachweis(client: TestClient, owner, prozess, db) -> None:

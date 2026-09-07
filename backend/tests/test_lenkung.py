@@ -179,10 +179,18 @@ def test_frist_haengt_am_tier(
 ) -> None:
     niedrig = client.post(
         "/api/v1/prozesse",
-        json=prozess_daten(owner.user_id, vertretung.user_id, name="Niedrig"),
+        json=prozess_daten(
+            owner.user_id,
+            vertretung.user_id,
+            name="Niedrig",
+            # Seit AP-19 wird UR gerechnet und nicht gefragt: Das Tier haengt
+            # an der erklaerten Erwartung, nicht mehr an ``ur=1`` im Aufruf.
+            customer="persoenlich",
+            ausfallfolge="keine",
+        ),
         headers=owner.kopf,
     ).json()
-    bewerte(client, owner, niedrig["id"], ur=1)
+    bewerte(client, owner, niedrig["id"])
     tool = client.post(
         "/api/v1/tools",
         json={"name": "Tier-1-Tool", "organisationseinheit_id": organisation["fin_de"]},

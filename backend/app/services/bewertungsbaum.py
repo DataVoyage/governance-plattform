@@ -162,23 +162,13 @@ BAUM: tuple[Themenblock, ...] = (
             ),
         ),
     ),
-    Themenblock(
-        Block.UR,
-        "Unternehmerisches Risiko",
-        (
-            Frage(
-                "6a",
-                "Gefährdet ein Ausfall den Geschäftsbetrieb oder wesentliche Umsätze?",
-                stufe_bei_ja=3,
-            ),
-            Frage(
-                "6b",
-                "Führt ein Ausfall zu einer spürbaren Beeinträchtigung?",
-                stufe_bei_ja=2,
-            ),
-            Frage("6c", "Führt ein Ausfall zu einer geringen Beeinträchtigung?", stufe_bei_ja=1),
-        ),
-    ),
+    # Der Block ``UR`` steht bewusst **nicht** hier. Das unternehmerische
+    # Risiko ist aus zwei erklaerten Erwartungen des Prozess-Owners gerechnet
+    # — erlaubte Reichweite und Ausfallfolge — und wird nach P1 deshalb nicht
+    # erfragt (``services/risiko.py``, E-65). Bis AP-19 standen an dieser
+    # Stelle die Fragen 6a bis 6c, deren richtige Antwort die Anwendung schon
+    # kannte und daneben als Vorschlag stellte. Die Dimension bleibt
+    # vollwertiger Teil des Profils; sie kommt nur nicht mehr aus dem Baum.
 )
 
 BLOCK_REIHENFOLGE: tuple[Block, ...] = tuple(b.block for b in BAUM)

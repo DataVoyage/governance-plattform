@@ -248,59 +248,76 @@ def test_attestierung_2_traegt_den_vorschlag_zum_arbeitsablauf(
     assert "kein Mensch" in dritte["belege"][0]["text"]
 
 
-# --- UR: aus Ausfallfolge und Prozesskette --------------------------------
+# --- UR: gerechnet, nicht vorgeschlagen -----------------------------------
+#
+# Bis AP-19 standen hier drei Vorschlagstests. Sie pruefen jetzt das, was an
+# ihre Stelle getreten ist: UR wird aus zwei erklaerten Erwartungen gerechnet
+# und deshalb gar nicht erst gefragt (E-65). Ein Vorschlag waere ueberfluessig
+# — man schlaegt nichts vor, was man ausrechnen kann.
+
+ALLE_GEFRAGTEN_NEIN = {
+    "1a": False,
+    "2a": False,
+    "2b": False,
+    "2c": False,
+    "3a": False,
+    "3b": False,
+    "3c": False,
+    "4a": False,
+    "4b": False,
+    "4c": False,
+    "5a": False,
+    "5b": False,
+    "5c": False,
+}
 
 
-def test_ausfallfolge_traegt_die_ur_dimension_vollstaendig(
-    client: TestClient, owner, prozess_mit
-) -> None:
-    """Als einzige Dimension ist UR in beide Richtungen ableitbar."""
+def test_ur_wird_nicht_mehr_gefragt(client: TestClient, owner, prozess_mit) -> None:
+    """Nach den fuenf gefragten Bloecken ist der Baum durch — ohne 6a."""
     prozess = prozess_mit(ausfallfolge="kritisch")
-    bis = {"1a": False, "2a": False, "2b": False, "2c": False}
-    bis |= {"3a": False, "3b": False, "3c": False}
-    bis |= {"4a": False, "4b": False, "4c": False, "5a": False, "5b": False, "5c": False}
-
-    frage = frage_im_wizard(client, owner, prozess["id"], bis)
-    assert frage["id"] == "6a"
-    assert frage["vorschlag"] is True
-    assert "kritisch" in frage["belege"][0]["text"]
+    koerper = wizard(client, owner, prozess["id"], ALLE_GEFRAGTEN_NEIN).json()
+    assert koerper["abgeschlossen"] is True
+    assert koerper["naechste_frage"] is None
 
 
-def test_geringe_ausfallfolge_verneint_die_oberen_stufen(
+def test_ur_kommt_aus_ausfallfolge_und_reichweite(client: TestClient, owner, prozess_mit) -> None:
+    """Kundenkreis „Bereich" mal Ausfallfolge „kritisch" ergibt Stufe 3."""
+    prozess = prozess_mit(ausfallfolge="kritisch", customer="bereich")
+    vorschau = wizard(client, owner, prozess["id"], ALLE_GEFRAGTEN_NEIN).json()["vorschau"]
+    assert vorschau["profil"]["ur"] == 3
+    # Gekappt: reines Betriebsrisiko hebt allein nicht auf Tier 3 (A.8.5, 6a).
+    assert vorschau["tier"] == 2
+
+
+def test_dieselbe_ausfallfolge_wiegt_bei_kleinerer_reichweite_leichter(
     client: TestClient, owner, prozess_mit
 ) -> None:
-    prozess = prozess_mit(ausfallfolge="gering")
-    bis = {"1a": False, "2a": False, "2b": False, "2c": False}
-    bis |= {"3a": False, "3b": False, "3c": False}
-    bis |= {"4a": False, "4b": False, "4c": False, "5a": False, "5b": False, "5c": False}
-
-    assert frage_im_wizard(client, owner, prozess["id"], bis)["vorschlag"] is False
-    zweite = frage_im_wizard(client, owner, prozess["id"], bis | {"6a": False})
-    assert zweite["id"] == "6b"
-    assert zweite["vorschlag"] is False
-    dritte = frage_im_wizard(client, owner, prozess["id"], bis | {"6a": False, "6b": False})
-    assert dritte["id"] == "6c"
-    assert dritte["vorschlag"] is True
+    """Ein kritischer Ausfall, der eine Person trifft, ist kein Unternehmensrisiko."""
+    prozess = prozess_mit(ausfallfolge="kritisch", customer="persoenlich")
+    vorschau = wizard(client, owner, prozess["id"], ALLE_GEFRAGTEN_NEIN).json()["vorschau"]
+    assert vorschau["profil"]["ur"] == 1
+    assert vorschau["tier"] == 1
 
 
-def test_die_kette_hebt_den_vorschlag_an_und_nennt_den_nachfolger(
+def test_die_kette_hebt_das_tier_und_nicht_die_dimension(
     client: TestClient, owner, prozess_mit
 ) -> None:
-    """A.4.2: wer einen kritischen Nachfolger speist, ist selbst kritisch."""
-    kritisch = prozess_mit(name="Zahlungslauf", ausfallfolge="kritisch")
+    """A.4.2 wirkt auf der Tier-Stufe, nicht in der UR-Dimension (E-67).
+
+    Der speisende Prozess bleibt in seinem eigenen Profil harmlos — sein
+    eigenes UR ist niedrig. Die Abhaengigkeit hebt trotzdem das Tier, und zwar
+    ungekappt, weil sie kein eigenes Betriebsrisiko ist.
+    """
+    kritisch = prozess_mit(name="Zahlungslauf", ausfallfolge="kritisch", customer="unternehmen")
     speist = prozess_mit(
-        name="Vorbereitung", ausfallfolge="gering", nachgelagert_ids=[kritisch["id"]]
+        name="Vorbereitung",
+        ausfallfolge="gering",
+        customer="persoenlich",
+        nachgelagert_ids=[kritisch["id"]],
     )
-    bis = {"1a": False, "2a": False, "2b": False, "2c": False}
-    bis |= {"3a": False, "3b": False, "3c": False}
-    bis |= {"4a": False, "4b": False, "4c": False, "5a": False, "5b": False, "5c": False}
-
-    frage = frage_im_wizard(client, owner, speist["id"], bis)
-    assert frage["id"] == "6a"
-    assert frage["vorschlag"] is True
-    quellen = [b["quelle"] for b in frage["belege"]]
-    assert quellen == ["prozess", "kette"]
-    assert "Zahlungslauf" in frage["belege"][1]["text"]
+    vorschau = wizard(client, owner, speist["id"], ALLE_GEFRAGTEN_NEIN).json()["vorschau"]
+    assert vorschau["profil"]["ur"] == 0
+    assert vorschau["tier"] == 3
 
 
 # --- KI, IT und RG bleiben zu erklaeren -----------------------------------
@@ -525,20 +542,22 @@ def test_geaenderte_datenlage_holt_die_alte_antwort_ins_cockpit(
 def test_datenlage_geaendert_wird_von_unbegruendet_unterschieden(
     client: TestClient, owner, prozess_mit, datenobjekt
 ) -> None:
-    """Beide Faelle sind Befunde — aber der Hinweis sagt, welcher es ist."""
-    entgelt = datenobjekt("Entgeltdaten", "besondere_kategorie")
-    prozess = prozess_mit(ausfallfolge="kritisch", input_datenobjekt_ids=[entgelt["id"]])
-    abschliessen(
-        client,
-        owner,
-        prozess["id"],
-        antworten_fuer(profil_von(ds=2, mb=3, ur=3)),
-        begruendungen={"2a": "Nur als Aggregat eingebunden."},
-    )
-    # Die Ausfallfolge sinkt: 6a schlaegt heute „nein" vor, geantwortet war „ja".
+    """Beide Faelle sind Befunde — aber der Hinweis sagt, welcher es ist.
+
+    Der Fall lief bis AP-19 ueber die Ausfallfolge und Frage 6a. Die gibt es
+    nicht mehr, weil UR gerechnet statt gefragt wird (E-65) — und eine
+    gerechnete Stufe kann der Datenlage gar nicht widersprechen. Gezeigt wird
+    dasselbe deshalb an einer Frage, die noch gefragt wird: Die Kategorie des
+    referenzierten Datenobjekts sinkt, damit kippt der Vorschlag zu 2b.
+    """
+    entgelt = datenobjekt("Entgeltdaten", "personenbezogen")
+    prozess = prozess_mit(input_datenobjekt_ids=[entgelt["id"]])
+    abschliessen(client, owner, prozess["id"], antworten_fuer(profil_von(ds=2)))
+
+    # Die Kategorie sinkt: 2b schlaegt heute „nein" vor, geantwortet war „ja".
     gesenkt = client.patch(
-        f"/api/v1/prozesse/{prozess['id']}",
-        json={"ausfallfolge": "gering"},
+        f"/api/v1/datenobjekte/{entgelt['id']}",
+        json={"kategorie": "oeffentlich"},
         headers=owner.kopf,
     )
     assert gesenkt.status_code == 200, gesenkt.text
@@ -546,7 +565,7 @@ def test_datenlage_geaendert_wird_von_unbegruendet_unterschieden(
     eintraege = zeile(client, owner, "antwort_widerspricht_datenlage")["eintraege"]
     hinweise = [e["hinweis"] for e in eintraege if e["id"] == prozess["id"]]
     assert len(hinweise) == 1
-    assert "Frage 6a" in hinweise[0]
+    assert "Frage 2b" in hinweise[0]
     assert "Datenlage seit der Bewertung geändert" in hinweise[0]
 
 

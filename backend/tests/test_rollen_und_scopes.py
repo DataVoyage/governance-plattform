@@ -34,6 +34,8 @@ from dataclasses import dataclass, field
 import pytest
 from fastapi.testclient import TestClient
 
+from app.services.bewertungsbaum import BAUM
+
 # --- Die elf Zugaenge -------------------------------------------------------
 #
 # Acht Rollen aus A.15, dazu zwei Faelle, an denen sich die Regel zeigt:
@@ -159,7 +161,12 @@ def _status(antwort) -> int:
 #: Eine vollstaendige Wizard-Nutzlast. Ein synthetisch gesetztes Zielprofil
 #: widerspricht der Datenlage fast immer, deshalb liegt zu jeder Frage eine
 #: Begruendung bei — der Server behaelt nur die, wo es wirklich abweicht.
-_ANTWORTEN = {f"{block}{frage}": False for block in range(1, 7) for frage in ("a", "b", "c")}
+#:
+#: Die Fragen kommen aus dem Baum, nicht aus einer Zahlenreihe: Seit AP-19
+#: steht UR nicht mehr darin, und eine hier mitgezaehlte Frage 6a wuerde als
+#: unbekannte Kennung mit 422 abgewiesen — ein Fehler, der wie ein fehlendes
+#: Recht aussieht und die ganze Matrix in die Irre fuehrt.
+_ANTWORTEN = {frage.id: False for block in BAUM for frage in block.fragen}
 _BEWERTUNG = {
     "antworten": _ANTWORTEN,
     "begruendungen": dict.fromkeys(_ANTWORTEN, "Fuer diese Pruefung bewusst gesetzt."),

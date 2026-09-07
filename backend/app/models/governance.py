@@ -453,6 +453,34 @@ class Technologiebewertung(Base, TimestampMixin):
     __table_args__ = (UniqueConstraint("technologie", "k_klasse", name="uq_technologie_klasse"),)
 
 
+class UrKomposition(Base, TimestampMixin):
+    """Ein Feld der UR-Kompositionstabelle (Leitdokument A.8.4, AP-19).
+
+    Das unternehmerische Risiko entsteht aus zwei erklaerten Erwartungen des
+    Prozess-Owners: wie weit der Prozess reicht und was sein Ausfall bedeutet.
+    Welche Stufe eine Paarung ergibt, ist eine fachliche Setzung — und wie die
+    Technologiematrix gepflegte Stammdaten, nicht Code (E-66, analog E-42).
+    """
+
+    __tablename__ = "ur_komposition"
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    ausfallfolge: Mapped[str] = mapped_column(String(24))
+    reichweite: Mapped[str] = mapped_column(String(24))
+    stufe: Mapped[int] = mapped_column(Integer)
+    #: Warum diese Paarung diese Stufe traegt. Bei der Standardbelegung leer;
+    #: bei jeder Aenderung Pflicht, weil ein Feld hier ueber das Tier ganzer
+    #: Prozessgruppen entscheidet.
+    begruendung: Mapped[str] = mapped_column(Text, default="")
+    geaendert_von: Mapped[uuid.UUID | None] = mapped_column(
+        GUID, ForeignKey("users.id"), nullable=True
+    )
+
+    __table_args__ = (
+        UniqueConstraint("ausfallfolge", "reichweite", name="uq_ur_komposition_paarung"),
+    )
+
+
 class Kompensation(Base, TimestampMixin):
     """Die dokumentierte Massnahme zu einer kompensierbaren Klasse (A.9.3).
 

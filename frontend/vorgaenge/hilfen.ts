@@ -235,9 +235,6 @@ export async function bewerten(
       '5a',
       '5b',
       '5c',
-      '6a',
-      '6b',
-      '6c',
     ].map((frage) => [frage, frage === '2a' ? hoch : false]),
   );
   const antwort = await anfrage.post(`${API}/api/v1/prozesse/${prozessId}/bewertungen`, {

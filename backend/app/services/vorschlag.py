@@ -9,8 +9,13 @@ die vorhandenen Daten zu einer Frage hergeben, und legt das Ergebnis als
 A.8.4 nennt die Herkunft je Dimension:
 
 * **DS** aus den Kategorien der referenzierten Datenobjekte und dem Kundenkreis,
-* **MB** aus denselben Kategorien und den Attestierungen 1 und 2 nach A.6,
-* **UR** aus der eigenen Ausfallfolge und der Kritikalitaet der Prozesskette.
+* **MB** aus denselben Kategorien und den Attestierungen 1 und 2 nach A.6.
+
+**UR** stand hier bis AP-19 als dritte Zeile — und war schon damals als
+„vollstaendig ableitbar" beschrieben. Genau deshalb hat es hier nichts mehr zu
+suchen: Was vollstaendig berechenbar ist, wird nach P1 nicht erfragt, und was
+nicht erfragt wird, braucht keinen Vorschlag. Die Stufe rechnet
+``services/risiko.py`` aus erlaubter Reichweite und Ausfallfolge (E-65).
 
 **KI** und **RG** bleiben vollstaendig zu erklaeren; **IT** waere nach A.8.4 aus
 Telemetrie abzuleiten, die diese Plattform nicht hat. Fuer diese drei Bloecke
@@ -33,7 +38,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from app.models.enums import (
-    AUSFALLFOLGE_STUFE,
     PERSONENBEZOGENE_KATEGORIEN,
     Datenkategorie,
     Kundenkreis,
@@ -49,14 +53,6 @@ KATEGORIE_NAME: dict[str, str] = {
     Datenkategorie.VERTRAULICH: "vertraulich",
     Datenkategorie.PERSONENBEZOGEN: "personenbezogen",
     Datenkategorie.BESONDERE_KATEGORIE: "besondere Kategorie",
-}
-
-#: Lesbare Namen der Ausfallfolgen fuer die Belegtexte.
-AUSFALLFOLGE_NAME: dict[str, str] = {
-    "keine": "keine",
-    "gering": "gering",
-    "spuerbar": "spürbar",
-    "kritisch": "kritisch",
 }
 
 
@@ -269,32 +265,12 @@ def _mb(prozess: Prozessobjekt, lage: ableitung.Datenlage) -> dict[str, Vorschla
 # --- UR: Unternehmerisches Risiko -----------------------------------------
 
 
-def _ur(prozess: Prozessobjekt) -> dict[str, Vorschlag]:
-    """A.8.4: eigene Ausfallfolge, angehoben durch die Kette (A.4.2).
-
-    Als einzige Dimension ist diese vollstaendig ableitbar: die Ausfallfolge
-    ist ein Pflichtfeld, und die Vererbung entlang der Kette ist gerechnet.
-    Alle drei Fragen bekommen deshalb einen Vorschlag in beide Richtungen.
-    """
-    stufe, quelle = ableitung.kritikalitaetsquelle(prozess)
-    eigene = AUSFALLFOLGE_STUFE[prozess.ausfallfolge]
-    name = AUSFALLFOLGE_NAME.get(prozess.ausfallfolge, str(prozess.ausfallfolge))
-
-    belege = [Beleg(f"Die Ausfallfolge des Prozesses ist „{name}“ (Stufe {eigene}).", "prozess")]
-    if quelle is not None:
-        belege.append(
-            Beleg(
-                f"Der nachgelagerte Prozess „{quelle.name}“ trägt Stufe {stufe}; nach A.4.2 "
-                "ist dieser Prozess mindestens so kritisch.",
-                "kette",
-            )
-        )
-    fest = tuple(belege)
-    return {
-        "6a": Vorschlag("6a", stufe >= 3, fest),
-        "6b": Vorschlag("6b", stufe >= 2, fest),
-        "6c": Vorschlag("6c", stufe >= 1, fest),
-    }
+# Fuer UR gab es hier bis AP-19 drei Vorschlaege — und der Docstring sagte
+# selbst, die Dimension sei „vollstaendig ableitbar". Genau deshalb steht sie
+# jetzt nicht mehr hier: Was berechenbar ist, wird nach P1 nicht erfragt,
+# also braucht es dafuer auch keinen Vorschlag. Die Stufe rechnet
+# ``services/risiko.ur_stufe`` (E-65), der Kettenanteil wirkt auf der
+# Tier-Stufe (E-67).
 
 
 # --- Zusammenfuehrung -----------------------------------------------------
@@ -305,10 +281,11 @@ def fuer_prozess(prozess: Prozessobjekt) -> dict[str, Vorschlag]:
 
     Enthaelt nur Eintraege fuer Fragen, zu denen es etwas zu sagen gibt —
     entweder einen Vorschlag oder wenigstens den Grund, warum keiner moeglich
-    ist. Fragen der Bloecke KI, IT und RG kommen nicht vor.
+    ist. Fragen der Bloecke KI, IT und RG kommen nicht vor; UR wird seit AP-19
+    gar nicht mehr gefragt, sondern gerechnet.
     """
     lage = ableitung.datenlage(prozess)
-    alle: dict[str, Vorschlag] = {**_ds(prozess, lage), **_mb(prozess, lage), **_ur(prozess)}
+    alle: dict[str, Vorschlag] = {**_ds(prozess, lage), **_mb(prozess, lage)}
     return {frage_id: v for frage_id, v in alle.items() if frage_id in FRAGE_JE_ID}
 
 

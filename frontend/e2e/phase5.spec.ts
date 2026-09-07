@@ -26,9 +26,6 @@ const TIER3_ANTWORTEN = {
   '5a': false,
   '5b': false,
   '5c': false,
-  '6a': false,
-  '6b': false,
-  '6c': false,
 };
 
 async function kopf(anfrage: APIRequestContext) {

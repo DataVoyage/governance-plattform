@@ -21,6 +21,7 @@ from app.schemas.bewertung import (
 )
 from app.services import bewertung as bewertung_service
 from app.services import prozess as prozess_service
+from app.services import risiko as risiko_service
 from app.services import vorschlag as vorschlag_service
 from app.services.bewertungsbaum import BAUM, BLOCK_JE_FRAGE
 
@@ -47,9 +48,9 @@ def _frage_aus(frage, vorschlaege: dict[str, vorschlag_service.Vorschlag]) -> Fr
     )
 
 
-def _ergebnis_aus(stand) -> ErgebnisAus:
+def _ergebnis_aus(stand, ur_kette: int = 0) -> ErgebnisAus:
     werte = bewertung_service.profil(stand)
-    tier_wert = bewertung_service.tier(stand)
+    tier_wert = bewertung_service.tier(stand, ur_kette=ur_kette)
     kennungen = bewertung_service.leite_k_klassen_ab(werte)
     return ErgebnisAus(
         tier=tier_wert,
@@ -89,11 +90,16 @@ def wizard_schritt(
     bewertung_service.pruefe_antworten(anfrage.antworten)
     vorschlaege = vorschlag_service.fuer_prozess(prozess)
     bewertung_service.pruefe_begruendungen(vorschlaege, anfrage.antworten, anfrage.begruendungen)
-    stand = bewertung_service.durchlaufe(anfrage.antworten)
+    # UR wird gerechnet, nicht erfragt (E-65); die Kette wirkt erst auf der
+    # Tier-Stufe (E-67). Beides kommt hier herein, damit der Wizard dieselbe
+    # Zahl zeigt, die das Speichern spaeter festhaelt.
+    ur = risiko_service.ur_stufe(db, prozess)
+    ur_kette, _ = risiko_service.ur_der_kette(db, prozess)
+    stand = bewertung_service.durchlaufe(anfrage.antworten, ur_stufe=ur.stufe)
 
     vorschau = None
     if stand.abgeschlossen and not stand.verboten:
-        vorschau = _ergebnis_aus(stand)
+        vorschau = _ergebnis_aus(stand, ur_kette)
     return WizardSchritt(
         naechste_frage=(
             _frage_aus(stand.naechste_frage, vorschlaege) if stand.naechste_frage else None

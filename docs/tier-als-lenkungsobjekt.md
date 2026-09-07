@@ -77,10 +77,9 @@ die das ganze Unternehmen trifft, kann eines sein.
 | **Erlaubte Reichweite** | persönlich (0) · Team (1) · Bereich (2) · Unternehmen (3) · extern (4) | Kundenkreis, angehoben durch mehr als eine Umsetzung (`ableitung.py:39-52`) |
 | **Ausfallfolge** | keine (0) · gering (1) · spürbar (2) · kritisch (3) | Direkt erklärtes Pflichtfeld (`models/governance.py:104`) |
 
-### 3.2 Die Kompositionstabelle — **zur Bestätigung**
+### 3.2 Die Kompositionstabelle
 
-UR-Stufe aus beiden Anteilen. Diese Belegung ist ein Vorschlag und der eine Punkt dieser
-Spezifikation, der eine fachliche Entscheidung braucht:
+UR-Stufe aus beiden Anteilen. Diese Belegung ist **entschieden** und gilt als Vorgabe:
 
 | Ausfallfolge ↓ / Reichweite → | persönlich | Team | Bereich | Unternehmen | extern |
 |---|---|---|---|---|---|
@@ -241,7 +240,8 @@ dort steht; der Nachtrag ist Bestandteil des Arbeitspakets, nicht Nacharbeit.
 - **E-65 — UR wird gerechnet, nicht erfragt.** Block 6 entfällt; P1 gilt auch dort, wo es
   bequemer wäre zu fragen. Löst ein, was AP-18 (E-64) zum Titel gemacht hat.
 - **E-66 — UR ist komposit aus erlaubter Reichweite und Ausfallfolge.** Keiner der beiden Werte
-  trägt allein.
+  trägt allein. Die Kompositionstabelle aus 3.2 ist die verbindliche Belegung; sie liegt als
+  gepflegte Stammdaten vor und ist damit ohne Auslieferung korrigierbar.
 - **E-67 — Die Prozesskette ist eine Bedingung des Tiers, nicht der Dimension.** Nur so lassen
   sich eigenes Betriebsrisiko und Abhängigkeit unterscheiden — und nur so wird die Kappung aus
   A.8.5 formulierbar.

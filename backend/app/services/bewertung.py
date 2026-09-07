@@ -19,7 +19,7 @@ from app.core.permissions import Principal, verlange
 from app.models.base import now_utc
 from app.models.enums import AlarmTyp, ProzessStatus
 from app.models.governance import Alarm, Bewertung, Prozessobjekt
-from app.services import ableitung, konfiguration, vorschlag
+from app.services import ableitung, konfiguration, risiko, vorschlag
 from app.services.bewertungsbaum import (
     BAUM,
     FRAGE_JE_ID,
@@ -66,7 +66,7 @@ def _werte_block_aus(
     return tentativ, None, False
 
 
-def durchlaufe(antworten: dict[str, bool]) -> Baumstand:
+def durchlaufe(antworten: dict[str, bool], *, ur_stufe: int = 0) -> Baumstand:
     """Fuehrt den Baum bis zur naechsten offenen Frage oder bis zum Ende.
 
     Der Durchlauf ist zustandslos: aus denselben Antworten folgt immer derselbe
@@ -79,8 +79,14 @@ def durchlaufe(antworten: dict[str, bool]) -> Baumstand:
     Bewertung konnte eine vollstaendige verdraengen und dabei still loeschen,
     was schon beantwortet war. Der Zeitgewinn war ein Scheingewinn: was die
     Anwendung ableiten kann, schlaegt sie ohnehin vor (A.8.4).
+
+    ``ur_stufe`` kommt von aussen hinein, weil sie **gerechnet** ist und nicht
+    erfragt wird (``services/risiko.ur_stufe``, E-65). Sie hier zu berechnen
+    wuerde diesem Modul eine Datenbank aufzwingen und die Zustandslosigkeit
+    kosten; stattdessen reicht der aufrufende Dienst den Wert durch.
     """
     stand = Baumstand()
+    stand.stufen[Block.UR] = ur_stufe
     for themenblock in BAUM:
         stufe, offene_frage, verboten = _werte_block_aus(themenblock, antworten)
         if verboten:
@@ -102,12 +108,54 @@ def profil(stand: Baumstand) -> dict[str, int]:
     return {block.value: stand.stufen.get(block, 0) for block in Block}
 
 
-def tier(stand: Baumstand) -> int:
-    """Tier 1 bis 3 als hoechste erreichte Stufe, mindestens 1."""
+#: Hoechstes Tier, das das **eigene** Betriebsrisiko allein erreichen kann.
+#: Leitdokument A.8.5, Schritt 6a: „bleibt Tier 2 auch bei maximaler
+#: Auspraegung — reines Betriebsrisiko hebt allein nicht in Tier 3."
+UR_KAPPUNG = 2
+
+
+def tier(stand: Baumstand, *, ur_kette: int = 0) -> int:
+    """Tier 1 bis 3 aus Profil, gekapptem eigenem UR und der Prozesskette.
+
+    Drei Quellen, bewusst getrennt (E-67):
+
+    * die fuenf erfragten Dimensionen — sie zaehlen ungekappt;
+    * das **eigene** unternehmerische Risiko — gekappt bei
+      :data:`UR_KAPPUNG`, weil A.8.5 reines Betriebsrisiko ausdruecklich nicht
+      auf Tier 3 heben laesst;
+    * ``ur_kette``, das hoechste UR der transitiven Nachfolger — **nicht**
+      gekappt, denn das ist kein eigenes Betriebsrisiko, sondern
+      Abhaengigkeit (A.4.2: wer einen kritischen Prozess beliefert, ist selbst
+      kritisch).
+
+    Solange beides in einer Zahl steckte, liess sich die Kappung nicht
+    formulieren, ohne die Kette mit zu kappen.
+    """
     if stand.verboten:
         return 3
-    erreicht = [s for s in stand.stufen.values() if s > 0]
+    erreicht = [s for block, s in stand.stufen.items() if s > 0 and block is not Block.UR]
+    erreicht.append(min(stand.stufen.get(Block.UR, 0), UR_KAPPUNG))
+    erreicht.append(ur_kette)
     return max(1, min(3, max(erreicht, default=1)))
+
+
+def tier_herkunft(stand: Baumstand, *, ur_kette: int = 0) -> str:
+    """Woher das Tier kommt: ``profil``, ``ur`` oder ``kette``.
+
+    Ein Tier, das ueber das eigene Profil hinausgeht, muss sagen koennen,
+    warum — sonst steht der Prozess-Owner vor einer Zahl, die er sich nicht
+    erklaeren kann, und die Auflage daneben wirkt willkuerlich.
+    """
+    if stand.verboten:
+        return "profil"
+    ohne_kette = tier(stand, ur_kette=0)
+    if ur_kette > 0 and tier(stand, ur_kette=ur_kette) > ohne_kette:
+        return "kette"
+    eigen = min(stand.stufen.get(Block.UR, 0), UR_KAPPUNG)
+    andere = [s for block, s in stand.stufen.items() if s > 0 and block is not Block.UR]
+    if eigen > max(andere, default=0):
+        return "ur"
+    return "profil"
 
 
 # --- K-Klassen (Leitdokument A.9.2) --------------------------------------
@@ -315,7 +363,9 @@ def speichere(
     pruefe_antworten(antworten)
     vorschlaege = vorschlag.fuer_prozess(prozess)
     abweichende = pruefe_begruendungen(vorschlaege, antworten, begruendungen or {})
-    stand = durchlaufe(antworten)
+    ur = risiko.ur_stufe(db, prozess)
+    ur_kette, _ = risiko.ur_der_kette(db, prozess)
+    stand = durchlaufe(antworten, ur_stufe=ur.stufe)
     if not stand.abgeschlossen:
         raise Ungueltig(
             f"Der Baumdurchlauf ist nicht abgeschlossen; offen ist Frage "
@@ -339,7 +389,7 @@ def speichere(
         return alarm
 
     werte = profil(stand)
-    tier_wert = tier(stand)
+    tier_wert = tier(stand, ur_kette=ur_kette)
     zeitpunkt = now_utc()
     bewertung = Bewertung(
         prozessobjekt_id=prozess.id,

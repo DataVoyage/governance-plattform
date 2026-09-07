@@ -48,6 +48,31 @@ def prozess(client: TestClient, owner, vertretung, prozess_daten):
     return antwort.json()
 
 
+@pytest.fixture
+def prozess_ohne_risiko(client: TestClient, owner, vertretung, prozess_daten):
+    """Ein Prozessobjekt, das wirklich Tier 1 ist.
+
+    Seit AP-19 ist UR gerechnet: Der Standardprozess erklaert Kundenkreis
+    „Bereich" und Ausfallfolge „spuerbar" und traegt damit UR 2 — er ist kein
+    Tier-1-Fall mehr, egal wie die Fragen beantwortet werden. Wer die Kurzform
+    pruefen will, braucht einen Prozess, der die niedrige Erwartung auch
+    erklaert.
+    """
+    antwort = client.post(
+        "/api/v1/prozesse",
+        json=prozess_daten(
+            owner.user_id,
+            vertretung.user_id,
+            name="Ohne Risiko",
+            customer="persoenlich",
+            ausfallfolge="keine",
+        ),
+        headers=owner.kopf,
+    )
+    assert antwort.status_code == 201, antwort.text
+    return antwort.json()
+
+
 def bewerte(client: TestClient, anmeldung, prozess_id: str, **profil) -> dict:
     antwort = client.post(
         f"/api/v1/prozesse/{prozess_id}/bewertungen",
@@ -118,8 +143,9 @@ def test_schicht_2_verbote_stehen_nicht_im_katalog() -> None:
 # --- Kurzform bei Tier 1 (A.10.5) ----------------------------------------
 
 
-def test_tier_1_verlangt_nur_die_kurzform(client: TestClient, owner, prozess) -> None:
-    bewerte(client, owner, prozess["id"])  # alles verneint -> Tier 1
+def test_tier_1_verlangt_nur_die_kurzform(client: TestClient, owner, prozess_ohne_risiko) -> None:
+    prozess = prozess_ohne_risiko
+    bewerte(client, owner, prozess["id"])  # alles verneint, UR 0 -> Tier 1
     kurz = [a.id for a in sv.verlangte_aussagen("prozesseigner", 1)]
     assert kurz == ["PE1", "PE2", "PE6"]
 
@@ -338,7 +364,15 @@ def test_ein_gestiegenes_tier_entwertet_die_tool_erklaerung(
     """Das Gegenstueck zur Profilbindung fuer geerbte Einstufungen."""
     niedrig = client.post(
         "/api/v1/prozesse",
-        json=prozess_daten(owner.user_id, vertretung.user_id, name="Niedrig"),
+        json=prozess_daten(
+            owner.user_id,
+            vertretung.user_id,
+            name="Niedrig",
+            # Seit AP-19 traegt die erklaerte Erwartung das UR: ohne eine
+            # niedrige Erklaerung waere dieser Prozess kein Tier-1-Fall.
+            customer="persoenlich",
+            ausfallfolge="keine",
+        ),
         headers=owner.kopf,
     ).json()
     bewerte(client, owner, niedrig["id"])  # Tier 1

@@ -187,9 +187,6 @@ vorgang('V-SEL-06', async ({ page, request }) => {
       '5a',
       '5b',
       '5c',
-      '6a',
-      '6b',
-      '6c',
     ].map((frage) => [frage, frage === '2a' || frage === '3a']),
   );
   const neu = await request.post(`${API}/api/v1/prozesse/${prozess.id}/bewertungen`, {

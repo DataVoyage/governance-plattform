@@ -115,12 +115,17 @@ def test_k_klassen_auch_nach_schnellem_durchlauf(client: TestClient, owner, proz
         headers=owner.kopf,
     )
     antwort = frage(client, f"/prozess/{prozess['id']}/k-klassen")
-    assert antwort.json()["ausgeloest"] == ["K1", "K2", "K3", "K4", "K5"]
+    # K9 haengt an UR >= 2. Seit AP-19 traegt dieses Prozessobjekt UR 2 aus
+    # seiner erklaerten Erwartung (Bereich x spuerbar) statt aus drei Antworten.
+    assert antwort.json()["ausgeloest"] == ["K1", "K2", "K3", "K4", "K5", "K9"]
 
 
 def test_neubewertung_schlaegt_sofort_durch(client: TestClient, owner, prozess) -> None:
+    # Der Ausgangswert ist 2, nicht 1: das gerechnete UR dieses Prozessobjekts
+    # traegt es schon vor der ersten Antwort (AP-19). Geprueft wird hier, dass
+    # eine Neubewertung sofort durchschlaegt — nicht die absolute Hoehe.
     bewerte(client, owner, prozess["id"], ds=1)
-    assert frage(client, f"/prozess/{prozess['id']}/tier").json()["tier"] == 1
+    assert frage(client, f"/prozess/{prozess['id']}/tier").json()["tier"] == 2
     bewerte(client, owner, prozess["id"], ds=3)
     assert frage(client, f"/prozess/{prozess['id']}/tier").json()["tier"] == 3
 
