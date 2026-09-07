@@ -248,3 +248,20 @@ ihn zu hinterlegen, bekommt einen roten Test — und umgekehrt.
 | V-INT-04 | Ohne Service-Token abfragen | Plattform | Die Auskunft wird verweigert | AP-3 | erfüllt |
 | V-INT-05 | Änderungen über den Cursor abholen | Plattform | Derselbe Cursor liefert keine Dopplungen | AP-3 | erfüllt |
 | V-INT-06 | Eine schreibende Aktion im Nachweis wiederfinden | Auditor | Jede Änderung steht mit Zeitpunkt, Person und Vorher/Nachher im Änderungsprotokoll | AP-9 | erfüllt |
+
+## V-TIE — Tier, komposites Risiko und Prozesskette
+
+Spezifiziert in [`docs/tier-als-lenkungsobjekt.md`](tier-als-lenkungsobjekt.md). Diese Vorgänge
+belegen, dass es keine Ebene neben der Bewertung mehr gibt: Die erklärten Erwartungen wirken über
+die UR-Achse, die Prozesskette über das Tier, und beides ist über die Oberfläche nachvollziehbar.
+
+| Kennung | Vorgang | Rolle | Erwartetes Ergebnis | AP | Stand |
+|---|---|---|---|---|---|
+| V-TIE-01 | Kundenkreis und Ausfallfolge als Erwartung erklären | Prozess-Owner | Beide stehen als erklärte Erwartung am Prozess und werden von der Bewertung als Ausgangslage übernommen | AP-19 | offen |
+| V-TIE-02 | Die Ausgangslage in der Bewertung ansehen | Prozess-Owner | Die UR-Stufe ist aus erlaubter Reichweite und Ausfallfolge gerechnet und nennt beide Anteile mit ihrem Rechenweg | AP-19 | offen |
+| V-TIE-03 | Von der gerechneten UR-Stufe abweichen wollen | Prozess-Owner | Es gibt keinen Weg dorthin — die Stufe wird gerechnet, nicht erfragt; änderbar ist nur die Erwartung | AP-19 | offen |
+| V-TIE-04 | Das Tier eines Prozesses mit unauffälligem Profil ansehen | Prozess-Owner | Das Tier nennt seine Herkunft: eigenes Profil oder Prozesskette, mit dem verantwortlichen Prozess | AP-19 | offen |
+| V-TIE-05 | Einen kritischen Nachfolger verknüpfen | Prozess-Owner | Das Tier steigt entlang der gesamten abhängigen Kette; die betroffenen Prozesse werden benannt | AP-19 | offen |
+| V-TIE-06 | Nach der Kettenänderung die eigene Bewertung ansehen | Prozess-Owner | Sie ist als überholt gekennzeichnet, nennt den Grund, und Gate 2 wurde automatisch eingereicht | AP-19 | offen |
+| V-TIE-07 | Eine Kettenänderung ohne Tier-Wirkung vornehmen | Prozess-Owner | Die Bewertung bleibt gültig; die Änderung ist sichtbar, löst aber weder Entwertung noch Gate 2 aus | AP-19 | offen |
+| V-TIE-08 | Eine zweite Umsetzung anlegen und den Erlaubnisrahmen prüfen | technischer Owner | Der Rahmen des Tools weitet sich nicht, solange keine neue Bewertung vorliegt | AP-19 | offen |

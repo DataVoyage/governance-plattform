@@ -574,6 +574,39 @@ der Bestand dahinter nicht.
 - [x] Jeder Abschluss steht mit Grund und Art im Werkzeugprotokoll — auch Stilllegen
       und Abbruch
 
+### AP-19 — Das Tier als Lenkungsobjekt, UR als komposite Ebene
+
+**Anwendervorgänge:** V-TIE-01 bis V-TIE-08. Spezifikation in
+[`docs/tier-als-lenkungsobjekt.md`](tier-als-lenkungsobjekt.md).
+
+Reichweite, Ausfallfolge und Kritikalität stehen als eigene Karte **neben** der Bewertung
+(`ProzessDetail.tsx:252`) und wirken nur als Vorschlag hinein. `vorschlag.py:275` sagt selbst, UR
+sei „vollständig ableitbar" — und fragt trotzdem; damit ist der Grundsatz aus AP-18 („Nichts
+abfragen, was die Anwendung weiß", E-64) an dieser Stelle noch nicht eingelöst. Gleichzeitig
+rechnet `aktualisiere_kette` die Betroffenenliste aus, ohne dass eine Kettenänderung je eine
+Bewertung entwertet. Dieses Paket gliedert die Ebenen auseinander: erklärte Erwartung → Ableitung
+als Vorauswahl → UR-Achse → Tier.
+
+- [ ] UR als komposite Stufe aus **erlaubter Reichweite und Ausfallfolge**; Kompositionstabelle
+      als gepflegte Stammdaten, nicht als Konstante (E-66, analog E-42)
+- [ ] Block 6 entfällt aus dem Bewertungsbaum; an seine Stelle tritt die Ausgangslage mit beiden
+      Anteilen und dem Rechenweg — sichtbar, nicht bedienbar (E-65)
+- [ ] Tier-Rechnung: Profil, gekapptes eigenes Betriebsrisiko und ungekappte Kettenbedingung.
+      Damit wird Schritt 6a aus A.8.5 erstmals formulierbar; `test_bewertung.py:109` schreibt die
+      fehlende Kappung heute fest und wird mitgezogen (E-67)
+- [ ] Jedes Tier oberhalb des Profils nennt seine Herkunft und den verantwortlichen Prozess —
+      `ableitung.kritikalitaetsquelle` trägt das bereits
+- [ ] K-Klassen folgen dem Profil, Auflagen und Lenkung folgen dem Tier (E-68)
+- [ ] Erlaubnisrahmen, Vererbung ans Tool und Cockpit lesen aus der gültigen Bewertung statt vom
+      lebenden Prozessobjekt; ohne Bewertung erbt ein Tool nichts (E-70)
+- [ ] Auslöser: Betroffenenliste → Tier neu rechnen → nur bei Tier-Wirkung entwerten und Gate 2
+      automatisch einreichen (E-69). Damit werden zwei der fünf Auslöser aus A.11 erstmals
+      automatisch erkannt — das Gegenstück zu AP-17 (E-63) auf der Soll-Seite
+- [ ] Die Karte „Abgeleitet" auf der Prozess-Detailseite löst sich auf; die Werte stehen in der
+      Bewertung, am Prozess bleibt der Verweis samt Drift-Hinweis
+- [ ] Nachtrag am Leitdokument in A.8.4, A.8.5 und A.13.2 — im selben Zug, nicht als Nacharbeit
+- [ ] V-TIE-01 bis V-TIE-08 scharfgeschaltet
+
 ---
 
 ## 3. Reihenfolge und Meilensteine
