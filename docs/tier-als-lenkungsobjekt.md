@@ -6,6 +6,8 @@ wirken: die erklärten Erwartungen in die UR-Achse, die Prozesskette an das Tier
 
 **Umgesetzt in:** AP-19 · **Vorgänge:** V-TIE-01 bis V-TIE-08, alle laufend · **Stand der Belege bei Abfassung:** `07a7c19`
 
+**Warum überhaupt:** [`konzept-risiko-am-tier.md`](konzept-risiko-am-tier.md) beschreibt die Absicht hinter der Umstellung — dieses Dokument beschreibt ihre Umsetzung.
+
 ---
 
 ## 1. Die Gliederung
