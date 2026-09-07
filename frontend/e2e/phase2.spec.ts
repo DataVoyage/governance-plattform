@@ -106,26 +106,23 @@ test.describe('Phase 2 in der Oberflaeche', () => {
     await page.goto(`/de/prozesse/${id}/bewertung`);
 
     // Profil KI0-DS3-MB1-IT1-RG2-UR2 aus dem durchgerechneten Beispiel.
-    await expect(page.getByText('Schritt 1 von 6 — Künstliche Intelligenz')).toBeVisible();
+    await expect(page.getByText('Schritt 1 von 5 — Künstliche Intelligenz')).toBeVisible();
     await antworte(page, 'Nein'); // 1a: kein KI-Einsatz
-    await expect(page.getByText('Schritt 2 von 6 — Datenschutz')).toBeVisible();
+    await expect(page.getByText('Schritt 2 von 5 — Datenschutz')).toBeVisible();
     // Der Zwischenstand bleibt bis zum Ende unsichtbar.
     await expect(page.getByTestId('tier')).toHaveCount(0);
     await antworte(page, 'Ja'); // 2a: besondere Kategorien -> DS 3
-    await expect(page.getByText('Schritt 3 von 6 — Mitbestimmung')).toBeVisible();
+    await expect(page.getByText('Schritt 3 von 5 — Mitbestimmung')).toBeVisible();
     await antworte(page, 'Nein'); // 3a
     await antworte(page, 'Nein'); // 3b
     await antworte(page, 'Ja'); // 3c -> MB 1
-    await expect(page.getByText('Schritt 4 von 6 — IT-Sicherheit')).toBeVisible();
+    await expect(page.getByText('Schritt 4 von 5 — IT-Sicherheit')).toBeVisible();
     await antworte(page, 'Nein'); // 4a
     await antworte(page, 'Nein'); // 4b
     await antworte(page, 'Ja'); // 4c -> IT 1
-    await expect(page.getByText('Schritt 5 von 6 — Regulatorik')).toBeVisible();
+    await expect(page.getByText('Schritt 5 von 5 — Regulatorik')).toBeVisible();
     await antworte(page, 'Nein'); // 5a
     await antworte(page, 'Ja'); // 5b -> RG 2
-    await expect(page.getByText('Schritt 6 von 6 — Unternehmerisches Risiko')).toBeVisible();
-    await antworte(page, 'Nein'); // 6a
-    await antworte(page, 'Ja'); // 6b -> UR 2
 
     await expect(page.getByTestId('tier')).toHaveText('3');
     await expect(page.getByTestId('profil')).toHaveText('KI0-DS3-MB1-IT1-RG2-UR2');

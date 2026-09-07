@@ -9,6 +9,7 @@ Weg zu widerspruechlichen Auskuenften.
 from __future__ import annotations
 
 import uuid
+from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
 
@@ -29,7 +30,7 @@ from app.services.bewertungsbaum import (
     Themenblock,
 )
 from app.services.changelog import protokolliere_erstellung
-from app.services.prozess import Ungueltig, darf_schreiben
+from app.services.prozess import Ungueltig, darf_schreiben, neueste_bewertung
 
 
 @dataclass
@@ -405,6 +406,14 @@ def speichere(
         antworten=dict(antworten),
         vorschlaege=vorschlag.werte(vorschlaege),
         abweichungen=abweichende,
+        # Der Sollzustand wird hier eingefroren, nicht nur sein Ergebnis: Der
+        # Erlaubnisrahmen liest die erlaubte Reichweite spaeter von hier
+        # (A.13.1, E-70), und ein Tier oberhalb des Profils muss seinen Grund
+        # nennen koennen.
+        reichweite=ur.reichweite,
+        ausfallfolge=ur.ausfallfolge,
+        ur_kette=ur_kette,
+        tier_herkunft=tier_herkunft(stand, ur_kette=ur_kette),
         bewertet_von=principal.user_id,
         bewertet_am=zeitpunkt,
         gueltig_bis=gueltig_bis(db, tier_wert, zeitpunkt),
@@ -417,6 +426,82 @@ def speichere(
     db.flush()
     protokolliere_erstellung(db, bewertung, akteur_user_id=principal.user_id)
     return bewertung
+
+
+def pruefe_tier_wirkung(
+    db: Session, principal: Principal, betroffene: Iterable[Prozessobjekt]
+) -> list[Bewertung]:
+    """Rechnet das Tier der Betroffenen neu — und entwertet nur, wo es sich verschiebt.
+
+    Der Auslöser aus E-69. Weil UR gerechnet statt erfragt wird, kann die
+    Anwendung selbst ausrechnen, ob eine Neubewertung noetig ist: Die
+    gespeicherten Antworten bleiben gueltig, nur die gerechneten Anteile —
+    eigenes UR und Kettenanteil — werden neu bestimmt.
+
+    **Nur bei Tier-Wirkung wird entwertet.** Eine Kettenaenderung, die das Tier
+    nicht bewegt, laesst die Bewertung stehen; sonst stuerbe Agilitaet an
+    Wartezeiten (P4). Unter dem frueheren Frage-mit-Vorschlag-Modell war diese
+    Unterscheidung gar nicht moeglich — man haette jemanden fragen muessen, um
+    zu wissen, ob man ihn fragen muss.
+
+    **Gate 2 entsteht nur, wenn das Tier steigt.** Die abschliessende Liste aus
+    A.11 kennt „Reichweitenerweiterung" und „Kritikalitaet gestiegen" — beides
+    Zunahmen. Ein sinkendes Tier entwertet die Bewertung ebenfalls, denn der
+    Sollzustand hat sich verschoben; es ist aber keine Rahmenverletzung und
+    braucht deshalb kein Gate.
+    """
+    from app.models.enums import REICHWEITE_ORDNUNG, Gate2Ausloeser, GateTyp
+    from app.services import gate, risiko
+
+    entwertet: list[Bewertung] = []
+    for prozess in betroffene:
+        vorher = neueste_bewertung(prozess)
+        if vorher is None or vorher.ueberholt_am is not None:
+            continue
+        ur = risiko.ur_stufe(db, prozess)
+        ur_kette, quelle = risiko.ur_der_kette(db, prozess)
+        stand = durchlaufe(vorher.antworten, ur_stufe=ur.stufe)
+        if not stand.abgeschlossen or stand.verboten:
+            continue
+        neues_tier = tier(stand, ur_kette=ur_kette)
+        if neues_tier == vorher.tier:
+            continue
+
+        gestiegen = neues_tier > vorher.tier
+        grund = (
+            f"Das Tier verschiebt sich von {vorher.tier} auf {neues_tier}: "
+            f"eigenes Risiko {ur.stufe}"
+            + (f", Prozesskette {ur_kette} über „{quelle.name}“" if quelle is not None else "")
+            + "."
+        )
+        vorher.ueberholt_am = now_utc()
+        vorher.ueberholt_grund = grund
+        entwertet.append(vorher)
+
+        if not gestiegen or prozess.status != ProzessStatus.AKTIV:
+            continue
+        if gate.offener_vorgang(db, prozess.id, GateTyp.GATE_2) is not None:
+            continue
+        weiter_gereicht = (
+            vorher.reichweite is not None
+            and ur.reichweite != vorher.reichweite
+            and REICHWEITE_ORDNUNG[ur.reichweite] > REICHWEITE_ORDNUNG[vorher.reichweite]
+        )
+        gate.einreichen(
+            db,
+            principal,
+            prozess,
+            gate_typ=GateTyp.GATE_2,
+            ausloeser=(
+                Gate2Ausloeser.REICHWEITENERWEITERUNG
+                if weiter_gereicht
+                else Gate2Ausloeser.KRITIKALITAET_GESTIEGEN
+            ),
+            begruendung=grund,
+        )
+    if entwertet:
+        db.flush()
+    return entwertet
 
 
 def _pruefe_freigabe_nach_neubewertung(

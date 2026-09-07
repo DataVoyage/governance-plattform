@@ -287,10 +287,20 @@ def test_rahmenabweichungen_rechnen_statt_auf_eine_meldung_zu_warten(
 def test_kritikalitaetsketten_zeigen_nur_geerbte_faelle(
     client: TestClient, governance, owner, vertretung, prozess_daten
 ) -> None:
+    from tests.test_bewertung import nutzlast, profil_von
+
+    def bewerte(prozess: dict) -> None:
+        antwort = client.post(
+            f"/api/v1/prozesse/{prozess['id']}/bewertungen",
+            json=nutzlast(profil_von()),
+            headers=owner.kopf,
+        )
+        assert antwort.status_code == 201, antwort.text
+
     nachfolger = lege_prozess_an(
         client, owner, vertretung, prozess_daten, name="Zahlungslauf", ausfallfolge="kritisch"
     )
-    lege_prozess_an(
+    erfassung = lege_prozess_an(
         client,
         owner,
         vertretung,
@@ -299,9 +309,17 @@ def test_kritikalitaetsketten_zeigen_nur_geerbte_faelle(
         ausfallfolge="gering",
         nachgelagert_ids=[nachfolger["id"]],
     )
+    # Die Zeile liest seit AP-19 das Tier und seine Herkunft aus der Bewertung
+    # (E-67); ohne Bewertung gibt es nichts zu zeigen.
+    bewerte(nachfolger)
+    bewerte(erfassung)
+
     treffer = zeile(client, governance, "kritikalitaetsketten")
     assert [e["titel"] for e in treffer["eintraege"]] == ["Erfassung"]
     assert "Zahlungslauf" in treffer["eintraege"][0]["hinweis"]
+    # Der Nachfolger selbst steht nicht drin: sein Tier stammt aus dem eigenen
+    # Betriebsrisiko und ist dort auf 2 gekappt, nicht aus der Kette.
+    assert "Zahlungslauf" not in [e["titel"] for e in treffer["eintraege"]]
 
 
 def test_tier_verteilung_je_technologie_und_monat(

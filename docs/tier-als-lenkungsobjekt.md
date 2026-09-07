@@ -4,7 +4,7 @@
 Bewertung. Diese Spezifikation gliedert sie auseinander und führt sie dorthin zurück, wo sie
 wirken: die erklärten Erwartungen in die UR-Achse, die Prozesskette an das Tier.
 
-**Vorgesehen in:** AP-19 · **Vorgänge:** V-TIE-01 bis V-TIE-08 · **Stand der Belege:** `07a7c19`
+**Umgesetzt in:** AP-19 · **Vorgänge:** V-TIE-01 bis V-TIE-08, alle laufend · **Stand der Belege bei Abfassung:** `07a7c19`
 
 ---
 
@@ -79,7 +79,8 @@ die das ganze Unternehmen trifft, kann eines sein.
 
 ### 3.2 Die Kompositionstabelle
 
-UR-Stufe aus beiden Anteilen. Diese Belegung ist **entschieden** und gilt als Vorgabe:
+UR-Stufe aus beiden Anteilen. Diese Belegung ist **entschieden**, gilt als Vorgabe und liegt als
+gepflegte Stammdaten in `ur_komposition`:
 
 | Ausfallfolge ↓ / Reichweite → | persönlich | Team | Bereich | Unternehmen | extern |
 |---|---|---|---|---|---|

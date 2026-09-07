@@ -108,24 +108,24 @@ vorgang('V-BEW-01', async ({ page, request }) => {
   await starte(page, prozess.id);
 
   // Alle sechs Blöcke in der festgelegten Reihenfolge (A.8.5).
-  await expect(page.getByText('Schritt 1 von 6 — Künstliche Intelligenz')).toBeVisible();
+  await expect(page.getByText('Schritt 1 von 5 — Künstliche Intelligenz')).toBeVisible();
   await antworte(page, 'Nein'); // 1a
-  await expect(page.getByText('Schritt 2 von 6 — Datenschutz')).toBeVisible();
+  await expect(page.getByText('Schritt 2 von 5 — Datenschutz')).toBeVisible();
   // Solange der Durchlauf läuft, gibt es keinen Zwischenstand.
   await expect(page.getByTestId('tier')).toHaveCount(0);
   await antworte(page, 'Ja'); // 2a -> DS 3
-  await expect(page.getByText('Schritt 3 von 6 — Mitbestimmung')).toBeVisible();
+  await expect(page.getByText('Schritt 3 von 5 — Mitbestimmung')).toBeVisible();
   await antworte(page, 'Ja'); // 3a -> MB 3
-  await expect(page.getByText('Schritt 4 von 6 — IT-Sicherheit')).toBeVisible();
+  await expect(page.getByText('Schritt 4 von 5 — IT-Sicherheit')).toBeVisible();
   await antworte(page, 'Nein');
   await antworte(page, 'Nein');
   await antworte(page, 'Ja'); // 4c -> IT 1
-  await expect(page.getByText('Schritt 5 von 6 — Regulatorik')).toBeVisible();
+  await expect(page.getByText('Schritt 5 von 5 — Regulatorik')).toBeVisible();
   await antworte(page, 'Nein');
   await antworte(page, 'Ja'); // 5b -> RG 2
-  await expect(page.getByText('Schritt 6 von 6 — Unternehmerisches Risiko')).toBeVisible();
-  await antworte(page, 'Nein'); // 6a
-  await antworte(page, 'Ja'); // 6b -> UR 2
+  // UR wird nicht gefragt: „spuerbar" mal Kundenkreis „bereich" ergibt Stufe 2
+  // aus der Kompositionstabelle (E-65, E-66).
+  await expect(page.getByTestId('ur-stufe')).toHaveText('2');
 
   await expect(page.getByTestId('tier')).toHaveText('3');
   await expect(page.getByTestId('profil')).toHaveText('KI0-DS3-MB3-IT1-RG2-UR2');
@@ -188,11 +188,11 @@ vorgang('V-BEW-03', async ({ page, request }) => {
   await antworte(page, 'Nein'); // 5b
   await antworte(page, 'Nein'); // 5c
 
-  // Unternehmerisches Risiko: aus der eigenen Ausfallfolge, im Klartext.
-  const ur = page.getByTestId('vorschlag');
-  await expect(ur).toHaveAttribute('data-wert', 'true');
-  await expect(ur).toContainText('Ausfallfolge');
-  await expect(ur).toContainText('kritisch');
+  // Unternehmerisches Risiko: kein Vorschlag mehr, sondern eine Rechnung.
+  // Sie steht als Ausgangslage da, mit beiden Anteilen im Klartext (E-65).
+  const lage = page.getByTestId('ausgangslage');
+  await expect(lage).toContainText('Kritisch');
+  await expect(page.getByTestId('ur-stufe')).toHaveText('3');
 });
 
 vorgang('V-BEW-04', async ({ page, request }) => {
@@ -219,9 +219,6 @@ vorgang('V-BEW-04', async ({ page, request }) => {
   await antworte(page, 'Nein'); // 5a
   await antworte(page, 'Nein'); // 5b
   await antworte(page, 'Nein'); // 5c
-  await antworte(page, 'Nein'); // 6a, Ausfallfolge „gering"
-  await antworte(page, 'Nein'); // 6b
-  await antworte(page, 'Ja'); // 6c, wie vorgeschlagen
 
   // Vorschlag und Antwort werden beide festgehalten.
   const [ruf] = await Promise.all([
@@ -281,9 +278,6 @@ vorgang('V-BEW-06', async ({ page, request }) => {
   await antworte(page, 'Nein');
   await antworte(page, 'Nein');
   await antworte(page, 'Nein'); // RG 0
-  await antworte(page, 'Nein');
-  await antworte(page, 'Nein');
-  await antworte(page, 'Ja'); // 6c -> UR 1
 
   const klassen = page.getByTestId('k-klassen');
   // Namen und Erklärungssatz, nicht nur das Kürzel.
@@ -310,9 +304,6 @@ vorgang('V-BEW-07', async ({ page, request }) => {
   await antworte(page, 'Nein');
   await antworte(page, 'Nein');
   await antworte(page, 'Nein');
-  await antworte(page, 'Nein');
-  await antworte(page, 'Nein');
-  await antworte(page, 'Ja'); // 6c
 
   const auflagen = page.getByTestId('auflagen');
   await expect(auflagen).toBeVisible();

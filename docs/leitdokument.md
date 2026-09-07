@@ -464,9 +464,13 @@ Auch hier gilt Prinzip P1 — nur bewerten, was nicht ableitbar ist:
 | MB | Datenkategorie der Inputs, Attestierungen 1 und 2 | Eignung zur Leistungs-/Verhaltenskontrolle |
 | IT | — (vorgesehen: angefragte Berechtigungen/Scopes und Netzwerk-Exposition, sobald Telemetrie-Adapter angebunden sind) | Sicherheitsrelevanz und Angriffsfläche — **derzeit vollständig zu erklären** |
 | RG | — | Nachweis-, Aufbewahrungs- oder Prüfpflicht — **vollständig zu erklären** |
-| UR | Ausfallfolge, Kritikalität aus der Prozesskette (A.4.2) | Wirtschaftliche Größenordnung |
+| UR | **Vollständig gerechnet** aus erlaubter Reichweite und Ausfallfolge — nicht erfragt (siehe unten) | — |
 
 Drei Dimensionen — KI, IT und RG — müssen derzeit vollständig erklärt werden; sie haben kein oder nur ein sehr partielles technisches Korrelat. Bei KI und RG ist das dauerhaft so, bei IT nur so lange, bis Telemetrie-Adapter Berechtigungen und Netzwerk-Exposition liefern. Genau dafür existiert die Selbstverpflichtung in Abschnitt A.10.
+
+**UR wird gerechnet, nicht erfragt.** Als einzige Dimension ist das unternehmerische Risiko vollständig ableitbar, und nach P1 wird es deshalb nicht gefragt: Es entsteht aus zwei erklärten Erwartungen des Prozess-Owners — der **erlaubten Reichweite** (der Normalform des Kundenkreises) und der **Ausfallfolge** —, verrechnet über eine gepflegte Kompositionstabelle. Keiner der beiden Werte trägt allein: Ein kritischer Ausfall, der eine Person betrifft, ist kein Unternehmensrisiko; eine geringe Störung, die das ganze Unternehmen trifft, kann eines sein. Der Bewertungsbaum enthält für UR deshalb **keinen Block**; die Stufe erscheint als Ausgangslage mit beiden Anteilen und ihrem Rechenweg.
+
+Was die Prozesskette beiträgt, gehört ausdrücklich **nicht** in diese Dimension — es wirkt auf der Tier-Stufe (A.8.5).
 
 **Ein Vorschlag ist keine Antwort.** Wo eine Dimension ableitbar ist, schlägt die Anwendung einen Wert vor und nennt den Beleg mitsamt seiner Quelle („Datenobjekt ‚Entgeltdaten' trägt die Kategorie besondere Kategorie"). Der Bewertende kann abweichen — dann ist die Abweichung zu begründen, und Vorschlag, Antwort und Begründung werden gemeinsam gespeichert. Nur so bleibt später unterscheidbar, ob jemand bewusst abgewichen ist oder ob sich seither die Daten geändert haben.
 
@@ -510,16 +514,30 @@ Das Tier wird durch einen **linearen Entscheidungsbaum** ermittelt — dieselben
 | 5a | Ist der Prozess rechnungslegungs-, steuer- oder aufsichtsrelevant? | **RG = 3** | weiter zu 5b |
 | 5b | Entstehen dokumentations- oder aufbewahrungspflichtige Ergebnisse? | **RG = 2** | weiter zu 5c |
 | 5c | Besteht eine sonstige regulatorische Berührung? | **RG = 1** | **RG = 0** |
-| 6a | Gefährdet ein Ausfall den Geschäftsbetrieb oder wesentliche Umsätze? | **UR = 3** | weiter zu 6b |
-| 6b | Führt ein Ausfall zu einer spürbaren Beeinträchtigung? | **UR = 2** | weiter zu 6c |
-| 6c | Führt ein Ausfall zu einer geringen Beeinträchtigung? | **UR = 1** | **UR = 0** |
 
-**Vom Profil zum Tier:** Das Tier ist die höchste erreichte Stufe über alle sechs Blöcke, mindestens 1 und höchstens 3. Ein Prozess ohne einen einzigen Treffer ist Tier 1 — es gibt kein „Tier 0". Auch das unternehmerische Risiko allein kann Tier 3 auslösen: ein Prozess, dessen Ausfall den Geschäftsbetrieb gefährdet, wird streng geführt, auch wenn er keine Personendaten berührt und keiner Nachweispflicht unterliegt.
+**Block 6 fehlt in dieser Tabelle, und zwar mit Absicht.** Das unternehmerische Risiko wird nach A.8.4 gerechnet, nicht gefragt. Es geht als fertige Stufe in die Tier-Ableitung ein.
+
+**Vom Profil zum Tier:** Das Tier entsteht aus drei Quellen, die bewusst getrennt bleiben:
+
+```
+Tier = max( KI, DS, MB, IT, RG,   min(UR, 2),   UR der Prozesskette )
+                 ↑                     ↑                ↑
+            die fünf              eigenes           Abhängigkeit —
+          erfragten Blöcke    Betriebsrisiko,        ungekappt
+                                  gekappt
+```
+
+Mindestens 1, höchstens 3; ein Prozess ohne einen einzigen Treffer ist Tier 1 — es gibt kein „Tier 0".
+
+**Das eigene Betriebsrisiko kappt bei Tier 2.** Ein Prozess, dessen Ausfall nur ihn selbst betrifft, wird nicht allein deswegen streng geführt (Schritt 6a). Was dagegen ein **nachgelagerter** Prozess mitbringt, ist kein eigenes Betriebsrisiko, sondern Abhängigkeit: Wer einen kritischen Prozess beliefert, ist selbst kritisch (A.4.2), und dieser Anteil hebt ungekappt auf Tier 3. Solange beides in derselben Zahl steckte, ließ sich das eine nicht kappen, ohne das andere mitzukappen.
+
+**Das Tier nennt seine Herkunft.** Liegt es über dem eigenen Profil, wird ausgewiesen, woraus es stammt — `profil`, `ur` oder `kette`, im letzten Fall mit dem verantwortlichen Prozess. Eine Zahl, die sich der Prozess-Owner nicht erklären kann, macht die Auflage daneben willkürlich.
+
+**Eine Änderung an der Kette rechnet nach.** Verschiebt sie das Tier, gilt die Bewertung als überholt und Gate 2 wird bei einem Anstieg automatisch eingereicht (A.11). Verschiebt sie es nicht, geschieht nichts — Agilität stirbt an Wartezeiten (P4).
 
 **Zwei Nutzungsweisen:**
 
-- **Schnell (nur Tier):** Baum von oben nach unten durchgehen, beim ersten „Tier 3"-Treffer abbrechen. Ausreichend für Freigabewege und Auflagen nach A.8.6, und genau die Form, in der der Baum als erste Betrachtung eines neuen Prozesses dient.
-- **Vollständig (Profil für K-Klassen):** Alle sechs Schritte bis zum Ende durchlaufen, auch nach einem frühen Tier-3-Treffer — nur so ergibt sich das vollständige Profil, das A.9 für die K-Klassen-Ableitung braucht.
+- **Vollständig (Profil für K-Klassen):** Alle Schritte bis zum Ende durchlaufen, auch nach einem frühen Tier-3-Treffer — nur so ergibt sich das vollständige Profil, das A.9 für die K-Klassen-Ableitung braucht. Eine abkürzende Variante gibt es nicht mehr: Sie hinterließ Bewertungen ohne K-Klassen und mit Nullen in den nicht durchlaufenen Dimensionen, die eine vollständige Bewertung verdrängen konnten.
 
 **Schreibweise für das vollständige Profil:** `KI1-DS3-MB0-IT1-RG2-UR2 → Tier 3` (höchster Einzeltreffer bestimmt den Tier — hier DS = 3 in Schritt 2a).
 
@@ -741,7 +759,7 @@ Es gilt das Positivlistenprinzip: **Was nicht ausdrücklich erlaubt ist, ist nic
 |---|---|---|
 | Erlaubte Datenobjekte | Input/Output des SIPOC | Datenzugriffe, APIs, Endpunkte |
 | Obergrenze der Datenkategorie | Dimension DS | Kategorie der referenzierten Objekte |
-| Erlaubte Reichweite / Empfängerkreis | Customer-Spalte | Deployment- und Freigabekonfiguration |
+| Erlaubte Reichweite / Empfängerkreis | **Die Reichweite der gültigen Bewertung** (aus der Customer-Spalte abgeleitet und dort eingefroren) | Deployment- und Freigabekonfiguration |
 | Erlaubte Zugriffsart | Output-Kante des SIPOC (A.4.1) | Lese- vs. Schreibberechtigungen je Datenobjekt |
 | Erlaubte externe Ziele | Prozessdeklaration | URL-/Egress-Logs, Allowlist |
 | Erlaubte Ausführungsart | Attestierung 2 | Lauftyp interaktiv/getriggert/geplant |
@@ -751,7 +769,7 @@ Es gilt das Positivlistenprinzip: **Was nicht ausdrücklich erlaubt ist, ist nic
 
 **Zur Ausführungsidentität:** Sie folgt der erlaubten Ausführungsart. Interaktiv heißt, ein Mensch bedient — dann läuft es unter dessen Identität. Getriggert oder geplant heißt, niemand ist da, der eine Identität leihen könnte; dann ist eine benannte Dienstidentität die einzige, die sich später noch jemandem zuordnen lässt.
 
-**Neben jedes erlaubte Element gehört das gemessene.** Ein Rahmen ohne Messung ist eine Behauptung; erst der Vergleich macht eine Abweichung sichtbar. Sechs der sieben Elemente haben ein solches Gegenstück am Tool-Objekt — die **Reichweite** hat keines: sie ist nach A.4.4 geerbt und nach P1 nie eingegeben, es gibt am Tool nichts, wogegen sie zu prüfen wäre. Das steht so auf dem Bildschirm, statt eine leere Spalte zu zeigen, die wie eine Messung ohne Befund aussähe.
+**Neben jedes erlaubte Element gehört das gemessene.** Ein Rahmen ohne Messung ist eine Behauptung; erst der Vergleich macht eine Abweichung sichtbar. Sechs der sieben Elemente haben ein solches Gegenstück am Tool-Objekt — die **Reichweite** hat keines: sie ist nach A.4.4 geerbt und nach P1 nie eingegeben, es gibt am Tool nichts, wogegen sie zu prüfen wäre. Ihre Soll-Seite stammt seit AP-19 aus der **gültigen Bewertung** und nicht mehr vom lebenden Prozessobjekt — sonst weitete sich der Rahmen von selbst, sobald jemand eine zweite Umsetzung anlegt. Ein Tool an einem unbewerteten Prozess erbt entsprechend nichts: Was nicht bewertet ist, deckt nichts. Das steht so auf dem Bildschirm, statt eine leere Spalte zu zeigen, die wie eine Messung ohne Befund aussähe.
 
 **Schicht 2 — Organisationsweite Verbote** (gelten immer, unabhängig vom Prozess)
 

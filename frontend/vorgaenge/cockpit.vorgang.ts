@@ -14,6 +14,7 @@ import {
   anmelden,
   anwenderMitRolle,
   bewerten,
+  datenobjektAnlegen,
   kennzeichen,
   kopf,
   organisation,
@@ -197,28 +198,47 @@ vorgang('V-COC-08', async ({ page, request }) => {
   // Erst passend bewerten, dann die Datenlage ändern: genau der Fall, für den
   // es die Zeile gibt — die Antwort von damals steht neben einer neuen
   // Wirklichkeit (siehe E-30).
+  //
+  // Der Fall lief bis AP-19 über die Ausfallfolge. Sie taugt dafür nicht mehr:
+  // UR wird gerechnet und kann der Datenlage gar nicht widersprechen (E-65).
+  // Gezeigt wird dasselbe deshalb an einer Frage, die noch gefragt wird — die
+  // Kategorie des referenzierten Datenobjekts steigt, damit kippt der
+  // Vorschlag zu 2a und 2b.
+  const objekt = await datenobjektAnlegen(request, {
+    name: `Quelle ${marke}`,
+    // „intern" ist eingeordnet und nicht personenbezogen: Zu Frage 2b gibt es
+    // damit einen gespeicherten Vorschlag („nein"), den die Umklassifizierung
+    // später kippt. Ohne gespeicherten Vorschlag wäre der Befund nur
+    // „damals nicht ableitbar" — ein anderer Fall.
+    kategorie: 'intern',
+    fachbereich_id: org.fachbereichId,
+  });
   const prozess = await prozessAnlegen(request, org, {
     name: `Widerspruch ${marke}`,
-    ausfallfolge: 'keine',
+    input_datenobjekt_ids: [objekt.id],
   });
-  await bewerten(request, prozess.id, true);
+  await bewerten(request, prozess.id);
   const h = await kopf(request);
-  const geaendert = await request.patch(`${API}/api/v1/prozesse/${prozess.id}`, {
+  const geaendert = await request.patch(`${API}/api/v1/datenobjekte/${objekt.id}`, {
     headers: h,
-    data: { ausfallfolge: 'kritisch' },
+    data: { kategorie: 'personenbezogen' },
   });
-  expect(geaendert.status()).toBe(200);
+  expect(geaendert.status(), await geaendert.text()).toBe(200);
   await anmelden(page);
 
   await page.goto('/de/cockpit/antwort_widerspricht_datenlage');
-  // Eine geänderte Ausfallfolge berührt mehrere Fragen des Risikoblocks —
+  // Eine umklassifizierte Quelle berührt mehrere Fragen des Datenschutzblocks —
   // deshalb steht der Prozess hier mit je einem Eintrag pro Frage.
   const eintraege = page.getByTestId(`eintrag-${prozess.id}`);
   await expect(eintraege.first()).toContainText(`Widerspruch ${marke}`);
   // Antwort, Vorschlag und der Grund stehen nebeneinander.
   await expect(eintraege.first()).toContainText('geantwortet');
   await expect(eintraege.first()).toContainText('abgeleitet');
-  await expect(eintraege.first()).toContainText('Datenlage seit der Bewertung geändert');
+  // Der Vorschlag zu 2b lautete „nein" und lautet heute „ja" — genau der Fall,
+  // den die Zeile von einer bewussten, begründeten Abweichung unterscheidet.
+  await expect(
+    eintraege.filter({ hasText: 'Datenlage seit der Bewertung geändert' }),
+  ).toHaveCount(1);
 });
 
 vorgang('V-COC-09', async ({ page, request }) => {

@@ -40,17 +40,38 @@ class WizardAnfrage(BaseModel):
     begruendungen: dict[str, str] = Field(default_factory=dict)
 
 
+class AusgangslageAus(BaseModel):
+    """Das gerechnete unternehmerische Risiko samt seiner beiden Anteile.
+
+    Sie steht **vor** der ersten Frage, nicht als Frage. Eine gerechnete Stufe
+    ohne ihren Rechenweg waere auf dem Bildschirm eine Behauptung; mit ihm ist
+    sie nachvollziehbar und trotzdem nicht bedienbar (E-65).
+    """
+
+    ur_stufe: int
+    reichweite: str
+    ausfallfolge: str
+    #: Was die abhaengige Prozesskette beitraegt, und ueber welchen Prozess.
+    ur_kette: int = 0
+    kette_quelle: str | None = None
+
+
 class WizardSchritt(BaseModel):
     """Antwort des Servers auf einen Wizard-Schritt.
 
     Enthaelt bewusst **keinen** Zwischenstand: das Ergebnis erscheint erst am
     Ende, um vorzeitige Selbstzensur der Antworten zu vermeiden (Architektur
     8.2). Erst wenn ``abgeschlossen`` wahr ist, traegt ``vorschau`` das Profil.
+
+    ``ausgangslage`` ist davon ausgenommen: Sie ist kein Zwischenstand, sondern
+    eine Vorbedingung. Wer sie sieht, erfaehrt nichts ueber seine eigenen
+    Antworten — nur, was er ohnehin selbst erklaert hat.
     """
 
     naechste_frage: FrageAus | None = None
     abgeschlossen: bool = False
     verboten: bool = False
+    ausgangslage: AusgangslageAus | None = None
     vorschau: ErgebnisAus | None = None
 
 
@@ -71,6 +92,10 @@ class ErgebnisAus(BaseModel):
     klassen: list[KKlasseAus] = Field(default_factory=list)
     #: Die Auflagen des erreichten Tiers nach A.8.6, kumuliert.
     auflagen: list[str] = Field(default_factory=list)
+    #: Woher das Tier stammt: ``profil``, ``ur`` oder ``kette`` (E-68). Ein
+    #: Tier oberhalb des eigenen Profils muss sagen koennen, warum — sonst
+    #: wirkt die Auflage daneben willkuerlich.
+    tier_herkunft: str = "profil"
 
 
 class BewertungAus(BaseModel):
@@ -90,6 +115,16 @@ class BewertungAus(BaseModel):
     antworten: dict[str, bool]
     vorschlaege: dict[str, bool] = Field(default_factory=dict)
     abweichungen: dict[str, str] = Field(default_factory=dict)
+    #: Die beiden erklaerten Erwartungen, aus denen ``ur_stufe`` entstand, und
+    #: woher das Tier stammt (E-66, E-68). Bei Bewertungen von vor AP-19 leer.
+    reichweite: str | None = None
+    ausfallfolge: str | None = None
+    ur_kette: int = 0
+    tier_herkunft: str = "profil"
+    #: Gesetzt, wenn eine Aenderung an der Datenlage das Tier verschoben hat
+    #: (E-69). Die Bewertung bleibt inhaltlich unangetastet.
+    ueberholt_am: datetime | None = None
+    ueberholt_grund: str = ""
     bewertet_von: uuid.UUID
     bewertet_am: datetime
     gueltig_bis: datetime | None = None

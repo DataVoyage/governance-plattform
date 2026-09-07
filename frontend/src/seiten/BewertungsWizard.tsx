@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 
 import { ApiFehler, api } from '@/api/client';
-import type { Beleg, Ergebnis, Frage } from '@/api/typen';
+import type { Ausgangslage, Beleg, Ergebnis, Frage } from '@/api/typen';
 import { useSprache } from '@/i18n/SprachKontext';
 import {
   Abzeichen,
@@ -52,6 +52,7 @@ export function BewertungsWizard() {
   const [gesehen, setGesehen] = useState<Record<string, boolean>>({});
   const [frage, setFrage] = useState<Frage | null>(null);
   const [ergebnis, setErgebnis] = useState<Ergebnis | null>(null);
+  const [ausgangslage, setAusgangslage] = useState<Ausgangslage | null>(null);
   const [entwurf, setEntwurf] = useState<{ wert: boolean; text: string } | null>(null);
   const [abbruchFrage, setAbbruchFrage] = useState(false);
   const [fehler, setFehler] = useState<string | null>(null);
@@ -73,6 +74,7 @@ export function BewertungsWizard() {
         setFehler(null);
         setFrage(stand.naechste_frage);
         setErgebnis(stand.vorschau);
+        setAusgangslage(stand.ausgangslage);
         setEntwurf(null);
         if (stand.verboten) setPhase('verboten');
         else if (stand.vorschau !== null) setPhase('ergebnis');
@@ -137,6 +139,7 @@ export function BewertungsWizard() {
     setAntworten(naechste);
     setVerlauf((bisher) => bisher.slice(0, -1));
     setErgebnis(null);
+    setAusgangslage(null);
     void schritt(naechste, begruendungen);
   };
 
@@ -157,6 +160,37 @@ export function BewertungsWizard() {
       rueckweg={{ ziel: pfad(`/prozesse/${id}`), text: t('nav.prozesse') }}
     />
   );
+
+  // Die Ausgangslage steht vor der ersten Frage und bleibt sichtbar. Sie ist
+  // kein Zwischenstand — der bliebe bis zum Ende verborgen (Architektur 8.2) —,
+  // sondern die Wiedergabe dessen, was der Prozess-Owner selbst erklärt hat.
+  // Das unternehmerische Risiko wird daraus gerechnet und deshalb nicht
+  // gefragt (E-65).
+  const ausgangslageKarte =
+    ausgangslage == null ? null : (
+      <Karte titel={t('bewertung.ausgangslage')} beischrift={t('bewertung.ausgangslage.hinweis')}>
+        <dl className="k-ausgangslage" data-testid="ausgangslage">
+          <div>
+            <dt>{t('prozess.feld.reichweite')}</dt>
+            <dd>{t(`reichweite.${ausgangslage.reichweite}` as never)}</dd>
+          </div>
+          <div>
+            <dt>{t('prozess.feld.ausfallfolge')}</dt>
+            <dd>{t(`ausfallfolge.${ausgangslage.ausfallfolge}` as never)}</dd>
+          </div>
+          <div>
+            <dt>{t('bewertung.ur')}</dt>
+            <dd data-testid="ur-stufe">{ausgangslage.ur_stufe}</dd>
+          </div>
+        </dl>
+        {ausgangslage.kette_quelle !== null && (
+          <Hinweis art="information">
+            {t('bewertung.kette.hinweis')} „{ausgangslage.kette_quelle}" (
+            {t('bewertung.ur')} {ausgangslage.ur_kette})
+          </Hinweis>
+        )}
+      </Karte>
+    );
 
   // --- Verbotstatbestand (1b): eigener roter Ausgang ---------------------
 
@@ -203,8 +237,13 @@ export function BewertungsWizard() {
             <p className="profil" data-testid="profil">
               {profil.join('-')}
             </p>
+            <p className="beischrift" data-testid="tier-herkunft">
+              {t(`bewertung.herkunft.${ergebnis.tier_herkunft}` as never)}
+            </p>
           </div>
         </Karte>
+
+        {ausgangslageKarte}
 
         <Karte titel={t('bewertung.kKlassen')} beischrift={t('bewertung.kKlassen.hinweis')}>
           {ergebnis.klassen.length === 0 ? (
@@ -288,6 +327,7 @@ export function BewertungsWizard() {
   return (
     <>
       {kopf}
+      {ausgangslageKarte}
       <Karte>
         <div className="k-fortschritt">
           <ol aria-label={t('bewertung.fortschritt')}>

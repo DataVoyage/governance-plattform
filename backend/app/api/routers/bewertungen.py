@@ -10,6 +10,7 @@ from app.api.deps import AktuellerNutzer, DbSession
 from app.models.governance import Alarm
 from app.schemas.bewertung import (
     AlarmAus,
+    AusgangslageAus,
     BelegAus,
     BewertungAbschluss,
     BewertungAus,
@@ -51,6 +52,7 @@ def _frage_aus(frage, vorschlaege: dict[str, vorschlag_service.Vorschlag]) -> Fr
 def _ergebnis_aus(stand, ur_kette: int = 0) -> ErgebnisAus:
     werte = bewertung_service.profil(stand)
     tier_wert = bewertung_service.tier(stand, ur_kette=ur_kette)
+    herkunft = bewertung_service.tier_herkunft(stand, ur_kette=ur_kette)
     kennungen = bewertung_service.leite_k_klassen_ab(werte)
     return ErgebnisAus(
         tier=tier_wert,
@@ -65,6 +67,7 @@ def _ergebnis_aus(stand, ur_kette: int = 0) -> ErgebnisAus:
             for kennung in kennungen
         ],
         auflagen=bewertung_service.auflagen(tier_wert),
+        tier_herkunft=herkunft,
     )
 
 
@@ -94,7 +97,7 @@ def wizard_schritt(
     # Tier-Stufe (E-67). Beides kommt hier herein, damit der Wizard dieselbe
     # Zahl zeigt, die das Speichern spaeter festhaelt.
     ur = risiko_service.ur_stufe(db, prozess)
-    ur_kette, _ = risiko_service.ur_der_kette(db, prozess)
+    ur_kette, kette_quelle = risiko_service.ur_der_kette(db, prozess)
     stand = bewertung_service.durchlaufe(anfrage.antworten, ur_stufe=ur.stufe)
 
     vorschau = None
@@ -106,6 +109,13 @@ def wizard_schritt(
         ),
         abgeschlossen=stand.abgeschlossen,
         verboten=stand.verboten,
+        ausgangslage=AusgangslageAus(
+            ur_stufe=ur.stufe,
+            reichweite=ur.reichweite,
+            ausfallfolge=ur.ausfallfolge,
+            ur_kette=ur_kette,
+            kette_quelle=kette_quelle.name if kette_quelle is not None else None,
+        ),
         vorschau=vorschau,
     )
 

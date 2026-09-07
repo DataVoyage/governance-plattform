@@ -248,6 +248,22 @@ def neueste_bewertung(prozess: Prozessobjekt):
     return max(prozess.bewertungen, key=lambda b: b.bewertet_am)
 
 
+def _fuehre_tier_nach(db: Session, principal: Principal, betroffene: list[Prozessobjekt]) -> None:
+    """Prueft nach einer Aenderung, ob sich das Tier der Kette verschoben hat.
+
+    Der Import liegt bewusst in der Funktion: ``bewertung`` baut auf diesem
+    Modul auf, ein Import am Kopf waere ein Kreis. Dasselbe Muster benutzt
+    ``bewertung`` fuer ``gate``.
+
+    ``aktualisiere_kette`` liefert die Betroffenenliste ohnehin — sie wurde
+    bisher nur zum Speichern der abgeleiteten Felder benutzt. Hier bekommt sie
+    ihre eigentliche Aufgabe (E-69).
+    """
+    from app.services import bewertung as bewertung_service
+
+    bewertung_service.pruefe_tier_wirkung(db, principal, betroffene)
+
+
 def zu_schema(prozess: Prozessobjekt, rechte: ProzessrechteAus | None = None) -> ProzessAus:
     """Die Ausgabe eines Prozessobjekts.
 
@@ -448,7 +464,7 @@ def aendern(
         setattr(prozess, feld, wert)
     db.flush()
 
-    ableitung.aktualisiere_kette(prozess, *abgehaengt)
+    _fuehre_tier_nach(db, principal, ableitung.aktualisiere_kette(prozess, *abgehaengt))
     db.flush()
     protokolliere_aenderung(db, prozess, vorher, akteur_user_id=principal.user_id)
 
@@ -482,7 +498,7 @@ def umsetzung_anlegen(
     db.add(umsetzung)
     db.flush()
     db.refresh(prozess)
-    ableitung.aktualisiere_kette(prozess)
+    _fuehre_tier_nach(db, principal, ableitung.aktualisiere_kette(prozess))
     db.flush()
     protokolliere_erstellung(db, umsetzung, akteur_user_id=principal.user_id)
     return umsetzung
@@ -526,5 +542,5 @@ def umsetzung_entfernen(
     db.delete(umsetzung)
     db.flush()
     db.refresh(prozess)
-    ableitung.aktualisiere_kette(prozess)
+    _fuehre_tier_nach(db, principal, ableitung.aktualisiere_kette(prozess))
     db.flush()

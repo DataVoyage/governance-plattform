@@ -12,6 +12,7 @@ import {
   API,
   anmelden,
   anwenderMitRolle,
+  bewerten,
   datenobjektAnlegen,
   kennzeichen,
   kopf,
@@ -131,6 +132,9 @@ vorgang('V-TOO-05', async ({ page, request }) => {
     name: `Kritischer Prozess ${marke}`,
     ausfallfolge: 'kritisch',
   });
+  // Seit E-70 erbt ein Tool nur aus der Bewertung — was nicht bewertet ist,
+  // deckt nichts. Die Bewertung ist Vorbedingung und laeuft ueber die API.
+  await bewerten(request, prozess.id);
   const tool = await toolAnlegen(request, { name: `Erbe ${marke}` });
   await anmelden(page);
   await page.goto(`/de/tools/${tool.id}`);
@@ -155,6 +159,8 @@ vorgang('V-TOO-06', async ({ page, request }) => {
     ausfallfolge: 'kritisch',
     customer: 'extern',
   });
+  await bewerten(request, gering.id);
+  await bewerten(request, kritisch.id);
   const tool = await toolAnlegen(request, { name: `Zwei Kanten ${marke}` });
   await anmelden(page);
   await page.goto(`/de/tools/${tool.id}`);
@@ -179,6 +185,7 @@ vorgang('V-TOO-07', async ({ page, request }) => {
     name: `Zu loesen ${marke}`,
     ausfallfolge: 'kritisch',
   });
+  await bewerten(request, prozess.id);
   const tool = await toolAnlegen(request, { name: `Loeser ${marke}` });
   await toolMitProzess(request, tool.id, prozess.id);
   await anmelden(page);

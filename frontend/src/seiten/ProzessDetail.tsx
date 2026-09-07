@@ -147,6 +147,9 @@ export function ProzessDetail() {
 
   const abwaerts = kette(prozess, prozesse, 'nachgelagert_ids');
   const aufwaerts = kette(prozess, prozesse, 'vorgelagert_ids');
+  // Die juengste Bewertung traegt seit AP-19 den Sollzustand: Tier samt
+  // Herkunft und die eingefrorene Reichweite (E-70).
+  const bewertung = bewertungen.length > 0 ? bewertungen[0] : null;
   const eigeneStufe = { keine: 0, gering: 1, spuerbar: 2, kritisch: 3 }[prozess.ausfallfolge];
 
   return (
@@ -235,6 +238,22 @@ export function ProzessDetail() {
           beschriftung={t('prozess.feld.customer')}
           wert={t(`kundenkreis.${prozess.customer}` as never)}
         />
+        {/*
+          Die Reichweite steht direkt bei dem Feld, aus dem sie folgt — als
+          unmittelbare Konsequenz der Erklärung, nicht als eigene Ebene. Wer
+          einen Kundenkreis wählt, muss sehen, was er damit sagt, und zwar
+          bevor er bewertet.
+        */}
+        <Zeile
+          pruefkennung="reichweite"
+          beschriftung={t('prozess.feld.reichweite')}
+          wert={prozess.reichweite === null ? '—' : t(`reichweite.${prozess.reichweite}` as never)}
+          zweitzeile={
+            prozess.umsetzungen.length > 1
+              ? t('prozess.herkunft.reichweiteUmsetzung')
+              : t('prozess.herkunft.reichweite')
+          }
+        />
         <Zeile
           beschriftung={t('prozess.feld.nachgelagert')}
           wert={chipreihe(prozess.nachgelagert_ids, prozessChip, t('prozess.wirkung.leer'))}
@@ -243,42 +262,88 @@ export function ProzessDetail() {
           beschriftung={t('prozess.feld.ausfallfolge')}
           wert={t(`ausfallfolge.${prozess.ausfallfolge}` as never)}
         />
+        <Zeile
+          pruefkennung="kritikalitaet"
+          beschriftung={t('prozess.feld.kritikalitaet')}
+          wert={prozess.kritikalitaet}
+          zweitzeile={
+            prozess.kritikalitaet > eigeneStufe
+              ? t('prozess.herkunft.kritikalitaetKette')
+              : t('prozess.herkunft.kritikalitaetEigen')
+          }
+        />
+        <Zeile
+          pruefkennung="mitbestimmung"
+          beschriftung={t('prozess.feld.mitbestimmung')}
+          wert={prozess.mitbestimmung_flag ? t('ja') : t('nein')}
+          zweitzeile={t('prozess.herkunft.mitbestimmung')}
+        />
       </Gruppe>
 
       {prozess.schritte_zu_viele && (
         <Hinweis art="warnung">{t('prozess.schritte.warnung')}</Hinweis>
       )}
 
-      <Karte titel={t('prozess.abgeleitet.titel')} beischrift={t('prozess.abgeleitet.hinweis')}>
-        <Werteliste
-          eintraege={[
-            {
-              beschriftung: t('prozess.feld.reichweite'),
-              wert:
-                prozess.reichweite === null ? '—' : t(`reichweite.${prozess.reichweite}` as never),
-              herkunft:
-                prozess.umsetzungen.length > 1
-                  ? t('prozess.herkunft.reichweiteUmsetzung')
-                  : t('prozess.herkunft.reichweite'),
-              pruefkennung: 'reichweite',
-            },
-            {
-              beschriftung: t('prozess.feld.kritikalitaet'),
-              wert: prozess.kritikalitaet,
-              herkunft:
-                prozess.kritikalitaet > eigeneStufe
-                  ? t('prozess.herkunft.kritikalitaetKette')
-                  : t('prozess.herkunft.kritikalitaetEigen'),
-              pruefkennung: 'kritikalitaet',
-            },
-            {
-              beschriftung: t('prozess.feld.mitbestimmung'),
-              wert: prozess.mitbestimmung_flag ? t('ja') : t('nein'),
-              herkunft: t('prozess.herkunft.mitbestimmung'),
-              pruefkennung: 'mitbestimmung',
-            },
-          ]}
-        />
+      {/*
+        Die Karte „Abgeleitet" stand hier bis AP-19 als eigene Ebene neben der
+        Bewertung und zeigte dieselben Größen ein zweites Mal. Sie ist
+        aufgelöst: Reichweite und Ausfallfolge sind erklärte Erwartungen und
+        stehen oben bei den Stammdaten, ihre Wirkung steht in der Bewertung.
+        Hier bleibt der Verweis darauf — und der Hinweis, wenn beides
+        auseinanderläuft.
+      */}
+      <Karte titel={t('prozess.bewertet.titel')} beischrift={t('prozess.bewertet.hinweis')}>
+        {bewertung === null ? (
+          <Hinweis art="information">{t('prozess.bewertet.keine')}</Hinweis>
+        ) : (
+          <>
+            <Werteliste
+              eintraege={[
+                {
+                  beschriftung: t('bewertung.tier'),
+                  wert: bewertung.tier,
+                  herkunft: t(`bewertung.herkunft.${bewertung.tier_herkunft}` as never),
+                  pruefkennung: 'tier-herkunft',
+                },
+                {
+                  beschriftung: t('prozess.feld.reichweite'),
+                  wert:
+                    bewertung.reichweite === null
+                      ? '—'
+                      : t(`reichweite.${bewertung.reichweite}` as never),
+                  herkunft: t('prozess.bewertet.stand'),
+                  pruefkennung: 'bewertung-reichweite',
+                },
+                {
+                  beschriftung: t('bewertung.ur'),
+                  wert: bewertung.ur_stufe,
+                  herkunft: t('prozess.feld.ausfallfolge'),
+                  pruefkennung: 'ur-stufe',
+                },
+                {
+                  beschriftung: t('prozess.feld.mitbestimmung'),
+                  wert: prozess.mitbestimmung_flag ? t('ja') : t('nein'),
+                  herkunft: t('prozess.herkunft.mitbestimmung'),
+                  pruefkennung: 'bewertung-mitbestimmung',
+                },
+              ]}
+            />
+            {bewertung.ueberholt_am !== null && (
+              <Hinweis art="warnung">
+                {t('bewertung.ueberholt')} — {bewertung.ueberholt_grund}
+              </Hinweis>
+            )}
+            {bewertung.ueberholt_am === null &&
+              bewertung.reichweite !== null &&
+              prozess.reichweite !== null &&
+              prozess.reichweite !== bewertung.reichweite && (
+                <Hinweis art="information">
+                  {t('prozess.drift')}: {t(`reichweite.${prozess.reichweite}` as never)} —{' '}
+                  {t('prozess.drift.hinweis')}
+                </Hinweis>
+              )}
+          </>
+        )}
       </Karte>
 
       <Karte titel={t('prozess.wirkung.titel')} beischrift={t('prozess.wirkung.hinweis')}>

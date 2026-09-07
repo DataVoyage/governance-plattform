@@ -22,7 +22,6 @@ from sqlalchemy.orm import Session
 
 from app.core.permissions import Principal
 from app.models.enums import (
-    AUSFALLFOLGE_STUFE,
     AssetStatus,
     Befundart,
     ComplianceFarbe,
@@ -244,27 +243,45 @@ def datenobjekte_ohne_kategorie(db: Session, principal: Principal, **filter) -> 
 
 
 def kritikalitaetsketten(db: Session, principal: Principal, **filter) -> Zeile:
-    """Prozesse, deren Kritikalitaet aus der Kette stammt, nicht aus sich selbst.
+    """Prozesse, deren **Tier** aus der Kette stammt, nicht aus sich selbst.
 
     Genau diese Faelle sind erklaerungsbeduerftig: der Prozess wirkt fuer sich
     harmlos und ist es wegen seiner Nachfolger nicht.
+
+    Massgeblich ist seit AP-19 das Tier und seine Herkunft, nicht die blosse
+    Kritikalitaet (E-67) — die Kette wirkt auf der Tier-Stufe, und die Zeile
+    zeigt damit, was der Prozess-Owner tatsaechlich zu tragen hat.
+
+    Zusaetzlich erscheint hier, wessen Bewertung eine Kettenaenderung ueberholt
+    hat. Ohne diesen Hinweis waere das Umlesen der Vererbung auf die Bewertung
+    gefaehrlich: Ein real gestiegenes Risiko verschwaende still hinter einer
+    alten Zahl.
     """
     zeile = Zeile(
         "kritikalitaetsketten",
         "Kritikalitätsketten",
-        "Prozesse, deren Kritikalität aus einem nachgelagerten Prozess geerbt ist.",
+        "Prozesse, deren Tier aus einem nachgelagerten Prozess stammt — "
+        "und Bewertungen, die eine Kettenänderung überholt hat.",
     )
     for prozess in _sichtbare_prozesse(db, principal, filter.get("fachbereich_id")):
-        eigene = AUSFALLFOLGE_STUFE[prozess.ausfallfolge]
-        if prozess.kritikalitaet <= eigene:
+        bewertung = prozess_service.neueste_bewertung(prozess)
+        if bewertung is None:
+            continue
+        if bewertung.tier_herkunft != "kette" and bewertung.ueberholt_am is None:
             continue
         quellen = ", ".join(p.name for p in prozess.nachgelagert) or "—"
+        if bewertung.ueberholt_am is not None:
+            hinweis = f"Bewertung überholt — {bewertung.ueberholt_grund}"
+        else:
+            hinweis = (
+                f"Tier {bewertung.tier} aus der Prozesskette, eigenes Risiko "
+                f"{bewertung.ur_stufe} (über: {quellen})"
+            )
         zeile.eintraege.append(
             Eintrag(
                 id=prozess.id,
                 titel=prozess.name,
-                hinweis=f"eigene Ausfallfolge {eigene}, geerbt {prozess.kritikalitaet} "
-                f"(über: {quellen})",
+                hinweis=hinweis,
                 ziel_modul="prozesse",
                 ziel_filter={"id": str(prozess.id)},
             )

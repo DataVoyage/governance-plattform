@@ -2069,3 +2069,150 @@ Zeitreihe eines Werkzeugs liest, soll den Vorgang nicht aufschlagen müssen, um
 zu erfahren, was aus ihm geworden ist.
 
 **Anwendervorgänge:** V-BEW-02, V-TOO-17, V-RAH-03.
+
+## E-65 — Das unternehmerische Risiko wird gerechnet, nicht erfragt
+
+`vorschlag.py` sagte es selbst: „Als einzige Dimension ist diese **vollständig
+ableitbar**." Und rechnete die Stufe dann aus, um sie als Vorschlag neben drei
+Ja/Nein-Fragen zu stellen. Das steht gegen P1 — *„Was aus vorhandenen Daten
+berechenbar ist, wird nie erfragt"* — und gegen den eigenen Titel von AP-18.
+
+Eine Rechnung, die man überstimmen kann, ist keine Rechnung, sondern eine
+Meinung. Wer bisher ein niedrigeres Tier wollte, setzte 6a bis 6c auf „nein"
+und begründete es; das Risiko verschwand aus der Bewertung, ohne sich in der
+Wirklichkeit zu ändern.
+
+Block 6 entfällt deshalb aus dem Bewertungsbaum, `_ur` aus dem
+Vorschlagsdienst. An ihre Stelle tritt eine **Ausgangslage**: beide erklärten
+Anteile, die daraus gerechnete Stufe und der Satz, wie sie zustande kommt.
+Sichtbar und nachvollziehbar, aber nicht bedienbar.
+
+Der Preis steht in E-71.
+
+**Anwendervorgänge:** V-TIE-02, V-TIE-03.
+
+## E-66 — Das unternehmerische Risiko ist komposit
+
+UR ist keine einzelne Aussage. Es besteht aus **wie weit reicht der Prozess**
+und **was passiert, wenn er ausfällt**. Keiner der beiden Werte trägt allein:
+Ein kritischer Ausfall, der eine Person betrifft, ist kein Unternehmensrisiko;
+eine geringe Störung, die das ganze Unternehmen trifft, kann eines sein.
+
+Beide Anteile sind erklärte Erwartungen des Prozess-Owners — Kundenkreis und
+Ausfallfolge, beide kontrollierte Listen nach E-1. Die erlaubte Reichweite ist
+die gerechnete Normalform des Kundenkreises.
+
+Die Kompositionstabelle liegt als **gepflegte Stammdaten** in
+`ur_komposition`, nicht als Konstante im Code — wie die Technologiematrix und
+aus demselben Grund (E-42): Eine Bewertungsgrundlage, die nur mit einer
+Auslieferung änderbar wäre, veraltet zwischen zwei Releases. Die Belegung ist
+in `docs/tier-als-lenkungsobjekt.md`, Abschnitt 3.2, festgehalten.
+
+**Anwendervorgänge:** V-TIE-01, V-TIE-02.
+
+## E-67 — Die Prozesskette ist eine Bedingung des Tiers, nicht der Dimension
+
+A.8.5 Schritt 6a verlangt eine Kappung: *„reines Betriebsrisiko hebt allein
+nicht in Tier 3."* Sie fehlte, und der Test
+`test_jede_antwortkombination_ergibt_das_tabellierte_tier` schrieb ihr Fehlen
+mit `max(1, max(kombination))` sogar fest.
+
+Formulierbar wird sie erst durch eine Trennung: Das **eigene** Betriebsrisiko
+ist „rein" und kappt bei Stufe 2. Was ein nachgelagerter Prozess mitbringt,
+ist kein eigenes Betriebsrisiko, sondern **Abhängigkeit** — es darf ungekappt
+auf Tier 3 heben (A.4.2: wer einen kritischen Prozess beliefert, ist selbst
+kritisch). Solange beides in derselben Zahl steckte, ließ sich das eine nicht
+kappen, ohne das andere mitzukappen.
+
+```
+Tier = max( KI, DS, MB, IT, RG, min(UR, 2), UR_kette )
+```
+
+Damit bekommt das Tier zum ersten Mal eine eigene Aussage. Vorher war es
+`max(Profil)` — ein Maximum kann nichts sagen, was seine Summanden nicht schon
+sagen. Die Trennung, die der Docstring von `TIER_AUFLAGEN` seit AP-4
+beschreibt, wird erst jetzt wirksam.
+
+**Anwendervorgänge:** V-TIE-04, V-TIE-05.
+
+## E-68 — K-Klassen folgen dem Profil, Auflagen folgen dem Tier
+
+Sobald das Tier das Profil übersteigen kann, entkoppeln sich beide. Die
+Zuordnung folgt der Trennung, die `TIER_AUFLAGEN` bereits beschreibt:
+
+| | Hängt an | Begründung |
+|---|---|---|
+| **K-Klassen** | dem **Profil** | Ein Prozess, den die Kette hebt, braucht deswegen keine Datenschutz-Folgenabschätzung — seine eigenen Eigenschaften haben sich nicht geändert |
+| **Auflagen und Lenkung** | dem **Tier** | Er wird strenger geführt; genau das rechtfertigt die Kette |
+
+Das Profil bleibt die Aussage über den Prozess selbst, das Tier wird die
+Aussage über seine Führung. Zwei Sätze statt einer Zahl. Deshalb trägt jede
+Bewertung ihre `tier_herkunft`: `profil`, `ur` oder `kette` — ein Tier
+oberhalb des eigenen Profils muss sagen können, warum.
+
+## E-69 — Eine Kettenänderung entwertet nur bei Tier-Wirkung
+
+`aktualisiere_kette` lief schon immer transitiv über alle Vorgänger und gab
+die Betroffenenliste zurück. Benutzt wurde sie nur zum Speichern der
+abgeleiteten Felder. Eine Kettenänderung entwertete **nie** eine Bewertung;
+der einzige Entwertungspfad war `gueltig_bis`, also Zeit. Ein kritischer
+Nachfolger hob damit die Kritikalität aller Vorgänger, während deren
+Bewertungen ihr altes Tier behielten — still.
+
+Weil UR jetzt gerechnet statt erfragt wird, kann die Anwendung selbst
+ausrechnen, ob eine Neubewertung nötig ist: Die gespeicherten Antworten
+bleiben, nur die gerechneten Anteile werden neu bestimmt. Unter dem früheren
+Frage-mit-Vorschlag-Modell ging das nicht — man hätte jemanden fragen müssen,
+um zu wissen, ob man ihn fragen muss.
+
+**Nur bei Tier-Wirkung wird entwertet.** Eine Kettenänderung, die das Tier
+nicht bewegt, lässt die Bewertung stehen; sonst stürbe Agilität an Wartezeiten
+(P4). Und **Gate 2 entsteht nur, wenn das Tier steigt**: Die abschließende
+Liste aus A.11 kennt „Reichweitenerweiterung" und „Kritikalität gestiegen" —
+beides Zunahmen. Ein sinkendes Tier entwertet die Bewertung ebenfalls, denn
+das Soll hat sich verschoben; es ist aber keine Rahmenverletzung.
+
+Damit werden zwei der fünf Auslöser aus A.11 erstmals automatisch erkannt
+statt selbst gemeldet — das Gegenstück zu E-63 auf der Soll-Seite.
+
+Die Bewertung wird dabei **nicht umgeschrieben**, sondern mit `ueberholt_am`
+und `ueberholt_grund` gekennzeichnet. A.13.7 verlangt eine lückenlose
+Historie, und eine rückwirkend veränderte Bewertung wäre keine.
+
+**Anwendervorgänge:** V-TIE-06, V-TIE-07.
+
+## E-70 — Ohne gültige Bewertung erbt ein Tool nichts
+
+`rahmen.py` baute das Rahmenelement „Erlaubte Reichweite" aus dem lebenden
+abgeleiteten Feld. Eine zweite Umsetzung hob die Reichweite über den
+Nachtlauf — und der Erlaubnisrahmen des Tools weitete sich **von selbst**,
+ohne Bewertung und ohne Gate 2. A.13.1 verlangt das Gegenteil:
+*Prozessbewertung (Soll) ──► Erlaubnisrahmen.*
+
+Die Bewertung friert deshalb die erklärte Erwartung mit ein, und Vererbung,
+Rahmen und Cockpit lesen aus ihr. Als Folge trägt ein Prozess **ohne**
+Bewertung nichts zum Erbe bei: Sein Tool erbt nichts, sein Rahmen deckt
+nichts. Nach dem Positivlistenprinzip aus A.13.2 ist das richtig — was nicht
+bewertet ist, ist nicht erlaubt.
+
+Das ist eine Verhaltensänderung und keine Nebenwirkung. Bewertungen aus der
+Zeit vor AP-19 führen keine eingefrorene Reichweite; für sie gilt ersatzweise
+das abgeleitete Feld, bis sie erneuert werden. Rückwirkend neu gerechnet wird
+nichts.
+
+**Anwendervorgänge:** V-TIE-08.
+
+## E-71 — Der einzige Hebel auf UR ist die erklärte Erwartung
+
+Der Preis von E-65, offen benannt: Wenn UR gerechnet wird, sind Kundenkreis
+und Ausfallfolge der einzige Hebel darauf. Wer ein niedrigeres Tier will,
+senkt sie. Vorher war die Baumfrage eine zweite, getrennt zurechenbare
+Aussage — jetzt gibt es nur noch eine.
+
+Abgemildert wird das dreifach: Beide Felder sind kontrollierte Listen (E-1),
+jede Änderung steht mit Person und Zeitpunkt im Nachweis, und die Kette rechnet
+nach — wer seine eigene Ausfallfolge senkt, entkommt dem Risiko seiner
+Nachfolger nicht.
+
+Aufgehoben ist der Zielkonflikt damit nicht. Er ist der Preis dafür, dass P1
+auch dort gilt, wo Fragen bequemer wären.

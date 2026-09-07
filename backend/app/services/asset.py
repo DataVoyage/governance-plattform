@@ -25,6 +25,7 @@ from sqlalchemy.orm import Session
 from app.core.permissions import Principal, Verboten, verlange
 from app.models.base import now_utc
 from app.models.enums import (
+    MB_STUFE_ZURECHENBAR,
     REICHWEITE_ORDNUNG,
     SCHREIBENDE_ZUGRIFFSARTEN,
     AssetStatus,
@@ -109,41 +110,54 @@ class GeerbteKlassifikation:
 
 
 def erbe_klassifikation(tool: ToolObjekt) -> GeerbteKlassifikation:
-    """Maximum ueber alle verknuepften Prozessobjekte.
+    """Maximum ueber alle **bewerteten** Prozesskanten.
 
     Ein Tool mit mehreren Prozesskanten traegt die hoechste Einstufung aller
     Kanten — sonst waere die schwaechste Verknuepfung eine stille Umgehung.
     Jede Kante wird zusaetzlich einzeln ausgewiesen und die massgebliche
     markiert (Leitdokument A.4.4: das Maximum bleibt nachvollziehbar).
+
+    **Geerbt wird aus der Bewertung, nicht vom lebenden Prozessobjekt** (E-70).
+    A.13.1 laesst den Erlaubnisrahmen aus der Prozess*bewertung* entstehen; las
+    er die abgeleiteten Felder direkt, weitete er sich von selbst, sobald jemand
+    eine zweite Umsetzung anlegte — ohne Bewertung und ohne Gate 2.
+
+    Ein Prozess **ohne** Bewertung traegt deshalb nichts bei. Nach dem
+    Positivlistenprinzip aus A.13.2 ist das richtig: Was nicht bewertet ist,
+    deckt nichts. Bewertungen aus der Zeit vor AP-19 fuehren keine eingefrorene
+    Reichweite; fuer sie gilt ersatzweise das abgeleitete Feld, bis sie erneuert
+    werden.
     """
     ergebnis = GeerbteKlassifikation()
     k_klassen: set[str] = set()
     for prozess in tool.prozessobjekte:
         bewertung = neueste_bewertung(prozess)
+        if bewertung is None:
+            ergebnis.beitraege.append(Kantenbeitrag(prozess_id=prozess.id, name=prozess.name))
+            ergebnis.quelle_prozess_ids.append(prozess.id)
+            continue
+        reichweite = bewertung.reichweite or prozess.reichweite
+        mitbestimmung = bewertung.mb_stufe >= MB_STUFE_ZURECHENBAR
         beitrag = Kantenbeitrag(
             prozess_id=prozess.id,
             name=prozess.name,
-            kritikalitaet=prozess.kritikalitaet,
-            reichweite=prozess.reichweite,
-            tier=bewertung.tier if bewertung is not None else None,
-            mitbestimmung_flag=prozess.mitbestimmung_flag,
-            k_klassen=sorted(
-                bewertung.ausgeloeste_k_klassen if bewertung is not None else [],
-                key=lambda k: int(k[1:]),
-            ),
+            kritikalitaet=bewertung.ur_stufe,
+            reichweite=reichweite,
+            tier=bewertung.tier,
+            mitbestimmung_flag=mitbestimmung,
+            k_klassen=sorted(bewertung.ausgeloeste_k_klassen, key=lambda k: int(k[1:])),
         )
         ergebnis.beitraege.append(beitrag)
         ergebnis.quelle_prozess_ids.append(prozess.id)
-        ergebnis.kritikalitaet = max(ergebnis.kritikalitaet, prozess.kritikalitaet)
-        ergebnis.mitbestimmung_flag = ergebnis.mitbestimmung_flag or prozess.mitbestimmung_flag
-        if prozess.reichweite is not None and (
+        ergebnis.kritikalitaet = max(ergebnis.kritikalitaet, bewertung.ur_stufe)
+        ergebnis.mitbestimmung_flag = ergebnis.mitbestimmung_flag or mitbestimmung
+        if reichweite is not None and (
             ergebnis.reichweite is None
-            or REICHWEITE_ORDNUNG[prozess.reichweite] > REICHWEITE_ORDNUNG[ergebnis.reichweite]
+            or REICHWEITE_ORDNUNG[reichweite] > REICHWEITE_ORDNUNG[ergebnis.reichweite]
         ):
-            ergebnis.reichweite = prozess.reichweite
-        if bewertung is not None:
-            ergebnis.tier = max(ergebnis.tier or 0, bewertung.tier)
-            k_klassen.update(bewertung.ausgeloeste_k_klassen)
+            ergebnis.reichweite = reichweite
+        ergebnis.tier = max(ergebnis.tier or 0, bewertung.tier)
+        k_klassen.update(bewertung.ausgeloeste_k_klassen)
     ergebnis.k_klassen = sorted(k_klassen, key=lambda k: int(k[1:]))
     for beitrag in ergebnis.beitraege:
         beitrag.massgeblich = (

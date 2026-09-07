@@ -587,25 +587,26 @@ rechnet `aktualisiere_kette` die Betroffenenliste aus, ohne dass eine Kettenänd
 Bewertung entwertet. Dieses Paket gliedert die Ebenen auseinander: erklärte Erwartung → Ableitung
 als Vorauswahl → UR-Achse → Tier.
 
-- [ ] UR als komposite Stufe aus **erlaubter Reichweite und Ausfallfolge**; Kompositionstabelle
+- [x] UR als komposite Stufe aus **erlaubter Reichweite und Ausfallfolge**; Kompositionstabelle
       als gepflegte Stammdaten, nicht als Konstante (E-66, analog E-42)
-- [ ] Block 6 entfällt aus dem Bewertungsbaum; an seine Stelle tritt die Ausgangslage mit beiden
+- [x] Block 6 entfällt aus dem Bewertungsbaum; an seine Stelle tritt die Ausgangslage mit beiden
       Anteilen und dem Rechenweg — sichtbar, nicht bedienbar (E-65)
-- [ ] Tier-Rechnung: Profil, gekapptes eigenes Betriebsrisiko und ungekappte Kettenbedingung.
+- [x] Tier-Rechnung: Profil, gekapptes eigenes Betriebsrisiko und ungekappte Kettenbedingung.
       Damit wird Schritt 6a aus A.8.5 erstmals formulierbar; `test_bewertung.py:109` schreibt die
       fehlende Kappung heute fest und wird mitgezogen (E-67)
-- [ ] Jedes Tier oberhalb des Profils nennt seine Herkunft und den verantwortlichen Prozess —
+- [x] Jedes Tier oberhalb des Profils nennt seine Herkunft und den verantwortlichen Prozess —
       `ableitung.kritikalitaetsquelle` trägt das bereits
-- [ ] K-Klassen folgen dem Profil, Auflagen und Lenkung folgen dem Tier (E-68)
-- [ ] Erlaubnisrahmen, Vererbung ans Tool und Cockpit lesen aus der gültigen Bewertung statt vom
+- [x] K-Klassen folgen dem Profil, Auflagen und Lenkung folgen dem Tier (E-68)
+- [x] Erlaubnisrahmen, Vererbung ans Tool und Cockpit lesen aus der gültigen Bewertung statt vom
       lebenden Prozessobjekt; ohne Bewertung erbt ein Tool nichts (E-70)
-- [ ] Auslöser: Betroffenenliste → Tier neu rechnen → nur bei Tier-Wirkung entwerten und Gate 2
+- [x] Auslöser: Betroffenenliste → Tier neu rechnen → nur bei Tier-Wirkung entwerten und Gate 2
       automatisch einreichen (E-69). Damit werden zwei der fünf Auslöser aus A.11 erstmals
       automatisch erkannt — das Gegenstück zu AP-17 (E-63) auf der Soll-Seite
-- [ ] Die Karte „Abgeleitet" auf der Prozess-Detailseite löst sich auf; die Werte stehen in der
-      Bewertung, am Prozess bleibt der Verweis samt Drift-Hinweis
-- [ ] Nachtrag am Leitdokument in A.8.4, A.8.5 und A.13.2 — im selben Zug, nicht als Nacharbeit
-- [ ] V-TIE-01 bis V-TIE-08 scharfgeschaltet
+- [x] Die Karte „Abgeleitet" auf der Prozess-Detailseite löst sich auf: Die abgeleiteten Folgen
+      stehen bei dem Feld, aus dem sie folgen, der eingefrorene Sollzustand in der Bewertung —
+      samt Drift-Hinweis, wenn beides auseinanderläuft
+- [x] Nachtrag am Leitdokument in A.8.4, A.8.5 und A.13.2 — im selben Zug, nicht als Nacharbeit
+- [x] V-TIE-01 bis V-TIE-08 scharfgeschaltet
 
 ---
 

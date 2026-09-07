@@ -190,9 +190,27 @@ class Bewertung(Base, TimestampMixin):
     #: widerspricht. Ohne Begruendung wird eine solche Bewertung nicht
     #: angenommen.
     abweichungen: Mapped[dict] = mapped_column(JSON, default=dict)
+    #: Die beiden erklaerten Erwartungen, aus denen ``ur_stufe`` gerechnet
+    #: wurde (A.8.4, E-66). Sie sind hier eingefroren, weil die Bewertung der
+    #: **Soll**-Zustand ist: Der Erlaubnisrahmen liest die erlaubte Reichweite
+    #: von hier und nicht vom lebenden Prozessobjekt, sonst weitete er sich
+    #: von selbst, sobald jemand eine zweite Umsetzung anlegt (A.13.1, E-70).
+    reichweite: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    ausfallfolge: Mapped[str | None] = mapped_column(String(24), nullable=True)
+    #: Was die abhaengige Prozesskette zum Tier beigetragen hat (E-67), und
+    #: woher das Tier stammt: ``profil``, ``ur`` oder ``kette``. Ein Tier
+    #: oberhalb des eigenen Profils muss sagen koennen, warum.
+    ur_kette: Mapped[int] = mapped_column(Integer, default=0)
+    tier_herkunft: Mapped[str] = mapped_column(String(16), default="profil")
     bewertet_von: Mapped[uuid.UUID] = mapped_column(GUID, ForeignKey("users.id"))
     bewertet_am: Mapped[datetime] = mapped_column(TZDateTime)
     gueltig_bis: Mapped[datetime | None] = mapped_column(TZDateTime, nullable=True)
+    #: Gesetzt, wenn eine Aenderung an der Datenlage das Tier verschoben hat
+    #: (E-69). Die Bewertung bleibt inhaltlich unangetastet — sie wird nicht
+    #: umgeschrieben, sondern als ueberholt gekennzeichnet, damit die Historie
+    #: lueckenlos bleibt (A.13.7).
+    ueberholt_am: Mapped[datetime | None] = mapped_column(TZDateTime, nullable=True)
+    ueberholt_grund: Mapped[str] = mapped_column(Text, default="")
 
     prozessobjekt: Mapped[Prozessobjekt] = relationship(back_populates="bewertungen")
 

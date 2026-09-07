@@ -53,6 +53,25 @@ def lege_prozess_an(client: TestClient, owner, vertretung, prozess_daten, **over
     return antwort.json()
 
 
+def bewerte_neutral(client: TestClient, owner, prozess: dict) -> dict:
+    """Bewertet einen Prozess, ohne eine der gefragten Dimensionen zu heben.
+
+    Seit AP-19 erbt ein Tool nur aus der **Bewertung** (E-70): Was nicht
+    bewertet ist, deckt nichts. Wer die Vererbung pruefen will, braucht deshalb
+    bewertete Prozesse. Die UR-Stufe stellt sich dabei von selbst ein — sie
+    kommt aus Kundenkreis und Ausfallfolge, nicht aus den Antworten.
+    """
+    from tests.test_bewertung import nutzlast, profil_von
+
+    antwort = client.post(
+        f"/api/v1/prozesse/{prozess['id']}/bewertungen",
+        json=nutzlast(profil_von()),
+        headers=owner.kopf,
+    )
+    assert antwort.status_code == 201, antwort.text
+    return antwort.json()["bewertung"]
+
+
 def importiere(client: TestClient, plattform, datensaetze, quelle: str = QUELLE):
     antwort = client.post(
         "/api/v1/import/assets",
@@ -267,6 +286,13 @@ def test_tool_zeigt_die_hoechste_geerbte_einstufung(
         json={"prozessobjekt_id": gering["id"]},
         headers=governance.kopf,
     )
+    # Solange der Prozess unbewertet ist, traegt er nichts bei (E-70).
+    unbewertet = client.get(f"/api/v1/tools/{tool['id']}", headers=governance.kopf).json()
+    assert unbewertet["geerbt"]["kritikalitaet"] == 0
+    assert unbewertet["geerbt"]["reichweite"] is None
+
+    bewerte_neutral(client, owner, gering)
+    bewerte_neutral(client, owner, kritisch)
     nur_gering = client.get(f"/api/v1/tools/{tool['id']}", headers=governance.kopf).json()
     assert nur_gering["geerbt"]["kritikalitaet"] == 1
     assert nur_gering["geerbt"]["reichweite"] == "bereich"
@@ -1376,6 +1402,7 @@ def test_geerbtes_maximum_nennt_die_massgebliche_kante(
     ).json()
     attestieren(governance.kopf, tool["id"])
     for prozess in (gering, kritisch):
+        bewerte_neutral(client, owner, prozess)
         client.post(
             f"/api/v1/tools/{tool['id']}/prozesse",
             json={"prozessobjekt_id": prozess["id"]},

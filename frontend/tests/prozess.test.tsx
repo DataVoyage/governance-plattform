@@ -79,21 +79,68 @@ describe('Prozessliste', () => {
 });
 
 describe('Prozessdetail', () => {
-  it('zeigt die abgeleiteten Felder als schreibgeschuetzte Angaben', async () => {
+  it('zeigt den Sollzustand aus der Bewertung, nicht als eigene Ebene daneben', async () => {
+    // Seit AP-19 gibt es keine Karte „Abgeleitet" mehr. Reichweite und Tier
+    // stehen dort, wo sie wirken: in der Bewertung (E-70).
     fetchAttrappe([
-      ...grundrouten(),
       {
         pfad: '/api/v1/prozesse/p-1',
         koerper: prozess({ reichweite: 'unternehmen', kritikalitaet: 3, mitbestimmung_flag: true }),
       },
+      {
+        pfad: /\/bewertungen$/,
+        koerper: [
+          {
+            id: 'b-1',
+            prozessobjekt_id: 'p-1',
+            ki_stufe: 0,
+            ds_stufe: 0,
+            mb_stufe: 0,
+            it_stufe: 0,
+            rg_stufe: 0,
+            ur_stufe: 2,
+            tier: 3,
+            gesperrt: false,
+            ausgeloeste_k_klassen: [],
+            antworten: {},
+            vorschlaege: {},
+            abweichungen: {},
+            reichweite: 'bereich',
+            ausfallfolge: 'spuerbar',
+            ur_kette: 3,
+            tier_herkunft: 'kette',
+            ueberholt_am: null,
+            ueberholt_grund: '',
+            bewertet_von: 'u-1',
+            bewertet_am: '2026-09-07T10:00:00Z',
+            gueltig_bis: null,
+          },
+        ],
+      },
+      ...grundrouten(),
     ]);
     zeichne('/de/prozesse/p-1');
-    expect(await screen.findByTestId('reichweite')).toHaveTextContent('Unternehmen');
-    expect(screen.getByTestId('kritikalitaet')).toHaveTextContent('3');
-    expect(screen.getByTestId('mitbestimmung')).toHaveTextContent('Ja');
-    // Die abgeleiteten Werte sind Text, kein Eingabefeld.
-    const bereich = screen.getByText('Abgeleitet — nicht eingebbar').closest('section');
+    // Das Tier nennt seine Herkunft — hier die Prozesskette.
+    expect(await screen.findByTestId('tier-herkunft')).toHaveTextContent('3');
+    expect(screen.getByTestId('ur-stufe')).toHaveTextContent('2');
+    // Die Bewertung trug „Fachbereich" ein, abgeleitet ist inzwischen
+    // „Unternehmen": genau dieser Unterschied muss sichtbar werden.
+    // Bei den Stammdaten steht die abgeleitete Folge der Erklärung …
+    expect(screen.getByTestId('reichweite')).toHaveTextContent('Unternehmen');
+    // … in der Bewertung die eingefrorene, und der Unterschied wird benannt.
+    expect(screen.getByTestId('bewertung-reichweite')).toHaveTextContent('Fachbereich');
+    expect(screen.getByText(/Abgeleitet jetzt: Unternehmen/)).toBeInTheDocument();
+    // Die Angaben sind Text, kein Eingabefeld.
+    const bereich = screen.getByTestId('bewertung-reichweite').closest('section');
     expect(within(bereich as HTMLElement).queryByRole('textbox')).toBeNull();
+  });
+
+  it('nennt einen unbewerteten Prozess als solchen', async () => {
+    fetchAttrappe([...grundrouten(), { pfad: '/api/v1/prozesse/p-1', koerper: prozess({}) }]);
+    zeichne('/de/prozesse/p-1');
+    expect(
+      await screen.findByText(/Noch nicht bewertet — dieses Prozessobjekt vererbt nichts\./),
+    ).toBeInTheDocument();
   });
 
   it('listet die umsetzenden Landesorganisationen', async () => {

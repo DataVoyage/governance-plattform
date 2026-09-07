@@ -169,6 +169,22 @@ const de = {
   'bewertung.frage': 'Frage',
   'bewertung.ergebnis': 'Ergebnis',
   'bewertung.tier': 'Tier',
+  'bewertung.ur': 'Unternehmerisches Risiko',
+  'bewertung.ausgangslage': 'Ausgangslage',
+  'bewertung.ausgangslage.hinweis':
+    'Das unternehmerische Risiko wird aus Ihren Angaben gerechnet, nicht gefragt. Ändern lässt es sich über Kundenkreis und Ausfallfolge am Prozessobjekt.',
+  'bewertung.kette.hinweis': 'Aus der Prozesskette kommt hinzu:',
+  'bewertung.herkunft.profil': 'Das Tier folgt dem eigenen Profil.',
+  'bewertung.herkunft.ur': 'Das Tier folgt dem eigenen Betriebsrisiko — es allein hebt nicht auf Tier 3.',
+  'bewertung.herkunft.kette': 'Das Tier stammt aus der Prozesskette, nicht aus dem eigenen Profil.',
+  'bewertung.ueberholt': 'Diese Bewertung ist überholt',
+  'prozess.bewertet.titel': 'Bewertung',
+  'prozess.bewertet.hinweis':
+    'Reichweite, Ausfallfolge und Kritikalität stehen nicht mehr neben der Bewertung, sondern in ihr.',
+  'prozess.bewertet.keine': 'Noch nicht bewertet — dieses Prozessobjekt vererbt nichts.',
+  'prozess.bewertet.stand': 'Bewertet am',
+  'prozess.drift': 'Abgeleitet jetzt',
+  'prozess.drift.hinweis': 'Die Datenlage hat sich seit der Bewertung geändert.',
   'bewertung.profil': 'Profil',
   'bewertung.vorschlag': 'Vorschlag aus Ihren Daten:',
   'bewertung.vorschlag.offen':
@@ -975,6 +991,23 @@ const fr: Record<Schluessel, string> = {
   'bewertung.frage': 'Question',
   'bewertung.ergebnis': 'Résultat',
   'bewertung.tier': 'Niveau',
+  'bewertung.ur': 'Risque entrepreneurial',
+  'bewertung.ausgangslage': 'Situation de départ',
+  'bewertung.ausgangslage.hinweis':
+    "Le risque entrepreneurial est calculé à partir de vos indications, il n'est pas demandé. Il se modifie via le cercle de clients et la conséquence de la défaillance sur l'objet de processus.",
+  'bewertung.kette.hinweis': 'La chaîne de processus ajoute :',
+  'bewertung.herkunft.profil': 'Le niveau suit le profil propre.',
+  'bewertung.herkunft.ur':
+    "Le niveau suit le risque d'exploitation propre — seul, il n'élève pas au niveau 3.",
+  'bewertung.herkunft.kette': 'Le niveau provient de la chaîne de processus, non du profil propre.',
+  'bewertung.ueberholt': 'Cette évaluation est dépassée',
+  'prozess.bewertet.titel': 'Évaluation',
+  'prozess.bewertet.hinweis':
+    "La portée, la conséquence de la défaillance et la criticité ne figurent plus à côté de l'évaluation, mais dedans.",
+  'prozess.bewertet.keine': "Pas encore évalué — cet objet de processus ne transmet rien.",
+  'prozess.bewertet.stand': 'Évalué le',
+  'prozess.drift': 'Dérivé actuellement',
+  'prozess.drift.hinweis': "La situation des données a changé depuis l'évaluation.",
   'bewertung.profil': 'Profil',
   'bewertung.vorschlag': 'Proposition issue de vos données :',
   'bewertung.vorschlag.offen':

@@ -194,12 +194,24 @@ export interface Ergebnis {
   ausgeloeste_k_klassen: string[];
   klassen: KKlasse[];
   auflagen: string[];
+  /** Woher das Tier stammt: eigenes Profil, eigenes Risiko oder die Kette. */
+  tier_herkunft: 'profil' | 'ur' | 'kette';
+}
+
+/** Das gerechnete unternehmerische Risiko samt seiner beiden Anteile (E-65). */
+export interface Ausgangslage {
+  ur_stufe: number;
+  reichweite: string;
+  ausfallfolge: string;
+  ur_kette: number;
+  kette_quelle: string | null;
 }
 
 export interface WizardSchritt {
   naechste_frage: Frage | null;
   abgeschlossen: boolean;
   verboten: boolean;
+  ausgangslage: Ausgangslage | null;
   vorschau: Ergebnis | null;
 }
 
@@ -218,6 +230,12 @@ export interface Bewertung {
   antworten: Record<string, boolean>;
   vorschlaege: Record<string, boolean>;
   abweichungen: Record<string, string>;
+  reichweite: string | null;
+  ausfallfolge: string | null;
+  ur_kette: number;
+  tier_herkunft: 'profil' | 'ur' | 'kette';
+  ueberholt_am: string | null;
+  ueberholt_grund: string;
   bewertet_von: string;
   bewertet_am: string;
   gueltig_bis: string | null;
