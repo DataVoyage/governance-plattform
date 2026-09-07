@@ -20,7 +20,6 @@ from dataclasses import dataclass, field
 from app.bestand.kontext import Kontext, Unstimmig
 from app.bestand.prozesse import PROZESSE, handelnder
 from app.models.governance import Bewertung
-from app.services import ableitung
 from app.services import bewertung as bewertung_service
 from app.services import vorschlag as vorschlag_service
 from app.services.bewertungsbaum import BAUM, KI_VERBOTEN, Block, Themenblock
@@ -39,9 +38,6 @@ class Einstufung:
     mb: int
     it: int
     rg: int
-    #: ``None`` heisst: der gerechneten Kritikalitaet folgen. Sie ist die einzige
-    #: Dimension, die vollstaendig aus den Daten faellt (A.8.4).
-    ur: int | None = None
     #: Tage vor heute; ``None`` heisst kurz nach dem Anlegen des Prozesses.
     bewertet_vor: int | None = None
     #: Die jaehrliche Erneuerung ab Tier 3 (A.10.5). Ohne sie laeuft die
@@ -144,6 +140,17 @@ EINSTUFUNGEN: tuple[Einstufung, ...] = (
     Einstufung("datenplattform", ki=0, ds=0, mb=0, it=3, rg=2, erneuert_vor=100),
     # --- Der Verbotstatbestand --------------------------------------------
     Einstufung("emotionsanalyse-kasse", ki=KI_VERBOTEN, ds=3, mb=3, it=2, rg=1, verboten=True),
+    # --- Randfaelle der Risikokomposition ---------------------------------
+    #
+    # Bewusst unauffaellige Profile: Was diese sieben zeigen, ist allein die
+    # Wirkung der Komposition aus erlaubter Reichweite und Ausfallfolge (E-66).
+    Einstufung("teamkalender", ki=0, ds=0, mb=0, it=0, rg=0),
+    Einstufung("pressespiegel", ki=0, ds=0, mb=0, it=0, rg=0),
+    Einstufung("eigenauswertung", ki=0, ds=0, mb=0, it=1, rg=0),
+    Einstufung("arbeitsvorrat", ki=0, ds=0, mb=0, it=1, rg=2),
+    Einstufung("dienstplanung", ki=0, ds=2, mb=2, it=1, rg=0),
+    Einstufung("notfallkontakte", ki=0, ds=2, mb=0, it=0, rg=0),
+    Einstufung("pruefmittelnachweis", ki=0, ds=0, mb=0, it=1, rg=2),
 )
 
 
@@ -182,23 +189,27 @@ def antworten_aus_profil(profil: dict[str, int]) -> dict[str, bool]:
     return antworten
 
 
-def profil_von(einstufung: Einstufung, kritikalitaet: int) -> dict[str, int]:
-    """Das Profil, mit der Kritikalitaet als Vorgabe fuer die Risikodimension."""
+def profil_von(einstufung: Einstufung) -> dict[str, int]:
+    """Die fuenf erfragten Stufen.
+
+    UR steht hier nicht mehr: Seit AP-19 wird es aus erlaubter Reichweite und
+    Ausfallfolge gerechnet, nicht erfragt (E-65). Der Katalog kann es deshalb
+    gar nicht mehr vorgeben — wer die Stufe eines Prozesses verschieben will,
+    aendert seinen Kundenkreis oder seine Ausfallfolge.
+    """
     return {
         Block.KI.value: einstufung.ki,
         Block.DS.value: einstufung.ds,
         Block.MB.value: einstufung.mb,
         Block.IT.value: einstufung.it,
         Block.RG.value: einstufung.rg,
-        Block.UR.value: einstufung.ur if einstufung.ur is not None else kritikalitaet,
     }
 
 
 def _pruefe_begruendungen(kontext: Kontext, einstufung: Einstufung) -> list[str]:
     """Sammelt Abweichungen ohne Begruendung, statt bei der ersten zu scheitern."""
     prozess = kontext.prozess(einstufung.prozess)
-    profil = profil_von(einstufung, ableitung.leite_kritikalitaet_ab(prozess))
-    antworten = antworten_aus_profil(profil)
+    antworten = antworten_aus_profil(profil_von(einstufung))
     vorschlaege = vorschlag_service.fuer_prozess(prozess)
     return [
         f"{einstufung.prozess}: Frage {abweichung.frage_id} — geantwortet "
@@ -214,8 +225,7 @@ KATALOG = {p.schluessel: p for p in PROZESSE}
 
 def _speichere(kontext: Kontext, einstufung: Einstufung, vor_tagen: int) -> Bewertung | None:
     prozess = kontext.prozess(einstufung.prozess)
-    profil = profil_von(einstufung, ableitung.leite_kritikalitaet_ab(prozess))
-    antworten = antworten_aus_profil(profil)
+    antworten = antworten_aus_profil(profil_von(einstufung))
     with kontext.aktion(vor_tagen, stunde=10, minute=(vor_tagen * 13) % 60):
         ergebnis = bewertung_service.speichere(
             kontext.db,
