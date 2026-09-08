@@ -135,7 +135,6 @@ class ProzessAus(BaseModel):
 
     # Abgeleitet und schreibgeschuetzt (Architektur 8.1)
     reichweite: Reichweite | None = None
-    kritikalitaet: int = 0
     mitbestimmung_flag: bool = False
     #: Zahl der Schritte in der P-Spalte und die Flughoehen-Warnung aus A.5.
     schritt_anzahl: int = 0

@@ -82,10 +82,14 @@ vorgang('V-TIE-01', async ({ page, request }) => {
   });
   await anmelden(page);
 
-  // Sie stehen am Prozessobjekt, dort wo der Owner sie erklärt hat.
+  // Sie stehen am Prozessobjekt, dort wo der Owner sie erklärt hat — die
+  // Ausfallfolge als Erklärung, die Reichweite als ihre unmittelbare Folge.
+  // Eine dritte, abgeleitete Größe steht hier seit AP-19 nicht mehr: Was die
+  // Kette bewirkt, sagt das Tier und sonst nichts (E-72).
   await page.goto(`/de/prozesse/${prozess.id}`);
   await expect(page.getByTestId('reichweite')).toContainText('Fachbereich');
-  await expect(page.getByTestId('kritikalitaet')).toContainText('2');
+  await expect(page.getByTestId('ausfallfolge')).toContainText('Spürbar');
+  await expect(page.getByTestId('kritikalitaet')).toHaveCount(0);
 
   // Und die Bewertung übernimmt sie unverändert als Ausgangslage.
   await starte(page, prozess.id);

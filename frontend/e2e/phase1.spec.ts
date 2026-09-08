@@ -93,17 +93,22 @@ test.describe('Phase 1 in der Oberflaeche', () => {
     await expect(page.getByRole('heading', { name: 'Rechnungspruefung' })).toBeVisible();
 
     // Abgeleitet und schreibgeschuetzt: zwei Umsetzungen heben die Reichweite an.
+    // Die Ausfallfolge daneben ist erklaert, nicht abgeleitet — eine dritte,
+    // gerechnete Kritikalitaet gibt es seit AP-19 nicht mehr (E-72).
     await expect(page.getByTestId('reichweite')).toContainText('Unternehmen');
-    await expect(page.getByTestId('kritikalitaet')).toHaveText('2Aus der eigenen Ausfallfolge');
+    await expect(page.getByTestId('ausfallfolge')).toContainText('Spürbar');
+    await expect(page.getByTestId('kritikalitaet')).toHaveCount(0);
     await expect(page.getByText(`${daten.fachbereich.name} — Land DE`)).toBeVisible();
     await expect(page.getByText(`${daten.fachbereich.name} — Land FR`)).toBeVisible();
 
     // Sprachwechsel: andere Anzeige, dieselben Daten (Abnahmekriterium 1.7).
     await page.getByRole('group', { name: 'Sprache' }).getByRole('button', { name: 'FR' }).click();
     await expect(page).toHaveURL(/\/fr\/prozesse\//);
-    await expect(page.getByText('Dérivé — non saisissable')).toBeVisible();
     // Derselbe Wert, uebersetzt — kein technischer Schluessel im Sichtfeld.
+    // Geprueft wird die Herkunftszeile: Sie ist ein ganzer Satz und faellt
+    // deshalb am ehesten auf, wenn eine Uebersetzung fehlt.
     await expect(page.getByTestId('reichweite')).toContainText('Entreprise');
+    await expect(page.getByTestId('reichweite')).toContainText('cercle de clients');
     await expect(page.getByText(`${daten.fachbereich.name} — Land DE`)).toBeVisible();
     await expect(page.getByText(`${daten.fachbereich.name} — Land FR`)).toBeVisible();
 

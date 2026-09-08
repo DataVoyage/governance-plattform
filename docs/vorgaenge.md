@@ -79,8 +79,8 @@ ihn zu hinterlegen, bekommt einen roten Test — und umgekehrt.
 | V-PRO-08 | Mehr als sieben Prozessschritte eintragen | Prozess-Owner | Eine Warnung nennt die falsche Flughöhe und empfiehlt einen weiteren Prozess; Speichern bleibt möglich | AP-1 | erfüllt |
 | V-PRO-09 | Einen Kreis in der Prozesskette anlegen | Prozess-Owner | Das Speichern wird mit Begründung abgelehnt | AP-1 | erfüllt |
 | V-PRO-10 | Den Kundenkreis festlegen | Prozess-Owner | Die Reichweite wird abgeleitet, ist schreibgeschützt und nennt ihre Herkunft | AP-1 | erfüllt |
-| V-PRO-11 | Die Ausfallfolge festlegen | Prozess-Owner | Die Kritikalität wird abgeleitet und nennt ihre Herkunft | AP-1 | erfüllt |
-| V-PRO-12 | Einen kritischeren Nachfolger verknüpfen | Prozess-Owner | Die eigene Kritikalität steigt auf dessen Wert, die Herkunft wechselt auf „aus der Prozesskette geerbt" | AP-1 | erfüllt |
+| V-PRO-11 | Die Ausfallfolge festlegen | Prozess-Owner | Sie steht als erklärte Erwartung am Objekt; eine zweite, abgeleitete Kritikalität daneben gibt es nicht mehr (AP-19, E-72) | AP-1 | erfüllt |
+| V-PRO-12 | Einen kritischeren Nachfolger verknüpfen | Prozess-Owner | Die nächste Bewertung trägt dessen Stufe und nennt als Herkunft die Prozesskette; eine bereits gespeicherte wird entwertet, nicht umgeschrieben (V-TIE-06) | AP-1 | erfüllt |
 | V-PRO-13 | Den Prozess in zwei Landesorganisationen umsetzen | Prozess-Owner | Die Reichweite steigt auf „Unternehmen", beide Einheiten sind mit sprechendem Namen sichtbar | AP-1 | erfüllt |
 | V-PRO-14 | Eine lokale Abweichung zur Umsetzung erfassen | Prozess-Umsetzer | Die Abweichung steht an der Umsetzung, nicht am Prozess | AP-1 | erfüllt |
 | V-PRO-15 | Eine Umsetzung entfernen | Prozess-Owner | Die Reichweite wird neu abgeleitet | AP-1 | erfüllt |

@@ -243,7 +243,6 @@ def bewerte(kontext: Kontext) -> None:
     Kette aus A.4.2 auch in den Bewertungen.
     """
     from app.bestand.bewertungen import antworten_aus_profil
-    from app.services import ableitung
 
     for nummer, eintrag in enumerate(PROZESSE):
         vorgabe = PROFILE.get(eintrag.schluessel)
@@ -256,7 +255,6 @@ def bewerte(kontext: Kontext) -> None:
             "mb": vorgabe[2],
             "it": vorgabe[3],
             "rg": vorgabe[4],
-            "ur": ableitung.leite_kritikalitaet_ab(prozess),
         }
         antworten = antworten_aus_profil(profil)
         with kontext.aktion(vor_tagen=330 - nummer * 2, stunde=10):

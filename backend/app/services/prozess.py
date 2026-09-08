@@ -288,7 +288,6 @@ def zu_schema(prozess: Prozessobjekt, rechte: ProzessrechteAus | None = None) ->
         erstellt_am=prozess.erstellt_am,
         geaendert_am=prozess.geaendert_am,
         reichweite=prozess.reichweite,
-        kritikalitaet=prozess.kritikalitaet,
         mitbestimmung_flag=prozess.mitbestimmung_flag,
         schritt_anzahl=zaehle_schritte(prozess.process_steps),
         schritte_zu_viele=zaehle_schritte(prozess.process_steps) > HOECHSTZAHL_SCHRITTE,

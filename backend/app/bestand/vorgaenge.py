@@ -29,7 +29,7 @@ from app.models.enums import (
     SelbstverpflichtungTyp,
 )
 from app.schemas.prozess import ProzessAendern
-from app.services import asset, gate, klassen, konfiguration, lenkung
+from app.services import asset, gate, klassen, konfiguration, lenkung, risiko
 from app.services import prozess as prozess_service
 from app.services import selbstverpflichtung as verpflichtung
 from app.services.changelog import protokolliere_aenderung, snapshot
@@ -671,9 +671,15 @@ def _hoechste_dimension(bewertung) -> str:
 
 
 def technologiematrix(kontext: Kontext) -> None:
-    """Fuellt die Matrix und pflegt eine Entscheidung der Governance ein."""
+    """Fuellt die Matrix und pflegt eine Entscheidung der Governance ein.
+
+    Die UR-Kompositionstabelle kommt im selben Zug: Sie ist genauso gepflegte
+    Bewertungsgrundlage und stuende sonst leer in der Datenbank, waehrend die
+    Rechnung still auf die Standardbelegung im Code zurueckfaellt (E-66).
+    """
     with kontext.aktion(740, stunde=9):
         klassen.initialisiere(kontext.db)
+        risiko.initialisiere(kontext.db)
 
     with kontext.aktion(150, stunde=10):
         klassen.setze_feld(

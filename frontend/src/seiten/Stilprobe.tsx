@@ -205,9 +205,9 @@ export function Stilprobe() {
               herkunft: 'Aus Kundenkreis „Team", angehoben durch zwei Umsetzungen',
             },
             {
-              beschriftung: 'Kritikalität',
+              beschriftung: 'Tier',
               wert: '3',
-              herkunft: 'Aus nachgelagertem Prozess „Produktionsfreigabe"',
+              herkunft: 'Aus der Prozesskette, über „Produktionsfreigabe"',
             },
             { beschriftung: 'Profil', wert: 'KI0-DS3-MB1-IT1-RG2-UR2' },
           ]}

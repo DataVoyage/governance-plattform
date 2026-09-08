@@ -253,7 +253,6 @@ def lenkungswege(kontext: Kontext) -> None:
     nichts. Sie sind drei verschiedene Fälle, keine Wiederholung.
     """
     from app.bestand.bewertungen import antworten_aus_profil
-    from app.services import ableitung
     from app.services import bewertung as bewertung_service
 
     governance = kontext.wer("governance")
@@ -300,7 +299,6 @@ def lenkungswege(kontext: Kontext) -> None:
             "mb": 0,
             "it": 1,
             "rg": 0,
-            "ur": ableitung.leite_kritikalitaet_ab(prozess),
         }
         antworten = antworten_aus_profil(profil)
         with kontext.aktion(vor_tagen=48, stunde=10):

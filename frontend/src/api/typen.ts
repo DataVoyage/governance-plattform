@@ -126,7 +126,6 @@ export interface Prozess {
   ausfallfolge: Ausfallfolge;
   status: ProzessStatus;
   reichweite: string | null;
-  kritikalitaet: number;
   mitbestimmung_flag: boolean;
   schritt_anzahl: number;
   schritte_zu_viele: boolean;
@@ -531,6 +530,20 @@ export interface Matrixfeld {
   technologie: string;
   k_klasse: string;
   bewertung: Klassenbewertung;
+  begruendung: string;
+  geaendert_am: string | null;
+}
+
+/**
+ * Ein Feld der Tabelle Ausfallfolge × Reichweite (Leitdokument A.8.4).
+ *
+ * Sie entscheidet die UR-Stufe und damit — über die Kappung — das Tier ganzer
+ * Prozessgruppen. Wie die Technologiematrix gepflegte Stammdaten, nicht Code.
+ */
+export interface UrKompositionsfeld {
+  ausfallfolge: Ausfallfolge;
+  reichweite: string;
+  stufe: number;
   begruendung: string;
   geaendert_am: string | null;
 }

@@ -92,7 +92,6 @@ export function prozess(ueberschreibungen: Partial<Prozess> = {}): Prozess {
     ausfallfolge: 'spuerbar',
     status: 'entwurf',
     reichweite: 'bereich',
-    kritikalitaet: 2,
     mitbestimmung_flag: false,
     schritt_anzahl: 3,
     schritte_zu_viele: false,

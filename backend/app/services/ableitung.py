@@ -1,9 +1,18 @@
 """Serverseitige Ableitungen am Prozessobjekt (Leitdokument P1, Architektur 8.1).
 
-Reichweite, Kritikalitaet und Mitbestimmungsflag werden nicht abgefragt,
-sondern aus vorhandenen Daten berechnet. Die Regeln liegen hier in der
-Geschaeftslogik und nicht in der Oberflaeche, damit sie nicht versehentlich
-durch eine UI-Aenderung verschoben werden koennen.
+Reichweite und Mitbestimmungsflag werden nicht abgefragt, sondern aus
+vorhandenen Daten berechnet. Die Regeln liegen hier in der Geschaeftslogik und
+nicht in der Oberflaeche, damit sie nicht versehentlich durch eine
+UI-Aenderung verschoben werden koennen.
+
+**Die Kritikalitaet steht hier seit AP-19 nicht mehr.** Sie war die eigene
+Ausfallfolge, hochgezogen auf das Maximum der Prozesskette — eine zweite
+Aussage ueber dieselbe Kette neben der, die zaehlt. Der Kettenanteil wirkt
+jetzt ausschliesslich am Tier, und zwar ueber das komposite UR der Nachfolger
+(``services/risiko.ur_der_kette``, E-67). Beide Zahlen nebeneinander stehen zu
+lassen hiess, genau die Ebene zu behalten, die AP-19 aufgeloest hat: Die
+rohe Ausfallfolge der Kette und ihr komposites UR laufen auseinander, sobald
+ein Nachfolger kritisch ausfaellt, aber nur eine Person trifft.
 """
 
 from __future__ import annotations
@@ -11,7 +20,6 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from app.models.enums import (
-    AUSFALLFOLGE_STUFE,
     KUNDENKREIS_ZU_REICHWEITE,
     LEISTUNGSDATEN_KATEGORIEN,
     MB_STUFE_ZURECHENBAR,
@@ -50,39 +58,6 @@ def leite_reichweite_ab(prozess: Prozessobjekt) -> Reichweite:
     ):
         return Reichweite.UNTERNEHMEN
     return basis
-
-
-def leite_kritikalitaet_ab(prozess: Prozessobjekt, *, _besucht: set | None = None) -> int:
-    """Eigene Ausfallfolge, angehoben auf das Maximum der Prozesskette (A.4.2).
-
-    Wer einen kritischen Nachfolgeprozess speist, ist selbst mindestens so
-    kritisch wie dieser. Die Rekursion ist gegen Zyklen abgesichert, weil die
-    Kette fachlich zwar azyklisch gemeint, technisch aber n:m ist.
-    """
-    besucht = _besucht if _besucht is not None else set()
-    if prozess.id in besucht:
-        return AUSFALLFOLGE_STUFE[prozess.ausfallfolge]
-    besucht.add(prozess.id)
-    stufe = AUSFALLFOLGE_STUFE[prozess.ausfallfolge]
-    for nachfolger in prozess.nachgelagert:
-        stufe = max(stufe, leite_kritikalitaet_ab(nachfolger, _besucht=besucht))
-    return stufe
-
-
-def kritikalitaetsquelle(prozess: Prozessobjekt) -> tuple[int, Prozessobjekt | None]:
-    """Die Kritikalitaet samt dem Prozess, aus dem sie stammt.
-
-    Ist die zweite Stelle ``None``, traegt der Prozess seine Stufe selbst.
-    Andernfalls ist es der nachgelagerte Prozess, der sie nach A.4.2 anhebt —
-    genau die Angabe, die ein Vorschlag nennen muss, damit man ihn pruefen kann.
-    """
-    stufe = leite_kritikalitaet_ab(prozess)
-    if stufe <= AUSFALLFOLGE_STUFE[prozess.ausfallfolge]:
-        return stufe, None
-    for nachfolger in prozess.nachgelagert:
-        if leite_kritikalitaet_ab(nachfolger) >= stufe:
-            return stufe, nachfolger
-    return stufe, None
 
 
 def datenlage(prozess: Prozessobjekt) -> Datenlage:
@@ -157,23 +132,30 @@ def leite_mitbestimmung_ab(prozess: Prozessobjekt) -> bool:
 def aktualisiere_ableitungen(prozess: Prozessobjekt) -> None:
     """Setzt alle abgeleiteten Felder eines Prozessobjekts neu."""
     prozess.reichweite = leite_reichweite_ab(prozess)
-    prozess.kritikalitaet = leite_kritikalitaet_ab(prozess)
     prozess.mitbestimmung_flag = leite_mitbestimmung_ab(prozess)
 
 
 def aktualisiere_kette(*prozesse: Prozessobjekt) -> list[Prozessobjekt]:
-    """Aktualisiert die genannten Prozesse und alle ihre transitiven Vorgaenger.
+    """Sammelt die genannten Prozesse und alle ihre transitiven Vorgaenger.
 
-    Eine geaenderte Ausfallfolge wirkt entlang der Kette nach oben; ohne diese
-    Nachfuehrung waere die Kritikalitaet eines Vorgaengers nach einer Aenderung
-    still veraltet.
+    Die Rueckgabe ist der eigentliche Zweck: Sie ist die Betroffenenliste, aus
+    der ``bewertung.pruefe_tier_wirkung`` jedes Tier neu rechnet. Ein
+    kritischer Nachfolger wirkt entlang der Kette nach oben, und ohne diese
+    Liste bliebe das Tier eines Vorgaengers nach einer Aenderung still zu
+    niedrig (E-67, E-69).
+
+    Die abgeleiteten Felder werden dabei mitgezogen. Fuer die Vorgaenger ist
+    das seit AP-19 folgenlos — Reichweite und Mitbestimmungsflag haengen an den
+    eigenen Daten, nicht an der Kette —, fuer die uebergebenen Wurzeln aber
+    noetig, und ein zweiter Aufruf daneben waere eine Stelle mehr, die man
+    vergessen kann.
 
     **Mehrere Wurzeln, und warum das noetig ist.** Beim *Setzen* einer Kante
     genuegt der geaenderte Prozess: der neue Vorgaenger haengt jetzt an ihm und
     wird mitgelaufen. Beim *Loesen* nicht — der ehemalige Vorgaenger ist genau
-    der, der nicht mehr erreichbar ist, und bliebe mit einer zu hohen
-    Kritikalitaet stehen (E-59). Wer eine Kante loest, uebergibt deshalb auch
-    das abgehaengte Ende.
+    der, der nicht mehr erreichbar ist, und bliebe mit einem zu hohen Tier
+    stehen (E-59). Wer eine Kante loest, uebergibt deshalb auch das abgehaengte
+    Ende.
     """
     betroffen: dict = {}
     stapel = list(prozesse)

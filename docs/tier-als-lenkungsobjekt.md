@@ -269,3 +269,31 @@ dort steht; der Nachtrag ist Bestandteil des Arbeitspakets, nicht Nacharbeit.
 Der Aufwand liegt in Schritt 3 und 4, nicht in 1 und 2: Die Rechnungen sind klein, das Umlesen der
 nachgelagerten Verwendungen ist die eigentliche Arbeit — und der Auslöser ist der Teil, ohne den
 Schritt 3 gefährlich wäre, weil er sonst echtes Risiko verstecken würde.
+
+## 11. Nachtrag: was beim Abgleich gegen das Konzept offen war
+
+Beide Punkte standen in AP-19 abgehakt, waren in einer laufenden Instanz aber
+nicht eingelöst. Sie fielen erst auf, als die Anwendung Merkmal für Merkmal
+gegen die Prüftabelle in [`konzept-risiko-am-tier.md`](konzept-risiko-am-tier.md),
+Abschnitt 5, gehalten wurde — nicht gegen die Haken im Umsetzungsplan.
+
+**Die alte Kritikalität stand noch da (E-72).** Schritt 3 hat alle
+*Verwendungen* umgelesen, aber das Feld selbst blieb: gepflegt vom Nachtlauf,
+sichtbar auf Detailseite und in der Prozessliste, gelesen von keiner Fachlogik
+mehr. Es zeigte die rohe Ausfallfolge über die Kette, während das Tier das
+komposite UR zählt — dieselbe Skala, dieselbe scheinbare Frage, eine andere
+Antwort. Damit war die zweite Ebene wieder da, die Abschnitt 1 auflöst. Das
+Feld ist entfallen.
+
+**Die Kompositionstabelle war leer (E-73).** Schritt 1 hat sie als Modell,
+Migration und Dienst gebaut und getestet — aber weder Endpunkt noch
+Bestandsbelegung noch Oberfläche. In einer laufenden Instanz stand
+`ur_komposition` mit null Zeilen, und `stufe_fuer` fiel still auf
+`STANDARDTABELLE` zurück. „Gepflegte Stammdaten, nicht als Konstante" war damit
+beschrieben, nicht eingelöst. Sie hat jetzt `GET`/`PUT`, wird vom Bestand
+belegt und steht als dritte Ansicht neben der Technologiematrix.
+
+**Die Lehre für den Zuschnitt.** Ein Punkt gilt nicht als erledigt, weil der
+Dienst existiert und ein Test grün ist. Er gilt als erledigt, wenn die
+Zusage in einer laufenden Instanz nachvollziehbar ist — bei Stammdaten heisst
+das: sichtbar und änderbar, ohne Auslieferung.

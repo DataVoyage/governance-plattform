@@ -163,9 +163,12 @@ def ur_der_kette(db: Session, prozess: Prozessobjekt) -> tuple[int, Prozessobjek
     """Das hoechste UR aller **transitiven Nachfolger**, samt seiner Quelle.
 
     Die Richtung folgt A.4.2: Wer einen kritischen Prozess beliefert, ist selbst
-    kritisch. Anders als ``ableitung.leite_kritikalitaet_ab`` zaehlt hier nicht
-    die blosse Ausfallfolge, sondern das komposite UR — ein Prozess mit
-    kritischem Ausfall, der nur eine Person betrifft, reisst niemanden mit.
+    kritisch. Gezaehlt wird das **komposite** UR des Nachfolgers, nicht seine
+    blosse Ausfallfolge — ein Prozess mit kritischem Ausfall, der nur eine
+    Person betrifft, reisst niemanden mit. Genau an diesem Unterschied ist die
+    frueher daneben gefuehrte ``kritikalitaet`` am Prozessobjekt gescheitert:
+    Sie kannte die Reichweite nicht und behauptete deshalb eine Kettenwirkung,
+    die das Tier gar nicht hatte (E-72).
 
     Der eigene Wert ist **nicht** enthalten. Ist die zweite Stelle ``None``,
     bringt die Kette nichts bei.

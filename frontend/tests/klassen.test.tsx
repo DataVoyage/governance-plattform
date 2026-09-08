@@ -69,11 +69,30 @@ const MATRIX: Matrixfeld[] = TECHNOLOGIEN.flatMap((technologie) =>
   ),
 );
 
+/** Die Tabelle Ausfallfolge × Reichweite in der Belegung aus A.8.4. */
+const KOMPOSITION = (
+  [
+    ['keine', [0, 0, 0, 0, 1]],
+    ['gering', [0, 1, 1, 2, 2]],
+    ['spuerbar', [1, 1, 2, 3, 3]],
+    ['kritisch', [1, 2, 3, 3, 3]],
+  ] as const
+).flatMap(([ausfallfolge, stufen]) =>
+  ['persoenlich', 'team', 'bereich', 'unternehmen', 'extern'].map((reichweite, spalte) => ({
+    ausfallfolge,
+    reichweite,
+    stufe: stufen[spalte],
+    begruendung: '',
+    geaendert_am: null,
+  })),
+);
+
 function klassenrouten(profil = PROFIL, zusatz: Route[] = []): Route[] {
   return [
     ...zusatz,
     { pfad: '/api/v1/auth/me', koerper: profil },
     { pfad: '/api/v1/technologiematrix', koerper: MATRIX },
+    { pfad: '/api/v1/ur-komposition', koerper: KOMPOSITION },
   ];
 }
 
@@ -204,6 +223,74 @@ describe('Technologiematrix (Teil C.1)', () => {
     await userEvent.click(within(screen.getByTestId('matrix-apps-script-K5')).getByRole('button'));
     await userEvent.click(screen.getByTestId('matrix-sichern'));
     expect(await screen.findByRole('alert')).toHaveTextContent('Governance-Rolle');
+  });
+});
+
+describe('UR-Komposition (A.8.4)', () => {
+  it('zeigt beide Achsen und sagt, dass die Stufe allein nicht auf Tier 3 hebt', async () => {
+    fetchAttrappe(klassenrouten());
+    zeichne('/de/klassen');
+    await screen.findByTestId('klasse-K1');
+    await userEvent.click(screen.getByRole('button', { name: 'UR-Komposition' }));
+
+    // Die beiden Enden der Tabelle — daran hängt die ganze Aussage: ein
+    // kritischer Ausfall, der eine Person trifft, ist kein Unternehmensrisiko.
+    expect(screen.getByTestId('komposition-kritisch-persoenlich')).toHaveTextContent('1');
+    expect(screen.getByTestId('komposition-kritisch-unternehmen')).toHaveTextContent('3');
+    expect(screen.getByTestId('komposition-gering-unternehmen')).toHaveTextContent('2');
+    expect(screen.getByText(/nicht in Tier 3/)).toBeInTheDocument();
+  });
+
+  it('pflegt ein Feld mit Pflichtbegründung', async () => {
+    const { aufrufe } = fetchAttrappe(
+      klassenrouten(GOVERNANCE, [
+        {
+          pfad: '/api/v1/ur-komposition/spuerbar/bereich',
+          methode: 'PUT',
+          koerper: {
+            ausfallfolge: 'spuerbar',
+            reichweite: 'bereich',
+            stufe: 3,
+            begruendung: 'Der Bereich trägt inzwischen die halbe Gruppe.',
+            geaendert_am: null,
+          },
+        },
+      ]),
+    );
+    zeichne('/de/klassen');
+    await screen.findByTestId('klasse-K1');
+    await userEvent.click(screen.getByRole('button', { name: 'UR-Komposition' }));
+    await userEvent.click(
+      within(screen.getByTestId('komposition-spuerbar-bereich')).getByRole('button'),
+    );
+
+    // Ohne Begründung geht nichts: das Feld entscheidet über ganze Prozessgruppen.
+    expect(screen.getByTestId('komposition-sichern')).toBeDisabled();
+
+    await userEvent.selectOptions(screen.getByLabelText('Stufe'), '3');
+    await userEvent.type(
+      screen.getByLabelText('Begründung'),
+      'Der Bereich trägt inzwischen die halbe Gruppe.',
+    );
+    await userEvent.click(screen.getByTestId('komposition-sichern'));
+
+    await waitFor(() =>
+      expect(aufrufe.find((a) => a.methode === 'PUT')?.koerper).toEqual({
+        stufe: 3,
+        begruendung: 'Der Bereich trägt inzwischen die halbe Gruppe.',
+      }),
+    );
+    expect(screen.getByTestId('komposition-spuerbar-bereich')).toHaveTextContent('3');
+  });
+
+  it('bleibt ohne Governance-Rolle eine reine Ansicht', async () => {
+    fetchAttrappe(klassenrouten());
+    zeichne('/de/klassen');
+    await screen.findByTestId('klasse-K1');
+    await userEvent.click(screen.getByRole('button', { name: 'UR-Komposition' }));
+    expect(
+      within(screen.getByTestId('komposition-spuerbar-bereich')).queryByRole('button'),
+    ).toBeNull();
   });
 });
 

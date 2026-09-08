@@ -16,10 +16,13 @@ from app.schemas.klassen import (
     MatrixfeldSetzen,
     TechnologieAus,
     ToolbefundAus,
+    UrKompositionsfeldAus,
+    UrKompositionsfeldSetzen,
 )
 from app.services import asset as asset_service
 from app.services import klassen as klassen_service
 from app.services import prozess as prozess_service
+from app.services import risiko as risiko_service
 from app.services.klassen import Toolbefund
 
 router = APIRouter(tags=["Anforderungsklassen"])
@@ -103,6 +106,47 @@ def setze_matrixfeld(
         begruendung=daten.begruendung,
     )
     return MatrixfeldAus.model_validate(eintrag)
+
+
+@router.get("/ur-komposition", response_model=list[UrKompositionsfeldAus])
+def ur_komposition(principal: AktuellerNutzer, db: DbSession) -> list:
+    """Die vollstaendige Tabelle Ausfallfolge x Reichweite (Leitdokument A.8.4).
+
+    Der erste Aufruf legt die Standardbelegung an. Sie steht bewusst in der
+    Datenbank und nicht als Konstante im Code: Sie ist eine Bewertungsgrundlage,
+    und eine, die nur mit einer Auslieferung aenderbar waere, veraltet zwischen
+    zwei Releases (E-66, analog E-42).
+    """
+    del principal
+    return risiko_service.tabelle(db)
+
+
+@router.put(
+    "/ur-komposition/{ausfallfolge}/{reichweite}",
+    response_model=UrKompositionsfeldAus,
+)
+def setze_ur_kompositionsfeld(
+    ausfallfolge: str,
+    reichweite: str,
+    daten: UrKompositionsfeldSetzen,
+    principal: AktuellerNutzer,
+    db: DbSession,
+) -> UrKompositionsfeldAus:
+    """Aendert ein Feld der Kompositionstabelle — ausschliesslich die Governance-Rolle.
+
+    Die Aenderung wirkt ab der naechsten Bewertung. Bereits gespeicherte
+    Bewertungen werden **nicht** neu gerechnet: Eine rueckwirkend veraenderte
+    Bewertung waere keine (A.13.7).
+    """
+    eintrag = risiko_service.setze_feld(
+        db,
+        principal,
+        ausfallfolge,
+        reichweite,
+        stufe=daten.stufe,
+        begruendung=daten.begruendung,
+    )
+    return UrKompositionsfeldAus.model_validate(eintrag)
 
 
 @router.get("/tools/{tool_id}/klassenbefund", response_model=ToolbefundAus)

@@ -117,19 +117,40 @@ def test_jede_reichweite_kommt_vor(lehrbestand: Session) -> None:
     assert vorhanden == set(Reichweite)
 
 
-def test_die_kritikalitaet_reicht_von_null_bis_drei(lehrbestand: Session) -> None:
-    vorhanden = {p.kritikalitaet for p in lehrbestand.execute(select(Prozessobjekt)).scalars()}
+def test_jede_ur_stufe_kommt_vor(lehrbestand: Session) -> None:
+    """Alle vier Stufen der Kompositionstabelle sind belegt.
+
+    Seit AP-19 ist das die Achse, die das Risiko trägt — vorher stand hier die
+    abgeleitete Kritikalität am Prozessobjekt, die es nicht mehr gibt (E-72).
+    """
+    vorhanden = {
+        b.ur_stufe
+        for p in lehrbestand.execute(select(Prozessobjekt)).scalars()
+        if (b := _neueste(p)) is not None
+    }
     assert vorhanden == {0, 1, 2, 3}
 
 
 def test_die_kette_hebt_das_vorderglied(lehrbestand: Session) -> None:
-    """A.4.2, transitiv über zwei Kanten — der Fall, für den es die Kette gibt."""
+    """A.4.2, transitiv über zwei Kanten — der Fall, für den es die Kette gibt.
+
+    Geprüft wird jetzt am **Tier**: Das Vorderglied hat ein niedriges eigenes
+    Risiko und kommt trotzdem auf Tier 3, weil es einen kritischen Prozess
+    beliefert. Genau diese Trennung — eigenes Risiko gekappt, Kettenanteil
+    ungekappt — war unter der alten Kritikalität nicht aussagbar (E-67).
+    """
     prozesse = {p.name: p for p in lehrbestand.execute(select(Prozessobjekt)).scalars()}
     vorn = next(p for name, p in prozesse.items() if name.startswith("Kette 1"))
     hinten = next(p for name, p in prozesse.items() if name.startswith("Kette 3"))
     assert hinten.ausfallfolge == Ausfallfolge.KRITISCH
     assert vorn.ausfallfolge == Ausfallfolge.GERING
-    assert vorn.kritikalitaet == 3, "die Kritikalität muss über zwei Kanten durchschlagen"
+
+    bewertung = _neueste(vorn)
+    assert bewertung is not None
+    assert bewertung.ur_stufe == 1, "das eigene Risiko des Vorderglieds ist gering"
+    assert bewertung.ur_kette == 3, "die Kette muss über zwei Kanten durchschlagen"
+    assert bewertung.tier == 3
+    assert bewertung.tier_herkunft == "kette"
 
 
 def test_jede_datenkategorie_kommt_vor(lehrbestand: Session) -> None:

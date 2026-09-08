@@ -262,3 +262,93 @@ def test_eine_aenderung_steht_im_nachweis(db, anmelden) -> None:
     )
     assert len(protokoll) == 1
     assert protokoll[0].akteur_user_id is not None
+
+
+# --- Die Tabelle ueber HTTP ----------------------------------------------
+#
+# Ohne Endpunkt waere die Kompositionstabelle zwar in der Datenbank, aber nur
+# mit einer Auslieferung aenderbar — also faktisch weiter eine Konstante. Genau
+# das schliesst E-66 aus.
+
+
+@pytest.fixture
+def governance_nutzer(anmelden, rolle_geben):
+    nutzer = anmelden("Governance", subject="sub-gov-komposition")
+    rolle_geben(nutzer.user_id, "governance", "global")
+    return nutzer
+
+
+def test_die_tabelle_kommt_ueber_die_api(client: TestClient, anmelden) -> None:
+    """Der erste Aufruf legt die Standardbelegung an — zwanzig Felder."""
+    wer = anmelden("Leserin", subject="sub-leserin-komposition")
+    antwort = client.get("/api/v1/ur-komposition", headers=wer.kopf)
+    assert antwort.status_code == 200, antwort.text
+    felder = antwort.json()
+    assert len(felder) == 20
+
+    feld = {(f["ausfallfolge"], f["reichweite"]): f["stufe"] for f in felder}
+    # Die beiden Enden der Aussage aus A.8.4.
+    assert feld[("kritisch", "persoenlich")] == 1
+    assert feld[("kritisch", "unternehmen")] == 3
+    assert feld[("gering", "unternehmen")] == 2
+
+
+def test_governance_aendert_ein_feld_und_die_rechnung_folgt(
+    client: TestClient, governance_nutzer, prozess_orm
+) -> None:
+    """Die Aenderung wirkt in der naechsten Bewertung, nicht nur in der Tabelle."""
+    prozess = prozess_orm(customer="bereich", ausfallfolge="spuerbar")
+    assert (
+        client.post(
+            f"/api/v1/prozesse/{prozess.id}/bewertung/wizard",
+            json={"antworten": {}},
+            headers=governance_nutzer.kopf,
+        ).json()["ausgangslage"]["ur_stufe"]
+        == 2
+    )
+
+    antwort = client.put(
+        "/api/v1/ur-komposition/spuerbar/bereich",
+        json={"stufe": 3, "begruendung": "Der Bereich traegt inzwischen die halbe Gruppe."},
+        headers=governance_nutzer.kopf,
+    )
+    assert antwort.status_code == 200, antwort.text
+    assert antwort.json()["stufe"] == 3
+
+    lage = client.post(
+        f"/api/v1/prozesse/{prozess.id}/bewertung/wizard",
+        json={"antworten": {}},
+        headers=governance_nutzer.kopf,
+    ).json()["ausgangslage"]
+    assert lage["ur_stufe"] == 3
+
+
+def test_ohne_governance_rolle_bleibt_die_tabelle_zu(client: TestClient, anmelden) -> None:
+    wer = anmelden("Ohne Rolle", subject="sub-ohne-rolle-komposition")
+    antwort = client.put(
+        "/api/v1/ur-komposition/spuerbar/bereich",
+        json={"stufe": 0, "begruendung": "Weil ich es kann."},
+        headers=wer.kopf,
+    )
+    assert antwort.status_code == 403, antwort.text
+
+
+def test_eine_aenderung_ohne_begruendung_wird_abgewiesen(
+    client: TestClient, governance_nutzer
+) -> None:
+    """Pflichtfeld — ein Feld hier entscheidet ueber ganze Prozessgruppen."""
+    antwort = client.put(
+        "/api/v1/ur-komposition/spuerbar/bereich",
+        json={"stufe": 3, "begruendung": "   "},
+        headers=governance_nutzer.kopf,
+    )
+    assert antwort.status_code in (400, 422), antwort.text
+
+
+def test_eine_unbekannte_paarung_gibt_es_nicht(client: TestClient, governance_nutzer) -> None:
+    antwort = client.put(
+        "/api/v1/ur-komposition/gibtesnicht/bereich",
+        json={"stufe": 1, "begruendung": "Egal."},
+        headers=governance_nutzer.kopf,
+    )
+    assert antwort.status_code == 404, antwort.text

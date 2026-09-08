@@ -98,7 +98,6 @@ def aufstieg(kontext: Kontext) -> None:
     ihn — und der Gate-1-Vorgang entsteht von selbst.
     """
     from app.bestand.bewertungen import antworten_aus_profil
-    from app.services import ableitung
     from app.services import bewertung as bewertung_service
 
     prozess = kontext.prozess("tier2")
@@ -120,7 +119,6 @@ def aufstieg(kontext: Kontext) -> None:
         "mb": 2,
         "it": 2,
         "rg": 0,
-        "ur": ableitung.leite_kritikalitaet_ab(prozess),
     }
     antworten = antworten_aus_profil(profil)
     with kontext.aktion(vor_tagen=118, stunde=10):

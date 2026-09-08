@@ -69,11 +69,7 @@ const de = {
   'prozess.feld.customer': 'Kundenkreis',
   'prozess.feld.ausfallfolge': 'Ausfallfolge',
   'prozess.feld.status': 'Status',
-  'prozess.abgeleitet.titel': 'Abgeleitet — nicht eingebbar',
-  'prozess.abgeleitet.hinweis':
-    'Diese Werte berechnet der Server aus den erfassten Angaben und der Prozesskette.',
   'prozess.feld.reichweite': 'Reichweite',
-  'prozess.feld.kritikalitaet': 'Kritikalität',
   'prozess.feld.mitbestimmung': 'Mitbestimmung berührt',
   'prozess.umsetzungen.titel': 'Umsetzende Landesorganisationen',
   'prozess.umsetzungen.leer': 'Noch keine Umsetzung erfasst.',
@@ -92,7 +88,8 @@ const de = {
   'prozess.hilfe.outputDatenobjekte': 'Was dieser Prozess erzeugt oder fortschreibt.',
   'prozess.hilfe.vorgelagert': 'Wer liefert zu — als Referenz, damit die Kette auswertbar bleibt.',
   'prozess.hilfe.nachgelagert':
-    'Wer konsumiert. Aus dieser Kante berechnet sich die Kritikalität dieses Prozesses.',
+    'Wer konsumiert. Über diese Kante erbt der Prozess das Tier seiner Nachfolger: ' +
+    'Wer einen kritischen Prozess beliefert, ist selbst kritisch.',
   'prozess.hilfe.supplier': 'Nur für Zulieferer außerhalb des Prozessregisters.',
   'prozess.hilfe.schritte': '5 bis 7 Schritte, Stichworte — eine Zeile je Schritt.',
   'prozess.hilfe.output':
@@ -122,8 +119,6 @@ const de = {
   'prozess.herkunft.reichweite': 'Aus dem Kundenkreis',
   'prozess.herkunft.reichweiteUmsetzung':
     'Aus dem Kundenkreis, angehoben durch mehrere Umsetzungen',
-  'prozess.herkunft.kritikalitaetEigen': 'Aus der eigenen Ausfallfolge',
-  'prozess.herkunft.kritikalitaetKette': 'Aus der Prozesskette geerbt',
   'prozess.herkunft.mitbestimmung': 'Aus Datenkategorie und Bewertung',
 
   'kundenkreis.persoenlich': 'Persönlich',
@@ -736,6 +731,7 @@ const de = {
   'klassen.ansicht': 'Ansicht',
   'klassen.ansicht.klassen': 'Klassen',
   'klassen.ansicht.matrix': 'Matrix',
+  'klassen.ansicht.komposition': 'UR-Komposition',
   'klassen.katalog': 'K1 bis K10',
   'klassen.katalogHinweis':
     'Jede Klasse mit Name, Zweck und der Bedingung, unter der eine Bewertung sie auslöst.',
@@ -745,6 +741,17 @@ const de = {
     'Welche Technologie welche Klasse tragen kann. Ein Ausschluss ist keine Warnung, sondern ein Kriterium; ein kompensierbarer Fall verlangt eine dokumentierte Maßnahme (A.9.3).',
   'klassen.nurLesen': 'Ansicht ohne Änderungsrecht: die Matrix pflegt die Governance-Rolle.',
   'klassen.spalte.klasse': 'Anforderungsklasse',
+  'klassen.spalte.ausfallfolge': 'Ausfallfolge',
+  'klassen.komposition': 'Unternehmerisches Risiko: Ausfallfolge × Reichweite',
+  'klassen.kompositionHinweis':
+    'Woraus sich die UR-Stufe ergibt. Keiner der beiden Anteile trägt allein: Ein kritischer Ausfall, der eine Person betrifft, ist kein Unternehmensrisiko — eine geringe Störung, die das ganze Unternehmen trifft, kann eines sein (A.8.4).',
+  'klassen.kompositionKappung':
+    'Die UR-Stufe hebt für sich genommen höchstens auf Tier 2: Reines Betriebsrisiko führt nicht in Tier 3 (A.8.5, Schritt 6a). Auf Tier 3 hebt nur das Profil oder die abhängige Prozesskette.',
+  'klassen.urStufe': 'Stufe',
+  'klassen.kompositionFeldHinweis':
+    'Dieses Feld entscheidet über das Tier ganzer Prozessgruppen. Die Änderung wirkt ab der nächsten Bewertung; bereits gespeicherte Bewertungen bleiben, wie sie erhoben wurden.',
+  'klassen.kompositionBegruendungHilfe':
+    'Pflicht — wer eine Bewertungsgrundlage verschiebt, schuldet den Satz, warum.',
   'klassen.bewertung.erfuellt': 'Erfüllt',
   'klassen.bewertung.kompensierbar': 'Kompensierbar',
   'klassen.bewertung.nicht_erfuellbar': 'Nicht erfüllbar',
@@ -891,11 +898,7 @@ const fr: Record<Schluessel, string> = {
   'prozess.feld.customer': 'Cercle de clients',
   'prozess.feld.ausfallfolge': 'Conséquence de la défaillance',
   'prozess.feld.status': 'Statut',
-  'prozess.abgeleitet.titel': 'Dérivé — non saisissable',
-  'prozess.abgeleitet.hinweis':
-    'Le serveur calcule ces valeurs à partir des données saisies et de la chaîne de processus.',
   'prozess.feld.reichweite': 'Portée',
-  'prozess.feld.kritikalitaet': 'Criticité',
   'prozess.feld.mitbestimmung': 'Cogestion concernée',
   'prozess.umsetzungen.titel': 'Organisations nationales de mise en œuvre',
   'prozess.umsetzungen.leer': 'Aucune mise en œuvre enregistrée.',
@@ -914,7 +917,8 @@ const fr: Record<Schluessel, string> = {
   'prozess.hilfe.outputDatenobjekte': 'Ce que ce processus produit ou met à jour.',
   'prozess.hilfe.vorgelagert': 'Qui alimente — en référence, pour que la chaîne reste exploitable.',
   'prozess.hilfe.nachgelagert':
-    'Qui consomme. La criticité de ce processus se calcule à partir de cette arête.',
+    'Qui consomme. Par cette arête, le processus hérite du palier de ses successeurs : ' +
+    'qui alimente un processus critique est lui-même critique.',
   'prozess.hilfe.supplier': 'Uniquement pour des fournisseurs hors du registre des processus.',
   'prozess.hilfe.schritte': '5 à 7 étapes, mots-clés — une ligne par étape.',
   'prozess.hilfe.output':
@@ -944,8 +948,6 @@ const fr: Record<Schluessel, string> = {
   'prozess.herkunft.reichweite': 'À partir du cercle de clients',
   'prozess.herkunft.reichweiteUmsetzung':
     'À partir du cercle de clients, relevé par plusieurs mises en œuvre',
-  'prozess.herkunft.kritikalitaetEigen': 'À partir de la conséquence de panne',
-  'prozess.herkunft.kritikalitaetKette': 'Hérité de la chaîne de processus',
   'prozess.herkunft.mitbestimmung': 'À partir de la catégorie de données et de l’évaluation',
 
   'kundenkreis.persoenlich': 'Personnel',
@@ -1563,6 +1565,7 @@ const fr: Record<Schluessel, string> = {
   'klassen.ansicht': 'Vue',
   'klassen.ansicht.klassen': 'Classes',
   'klassen.ansicht.matrix': 'Matrice',
+  'klassen.ansicht.komposition': 'Composition RE',
   'klassen.katalog': 'K1 à K10',
   'klassen.katalogHinweis':
     'Chaque classe avec son nom, son objet et la condition qui la déclenche.',
@@ -1573,6 +1576,17 @@ const fr: Record<Schluessel, string> = {
   'klassen.nurLesen':
     'Consultation sans droit de modification : la matrice relève du rôle Gouvernance.',
   'klassen.spalte.klasse': "Classe d'exigences",
+  'klassen.spalte.ausfallfolge': 'Conséquence de défaillance',
+  'klassen.komposition': "Risque d'entreprise : conséquence × portée",
+  'klassen.kompositionHinweis':
+    "D'où vient le niveau RE. Aucune des deux parts ne porte seule : une défaillance critique qui ne touche qu'une personne n'est pas un risque d'entreprise — une perturbation légère qui touche toute l'entreprise peut en être un (A.8.4).",
+  'klassen.kompositionKappung':
+    "À elle seule, la stufe RE ne mène qu'au palier 2 : un risque d'exploitation pur ne conduit pas au palier 3 (A.8.5, étape 6a). Seuls le profil ou la chaîne de processus dépendante y mènent.",
+  'klassen.urStufe': 'Niveau',
+  'klassen.kompositionFeldHinweis':
+    "Ce champ décide du palier de groupes entiers de processus. La modification agit à partir de la prochaine évaluation ; les évaluations déjà enregistrées restent telles qu'elles ont été établies.",
+  'klassen.kompositionBegruendungHilfe':
+    "Obligatoire — qui déplace une base d'évaluation doit la phrase qui l'explique.",
   'klassen.bewertung.erfuellt': 'Satisfaite',
   'klassen.bewertung.kompensierbar': 'Compensable',
   'klassen.bewertung.nicht_erfuellbar': 'Non satisfiable',

@@ -99,7 +99,9 @@ export function ProzessListe() {
                 wert={
                   <>
                     {p.mitbestimmung_flag && <Abzeichen ton="lila">MB</Abzeichen>}
-                    <Abzeichen>{`${t('prozess.feld.kritikalitaet')} ${p.kritikalitaet}`}</Abzeichen>
+                    {/* Bis AP-19 stand hier zusätzlich die abgeleitete
+                        Kritikalität. Sie ist entfallen — das Tier daneben sagt,
+                        was die Kette bewirkt, und sagt es als einziges. */}
                     {p.tier !== null && (
                       <Abzeichen ton={tierTon(p.tier)}>{`Tier ${p.tier}`}</Abzeichen>
                     )}

@@ -214,9 +214,10 @@ vorgang('V-PRO-11', async ({ page, request }) => {
   await page.getByLabel('Ausfallfolge').selectOption('kritisch');
   await page.getByRole('button', { name: 'Speichern' }).click();
 
-  const kritikalitaet = page.getByTestId('kritikalitaet');
-  await expect(kritikalitaet).toContainText('3');
-  await expect(kritikalitaet).toContainText('Aus der eigenen Ausfallfolge');
+  // Die Erklärung steht am Objekt. Eine zweite, abgeleitete Zahl daneben gibt
+  // es seit AP-19 nicht mehr — was die Kette bewirkt, sagt das Tier (E-72).
+  await expect(page.getByTestId('ausfallfolge')).toContainText('Kritisch');
+  await expect(page.getByTestId('kritikalitaet')).toHaveCount(0);
 });
 
 vorgang('V-PRO-12', async ({ page, request }) => {
@@ -230,18 +231,22 @@ vorgang('V-PRO-12', async ({ page, request }) => {
     name: `Harmlos ${marke}`,
     ausfallfolge: 'keine',
   });
-  await anmelden(page);
-  await page.goto(`/de/prozesse/${eigener.id}`);
-  await expect(page.getByTestId('kritikalitaet')).toContainText('0');
+  // Der Nachfolger braucht eine Bewertung: Ohne sie gibt es keinen
+  // Sollzustand, den die Kette weiterreichen könnte (E-70).
+  await bewerten(request, kritisch.id);
 
+  await anmelden(page);
   await page.goto(`/de/prozesse/${eigener.id}/bearbeiten`);
   await waehle(page, 'waehler-nachgelagert', kritisch.name);
   await page.getByRole('button', { name: 'Speichern' }).click();
 
-  // Wer einen kritischen Nachfolger speist, ist selbst so kritisch (A.4.2).
-  const kritikalitaet = page.getByTestId('kritikalitaet');
-  await expect(kritikalitaet).toContainText('3');
-  await expect(kritikalitaet).toContainText('Aus der Prozesskette geerbt');
+  // Wer einen kritischen Nachfolger speist, ist selbst so kritisch (A.4.2) —
+  // und das sagt seit AP-19 das Tier, samt Herkunft (E-67). Bewertet wird
+  // **nach** der Kante: Eine bereits gespeicherte Bewertung würde die Kette
+  // nicht rückwirkend umschreiben, sondern entwerten (A.13.7, siehe V-TIE-06).
+  await bewerten(request, eigener.id);
+  await page.goto(`/de/prozesse/${eigener.id}`);
+  await expect(page.getByTestId('tier-herkunft')).toContainText('Prozesskette');
 });
 
 vorgang('V-PRO-13', async ({ page, request }) => {

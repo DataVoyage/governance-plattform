@@ -2216,3 +2216,101 @@ Nachfolger nicht.
 
 Aufgehoben ist der Zielkonflikt damit nicht. Er ist der Preis dafür, dass P1
 auch dort gilt, wo Fragen bequemer wären.
+
+---
+
+## E-72 — Die abgeleitete Kritikalität am Prozessobjekt entfällt
+
+**Kontext.** Bis AP-19 trug jedes Prozessobjekt ein Feld `kritikalitaet`: die
+eigene Ausfallfolge, hochgezogen auf das Maximum der Prozesskette (A.4.2).
+E-67 hat den Kettenanteil an das Tier verlegt und dort auf das **komposite** UR
+der Nachfolger umgestellt. Das Feld blieb stehen — es wurde weiter vom
+Nachtlauf gepflegt und auf der Detailseite und in der Prozessliste angezeigt.
+
+**Das Problem.** Gelesen hat es danach niemand mehr: Der Erlaubnisrahmen und
+die Vererbung ans Werkzeug nehmen `bewertung.ur_stufe` (E-70), das Cockpit
+liest die Kettenzeile über `bewertung.tier_herkunft`. Übrig blieb eine zweite
+Zahl auf derselben Skala 0 bis 3, die dieselbe Frage zu beantworten schien und
+eine andere Antwort gab:
+
+| Prozess aus dem Lehrbestand | Kritikalität (angezeigt) | UR (wirksam) | Tier |
+|---|---|---|---|
+| Kette 3 — kritisch, unternehmensweit | 3 | 3 | **2** |
+| Fremder Bereich — extern, spürbar | **2** | **3** | 2 |
+
+Der Unterschied ist kein Fehler, sondern der Punkt von E-66: Die rohe
+Ausfallfolge kennt die Reichweite nicht, das komposite UR schon. Ein Nachfolger
+mit kritischem Ausfall, der nur eine Person betrifft, hob die Kritikalität auf
+3 und das Tier um nichts.
+
+Damit war genau die Lage wiederhergestellt, gegen die AP-19 angetreten ist:
+*zwei Orte für eine Aussage driften auseinander, und der Ort, der zählt, ist
+immer der andere.*
+
+**Entscheidung.** Das Feld entfällt — Spalte, Ableitung (`leite_kritikalitaet_ab`,
+`kritikalitaetsquelle`), Schema und Anzeige. Was die Kette bewirkt, sagt
+ausschließlich das Tier, und es sagt dazu, über welchen Prozess.
+
+Drei Dinge bleiben bewusst unberührt:
+
+1. **Die Kritikalität am Werkzeug** (`geerbt.kritikalitaet`). Sie kommt aus
+   `bewertung.ur_stufe`, nicht aus dem lebenden Prozessobjekt, und wird
+   gebraucht.
+2. **Der Kettendurchlauf** in `ableitung.aktualisiere_kette`. Sein Zweck ist
+   jetzt die Betroffenenliste für `pruefe_tier_wirkung` (E-69), nicht mehr ein
+   abgeleitetes Feld.
+3. **Der Gate-2-Auslöser `kritikalitaet_gestiegen`.** Das ist ein Name aus der
+   abschließenden Liste in A.11, keine Referenz auf das Feld.
+
+**Preis.** Wer bisher „Kritikalität" auf der Detailseite gelesen hat, findet die
+Aussage künftig beim Tier — und dort erst nach einer Bewertung. Für einen noch
+unbewerteten Prozess ist die Kettenwirkung damit nicht mehr abzulesen. Das ist
+richtig: Vor der Bewertung gibt es keinen Sollzustand, und eine Zahl, die so
+tut, als gäbe es einen, ist schlechter als keine.
+
+**Belegt durch** `test_die_kette_hebt_das_vorderglied` (Lehrbestand),
+`test_die_kette_wirkt_auf_das_tier_des_vorgaengers` und
+`test_der_kettenanteil_faellt_zurueck_wenn_die_kante_geloest_wird`.
+
+---
+
+## E-73 — Die Kompositionstabelle bekommt Endpunkt und Oberfläche
+
+**Kontext.** E-66 hält fest, dass die Tabelle Ausfallfolge × Reichweite
+gepflegte Stammdaten sind und keine Konstante — analog zur Technologiematrix
+(E-42), und aus demselben Grund: Eine Bewertungsgrundlage, die nur mit einer
+Auslieferung änderbar ist, veraltet zwischen zwei Releases.
+
+**Das Problem.** Die Migration hat die Tabelle angelegt, `risiko.initialisiere`
+und `risiko.setze_feld` waren geschrieben und getestet — aber aus der Anwendung
+rief sie niemand auf. In einer laufenden Instanz stand `ur_komposition` mit
+**null Zeilen** da, und `risiko.stufe_fuer` fiel still auf `STANDARDTABELLE` im
+Code zurück. Es gab weder einen Endpunkt noch eine Oberfläche. Die Tabelle war
+damit faktisch weiterhin eine Konstante; E-66 war beschrieben, aber nicht
+eingelöst.
+
+Nebenwirkung des stillen Rückfalls: Hätte jemand einzelne Felder von Hand
+eingetragen, käme die Stufe halb aus der Datenbank und halb aus dem Code, ohne
+dass irgendwo stünde, welche woher.
+
+**Entscheidung.** Die Tabelle wird angebunden, genau nach dem Muster der
+Technologiematrix:
+
+* `GET /api/v1/ur-komposition` liefert alle zwanzig Felder und legt beim ersten
+  Aufruf die Standardbelegung an.
+* `PUT /api/v1/ur-komposition/{ausfallfolge}/{reichweite}` ändert ein Feld —
+  ausschließlich die Governance-Rolle, mit Pflichtbegründung, im Nachweis.
+* Beide Bestandsaufbauten rufen `risiko.initialisiere` im selben Zug wie
+  `klassen.initialisiere`, damit eine frisch aufgebaute Instanz die Tabelle
+  wirklich hat.
+* Die Oberfläche zeigt sie als dritte Ansicht neben Klassenkatalog und
+  Technologiematrix — beides sind zweiachsige fachliche Setzungen, und sie
+  gehören nebeneinander.
+
+Der Fallback auf `STANDARDTABELLE` **bleibt**: Eine frisch migrierte Datenbank
+soll nicht anders rechnen als eine befüllte. Er ist jetzt nur nicht mehr der
+Normalfall.
+
+**Wirkung nur nach vorn.** Eine geänderte Stufe wirkt ab der nächsten Bewertung.
+Bereits gespeicherte Bewertungen werden nicht neu gerechnet — eine rückwirkend
+veränderte Bewertung wäre keine (A.13.7).

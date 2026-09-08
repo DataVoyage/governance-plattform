@@ -1006,14 +1006,14 @@ def test_job_rechnet_ableitungen_nach(
     # Ein veralteter Stand, wie ihn ein Regelwechsel hinterlassen wuerde.
     gespeichert = db.get(Prozessobjekt, uuid.UUID(prozess["id"]))
     gespeichert.mitbestimmung_flag = False
-    gespeichert.kritikalitaet = 0
+    gespeichert.reichweite = None
     db.commit()
 
     assert jobs.main(["ableitungen"]) == 0
 
     aktualisiert = client.get(f"/api/v1/prozesse/{prozess['id']}", headers=owner.kopf).json()
     assert aktualisiert["mitbestimmung_flag"] is True
-    assert aktualisiert["kritikalitaet"] == 2
+    assert aktualisiert["reichweite"] is not None
 
 
 # --- Attestierungen nach Leitdokument A.6 (Umsetzungsplan AP-3) ----------

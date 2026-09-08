@@ -608,6 +608,19 @@ als Vorauswahl → UR-Achse → Tier.
 - [x] Nachtrag am Leitdokument in A.8.4, A.8.5 und A.13.2 — im selben Zug, nicht als Nacharbeit
 - [x] V-TIE-01 bis V-TIE-08 scharfgeschaltet
 
+**Nachgezogen nach der Abnahme.** Zwei Punkte waren abgehakt, ohne in einer
+laufenden Instanz eingelöst zu sein — beide fielen erst beim Abgleich der
+Anwendung gegen `konzept-risiko-am-tier.md` auf:
+
+- [x] Die abgeleitete `kritikalitaet` am Prozessobjekt entfällt. Sie wurde noch
+      gepflegt und angezeigt, aber von keiner Fachlogik mehr gelesen — eine
+      zweite Zahl über dieselbe Kette, die von der wirksamen abweicht (E-72)
+- [x] Die Kompositionstabelle bekommt Endpunkt, Bestandsbelegung und
+      Oberfläche. Vorher stand sie mit null Zeilen in der Datenbank, die
+      Rechnung fiel still auf die Konstante im Code zurück, und „gepflegte
+      Stammdaten, nicht als Konstante" war damit beschrieben, aber nicht
+      eingelöst (E-73)
+
 ---
 
 ## 3. Reihenfolge und Meilensteine

@@ -16,7 +16,7 @@ from __future__ import annotations
 from app.bestand.kontext import Kontext, Unstimmig
 from app.models.enums import Ebene, Rolle, ScopeTyp
 from app.models.organisation import Fachbereich, Organisationseinheit, Rollenzuweisung, User
-from app.services import klassen, konfiguration
+from app.services import klassen, konfiguration, risiko
 from app.services.changelog import protokolliere_erstellung
 
 DOMAENE = "beispiel-ag.de"
@@ -164,12 +164,15 @@ def baue(kontext: Kontext) -> None:
 
 
 def stammdaten(kontext: Kontext) -> None:
-    """Technologiematrix und Einstellungen — die Regelwerke, die sonst fehlen.
+    """Technologiematrix, Kompositionstabelle und Einstellungen.
 
-    Beide legen die Dienste beim ersten Zugriff selbst an. Hier geschieht das
-    ausdrücklich, damit der Bestand vollständig ist und nicht erst beim ersten
-    Aufruf einer Seite entsteht.
+    Alle drei legen die Dienste beim ersten Zugriff selbst an. Hier geschieht
+    das ausdrücklich, damit der Bestand vollständig ist und nicht erst beim
+    ersten Aufruf einer Seite entsteht — eine Tabelle, die als gepflegte
+    Stammdaten gilt, aber leer in der Datenbank steht, ist faktisch weiter eine
+    Konstante im Code (E-66).
     """
     with kontext.aktion(vor_tagen=388):
         klassen.initialisiere(kontext.db)
+        risiko.initialisiere(kontext.db)
         konfiguration.initialisiere(kontext.db)

@@ -110,8 +110,11 @@ class Prozessobjekt(Base, TimestampMixin):
     erlaubte_externe_ziele: Mapped[list[str]] = mapped_column(JSON, default=list)
 
     # Abgeleitet, nie eingegeben (Leitdokument P1, Architektur 8.1).
+    # Eine dritte Ableitung ``kritikalitaet`` stand hier bis AP-19: die eigene
+    # Ausfallfolge, hochgezogen auf das Maximum der Kette. Der Kettenanteil
+    # wirkt jetzt am Tier ueber das komposite UR der Nachfolger (E-67); das
+    # Feld war danach nur noch eine zweite, abweichende Zahl in der Anzeige.
     reichweite: Mapped[Reichweite | None] = mapped_column(String(24), nullable=True)
-    kritikalitaet: Mapped[int] = mapped_column(Integer, default=0)
     mitbestimmung_flag: Mapped[bool] = mapped_column(Boolean, default=False)
 
     input_datenobjekte: Mapped[list[Datenobjekt]] = relationship(

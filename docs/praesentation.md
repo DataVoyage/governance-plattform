@@ -122,8 +122,8 @@ referenziert, die es anfassen.
 
 > **Was aus vorhandenen Daten berechenbar ist, wird nie erfragt.**
 
-Reichweite, Kritikalität und die Mitbestimmungsrelevanz werden **abgeleitet**,
-nicht abgefragt. Sie stehen nicht zur Wahl.
+Reichweite, unternehmerisches Risiko und die Mitbestimmungsrelevanz werden
+**abgeleitet**, nicht abgefragt. Sie stehen nicht zur Wahl.
 
 Das ist der Unterschied zwischen einem Formular und einem Werkzeug: das
 Formular fragt, was es wissen könnte. Das Werkzeug rechnet es aus und sagt,
@@ -133,32 +133,39 @@ woher es kommt.
 
 ## Beispiel einer Ableitung
 
-Prozessobjekt „Frischedisposition", eigene Ausfallfolge: *spürbar*.
+Prozessobjekt „Frischedisposition", erklärt sind zwei Dinge: Kundenkreis
+*Bereich*, Ausfallfolge *spürbar*.
 
-* Es beliefert den Bestellvorschlag der Filialen — der ist *kritisch*.
-* Also ist die Frischedisposition **mindestens so kritisch**: Stufe 3.
+* Daraus folgt die **erlaubte Reichweite**: *Bereich*.
+* Aus Reichweite und Ausfallfolge folgt das **unternehmerische Risiko**: Stufe 2.
+* Sie beliefert den Bestellvorschlag der Filialen — der ist unternehmensweit
+  und fällt kritisch aus, also **UR 3**. Dieser Anteil wirkt auf das **Tier**.
 
-Niemand hat das eingetragen. Es ergibt sich aus der Prozesskette, und die
-Anwendung schreibt dazu, woher die Stufe stammt.
+Niemand hat davon etwas eingetragen. Die Anwendung schreibt zu jeder Zahl,
+woher sie stammt — bis hin zum Prozess, der das Tier hochzieht.
 
 Im Bestand betrifft das **4 Prozessobjekte** — sie wirken für sich harmlos und
 sind es wegen ihrer Nachfolger nicht.
 
 ---
 
-## Die Bewertung: sechs Fragen an die Wirklichkeit
+## Die Bewertung: sechs Dimensionen, fünf davon gefragt
 
-| Dimension | Frage dahinter |
-|---|---|
-| **KI** | Ist ein KI-System beteiligt? Fällt es unter den EU AI Act? |
-| **Datenschutz** | Werden personenbezogene Daten verarbeitet? |
-| **Mitbestimmung** | Ist Verhaltens- oder Leistungskontrolle möglich? |
-| **IT-Sicherheit** | Schreibender Zugriff auf Kernsysteme? Weg nach außen? |
-| **Regulatorik** | Rechnungslegung, Steuer, Aufsicht, Aufbewahrung? |
-| **Unternehmerisches Risiko** | Was passiert bei Ausfall? |
+| Dimension | Frage dahinter | Herkunft |
+|---|---|---|
+| **KI** | Ist ein KI-System beteiligt? Fällt es unter den EU AI Act? | gefragt |
+| **Datenschutz** | Werden personenbezogene Daten verarbeitet? | gefragt |
+| **Mitbestimmung** | Ist Verhaltens- oder Leistungskontrolle möglich? | gefragt |
+| **IT-Sicherheit** | Schreibender Zugriff auf Kernsysteme? Weg nach außen? | gefragt |
+| **Regulatorik** | Rechnungslegung, Steuer, Aufsicht, Aufbewahrung? | gefragt |
+| **Unternehmerisches Risiko** | Wie weit reicht er — und was, wenn er ausfällt? | **gerechnet** |
 
-Achtzehn Fragen, je Block die schärfste zuerst. Ergebnis ist ein Profil:
+Sechzehn Fragen, je Block die schärfste zuerst. Ergebnis ist ein Profil:
 `KI1-DS2-MB3-IT2-RG2-UR2`.
+
+Die sechste Dimension wird **nicht gefragt**: Sie ergibt sich vollständig aus
+zwei Feldern, die ohnehin am Prozess stehen. Eine Rechnung, die man überstimmen
+kann, ist keine Rechnung, sondern eine Meinung.
 
 ---
 
@@ -166,6 +173,12 @@ Achtzehn Fragen, je Block die schärfste zuerst. Ergebnis ist ein Profil:
 
 Das **Tier** ist die höchste erreichte Stufe — nicht die Summe, nicht der
 Durchschnitt. Eine einzige Dimension auf Stufe 3 genügt.
+
+```
+Tier = max( KI, DS, MB, IT, RG,   die fünf gefragten Dimensionen
+            min(UR, 2),            eigenes Betriebsrisiko — gekappt
+            UR der Prozesskette )  Abhängigkeit — ungekappt
+```
 
 | Tier | Was verlangt wird |
 |---|---|
@@ -179,26 +192,79 @@ Im Bestand: **8 · 15 · 30**. Die Mehrheit der Kernprozesse eines Handels­unte
 
 <!-- _class: eng -->
 
-## Kritikalität und Tier sind **nicht** dasselbe
+## Das unternehmerische Risiko besteht aus **zwei** Angaben
 
-Beide laufen von 1 bis 3, und genau deshalb werden sie verwechselt.
+Es ist keine einzelne Aussage. Es ist *wie weit reicht der Prozess* und *was
+passiert, wenn er ausfällt* — und keiner der beiden Werte trägt allein:
 
-| | **Kritikalität** | **Tier** |
+* Ein **kritischer Ausfall, der eine Person betrifft**, ist kein Unternehmensrisiko.
+* Eine **geringe Störung, die das ganze Unternehmen trifft**, kann eines sein.
+
+| Ausfallfolge ↓ / Reichweite → | persönlich | Team | Bereich | Unternehmen | extern |
+|---|---|---|---|---|---|
+| **keine** | 0 | 0 | 0 | 0 | 1 |
+| **gering** | 0 | 1 | 1 | 2 | 2 |
+| **spürbar** | 1 | 1 | 2 | 3 | 3 |
+| **kritisch** | 1 | 2 | 3 | 3 | 3 |
+
+Die Tabelle ist gepflegte Konfiguration, keine Konstante im Code: Sie ist eine
+fachliche Setzung und muss ohne Auslieferung korrigierbar sein. Die
+Governance-Rolle ändert ein Feld — mit Pflichtbegründung, im Nachweis.
+
+---
+
+<!-- _class: eng -->
+
+## Warum die Kette am **Tier** ansetzt, nicht an der Dimension
+
+Weil sich sonst zwei Dinge nicht unterscheiden lassen, die verschieden sind.
+
+| | Was es ist | Wie es wirkt |
 |---|---|---|
-| Frage | Was passiert, wenn er ausfällt? | Wie streng wird er behandelt? |
-| Herkunft | eine Größe, gerechnet | Gesamturteil über **sechs** Dimensionen |
-| Gilt für | nur Prozessobjekte | nur Bewertungen |
+| **Eigenes Betriebsrisiko** | „rein" im Sinne von A.8.5 | **gekappt bei Tier 2** |
+| **Abhängige Prozesskette** | Abhängigkeit, kein eigenes Risiko | **ungekappt bis Tier 3** |
 
-Es gibt **genau eine** Verbindung: die Kritikalität ist der **Vorschlag für die
-Dimension UR** — unternehmerisches Risiko. Sie ist die einzige der sechs, die
-sich vollständig ableiten lässt, weil die Ausfallfolge ein Pflichtfeld ist und
-die Vererbung entlang der Kette gerechnet wird.
+Wer einen kritischen Prozess beliefert, ist selbst kritisch — aber er ist es
+nicht *aus eigenem Betrieb*. Deshalb hebt maximales Eigenrisiko auf Tier 2 und
+keinen Schritt weiter; auf Tier 3 hebt nur das Profil oder die Kette.
 
-*Ausfallfolge + Kette → Kritikalität → Vorschlag UR → höchste von sechs → Tier*
+**Gelesen wird abwärts:** Das Tier nimmt das höchste UR aller nachgelagerten
+Prozesse, transitiv über die ganze Kette. Gezählt wird deren **komposites** UR,
+nicht ihre rohe Ausfallfolge — sonst würde ein Prozess, der kritisch ausfällt
+und dabei eine Person trifft, seine ganze Vorkette hochziehen.
 
-Ein Vorschlag, kein Zwang: wer abweicht, begründet. Und umgekehrt kann ein
-hohes Tier ganz ohne Kritikalität entstehen — aus Datenschutz, aus KI, aus
-Nachweispflicht.
+Damit bekommt das Tier zum ersten Mal eine **eigene Stimme**: Es kann etwas
+sagen, was das Profil nicht sagt. Und es muss deshalb auch sagen, woher es
+kommt — `Profil`, `eigenes Risiko` oder `Prozesskette`, im letzten Fall mit dem
+verantwortlichen Prozess im Klartext.
+
+---
+
+<!-- _class: eng -->
+
+## Was passiert, wenn sich etwas ändert
+
+Kundenkreis, Ausfallfolge, eine Umsetzung, eine Prozesskante — jede dieser
+Änderungen kann ein Tier verschieben. Die Anwendung rechnet es selbst nach, für
+jeden transitiv Betroffenen, aus den **gespeicherten Antworten** plus dem
+aktuellen Risiko:
+
+| Ergebnis | Was geschieht |
+|---|---|
+| **Tier bleibt** | Die Änderung wird eingetragen. Sonst nichts. |
+| **Tier verschiebt sich** | Die Bewertung gilt als **überholt** und nennt den Grund. Sie wird *nicht* umgeschrieben — die Historie bleibt lückenlos. |
+| **Tier steigt** | Zusätzlich wird **Gate 2 automatisch eingereicht** — Auslöser *Reichweitenerweiterung* oder *Kritikalität gestiegen*. |
+
+Zwei der fünf Gate-2-Auslöser aus A.11 waren bisher reine Selbstmeldung. Jetzt
+rechnet die Anwendung nach.
+
+Das ging vorher nicht: Solange das Risiko *erfragt* wurde, hätte man jemanden
+fragen müssen, um zu wissen, ob man ihn fragen muss.
+
+**Und die Gegenrichtung:** Der Erlaubnisrahmen eines Werkzeugs bezieht sein Soll
+aus der **Bewertung**, nicht vom lebenden Prozessobjekt. Eine zweite
+Landesumsetzung weitet ihn deshalb nicht mehr von selbst — sein Sollzustand ist
+eingefroren, bis neu bewertet wird.
 
 ---
 
@@ -274,9 +340,13 @@ Im Bestand: **26 Ausschlüsse**, **26 fehlende Maßnahmen**, 30 dokumentierte,
 
 ## Was ein Werkzeug erbt — und was es selbst mitbringt
 
-Ein Tool-Objekt hat **weder Tier noch Kritikalität als eigene Angabe**. Es
-erbt das **Maximum** über alle Prozesse, an denen es hängt: Kritikalität,
-Reichweite, Tier, Mitbestimmungsflag und die Anforderungsklassen.
+Ein Tool-Objekt hat **weder Tier noch Risikostufe als eigene Angabe**. Es erbt
+das **Maximum** über alle Prozesse, an denen es hängt: Risikostufe, Reichweite,
+Tier, Mitbestimmungsflag und die Anforderungsklassen.
+
+Geerbt wird dabei aus der **gültigen Bewertung**, nicht vom lebenden
+Prozessobjekt. Ein Prozess ohne Bewertung trägt deshalb nichts bei — nach dem
+Positivlistenprinzip deckt sein Rahmen dann auch nichts.
 
 Warum das Maximum: ein Werkzeug an zwei Prozessen wäre sonst über die
 schwächere Kante zu umgehen. Und damit eine Zahl nicht ohne Adresse dasteht,
@@ -430,9 +500,9 @@ eines Menschen. Verweigert wird nicht die Behauptung, sondern der
 | Schritt | Was geschieht | Wer |
 |---|---|---|
 | 1 | Prozessobjekt anlegen: zehn Felder, Kanten setzen | Prozess-Owner |
-| 2 | **Kritikalität** ergibt sich aus Ausfallfolge und Kette | gerechnet |
-| 3 | Bewertung: achtzehn Fragen, sechs Dimensionen, Vorschläge mit Beleg | Prozess-Owner |
-| 4 | **Tier** = höchste Stufe · **K-Klassen** aus dem Profil | gerechnet |
+| 2 | **Reichweite** aus dem Kundenkreis, **UR** aus Reichweite × Ausfallfolge | gerechnet |
+| 3 | Bewertung: sechzehn Fragen, fünf Dimensionen, Vorschläge mit Beleg | Prozess-Owner |
+| 4 | **Tier** = Profil · gekapptes UR · Kette — **K-Klassen** aus dem Profil | gerechnet |
 | 5 | Ab Tier 3: Selbstverpflichtung und **Gate 1** vor Inbetriebnahme | Owner · Governance |
 | 6 | Werkzeug an den Prozess hängen: es **erbt** das Maximum | technischer Owner |
 | 7 | **Erlaubnisrahmen** entsteht — sieben Elemente, abgeleitet | gerechnet |
@@ -454,8 +524,9 @@ sofort vor. „Läuft" und „darf laufen" sind zwei Aussagen.
 **Personaleinsatzplanung Filiale**, Fachbereich Personal, in zwei Ländern umgesetzt
 
 1. Prozessobjekt angelegt: zehn Felder, drei Datenobjekte referenziert.
-2. Bewertung: `KI1-DS2-MB3-IT2-RG2-UR2` → **Tier 3**.
-   Abgeleitet: Reichweite *unternehmen*, Kritikalität 2, **Mitbestimmung: ja**.
+2. Bewertung: `KI1-DS2-MB3-IT2-RG2-UR2` → **Tier 3**, Herkunft *Profil* (MB 3).
+   Gerechnet: Reichweite *unternehmen* — zwei Umsetzungen heben sie —, daraus
+   mit Ausfallfolge *gering* das **UR 2**; **Mitbestimmung: ja**.
 3. Ausgelöst: K1, K2, K3, K5, K6, **K7**, K8, K9.
 4. Selbstverpflichtung des Eigners abgegeben — sechs prüfbare Aussagen.
 5. **Gate 1** eingereicht und freigegeben. Erst danach: aktiv.
@@ -735,7 +806,7 @@ Tool-Objekt.
 | Wo liegen Dauer-Zugangsdaten? | Schicht 2, automatisch erkannt |
 | Wer schreibt auf produktive Kernsysteme? | IT-Dimension 3, Zugriffsart am Rahmen |
 | Was geht nach außen, wohin? | Element „externe Ziele", erlaubt gegen gemessen |
-| Was fällt aus, wenn X ausfällt? | Kritikalität entlang der Prozesskette |
+| Was fällt aus, wenn X ausfällt? | Tier entlang der Prozesskette, mit Quelle |
 | Welche Technik trägt Wiederanlauf nicht? | Technologiematrix, K9 |
 
 Im Bestand automatisch erkannt: 2 geteilte Konten, 1 Satz Dauer-Zugangsdaten,
@@ -773,15 +844,16 @@ Im Bestand automatisch erkannt: 2 geteilte Konten, 1 Satz Dauer-Zugangsdaten,
 
 * Zehn Felder ausfüllen: Lieferant, Eingang, Schritte, Ergebnis, Kunde,
   Ausfallfolge, Owner, Stellvertretung.
-* Achtzehn Fragen beantworten — die meisten davon sind bereits vorgeschlagen,
-  mit Beleg.
+* Sechzehn Fragen beantworten — die meisten davon sind bereits vorgeschlagen,
+  mit Beleg. Die sechste Dimension wird gar nicht gefragt: Sie folgt aus
+  Kundenkreis und Ausfallfolge, die Sie ohnehin erklärt haben.
 * Eine Selbstverpflichtung abgeben: sechs Aussagen, ankreuzen und kommentieren.
 
 **Was Sie nicht tun**
 
 * Kein Ticket schreiben. Kein Formular per Mail. Keine Rückfrage-Schleife.
-* Nichts doppelt pflegen: Reichweite, Kritikalität und Mitbestimmung rechnet
-  die Anwendung.
+* Nichts doppelt pflegen: Reichweite, unternehmerisches Risiko und
+  Mitbestimmung rechnet die Anwendung.
 * Nichts wiederholen, solange sich nichts ändert.
 
 *Schätzung für die Ersterfassung eines Prozessobjekts: 20 bis 30 Minuten.

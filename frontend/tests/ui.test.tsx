@@ -324,16 +324,16 @@ describe('Werteliste', () => {
       <Werteliste
         eintraege={[
           {
-            beschriftung: 'Kritikalität',
+            beschriftung: 'Tier',
             wert: '3',
             herkunft: 'Aus nachgelagertem Prozess',
-            pruefkennung: 'kritikalitaet',
+            pruefkennung: 'tier-herkunft',
           },
           { beschriftung: 'Reichweite', wert: 'Team' },
         ]}
       />,
     );
-    expect(screen.getByTestId('kritikalitaet')).toHaveTextContent('Aus nachgelagertem Prozess');
+    expect(screen.getByTestId('tier-herkunft')).toHaveTextContent('Aus nachgelagertem Prozess');
     expect(screen.getByText('Reichweite')).toBeInTheDocument();
   });
 });

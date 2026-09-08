@@ -40,6 +40,24 @@ class MatrixfeldSetzen(BaseModel):
     begruendung: str = Field(min_length=1)
 
 
+class UrKompositionsfeldAus(BaseModel):
+    """Ein Feld der Tabelle Ausfallfolge x Reichweite (Leitdokument A.8.4)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    ausfallfolge: str
+    reichweite: str
+    stufe: int
+    begruendung: str = ""
+    geaendert_am: datetime | None = None
+
+
+class UrKompositionsfeldSetzen(BaseModel):
+    stufe: int = Field(ge=0, le=3)
+    #: Pflicht: ein Feld hier entscheidet ueber das Tier ganzer Prozessgruppen.
+    begruendung: str = Field(min_length=1)
+
+
 class BefundAus(BaseModel):
     tool_id: uuid.UUID
     tool_name: str

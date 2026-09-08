@@ -150,7 +150,6 @@ export function ProzessDetail() {
   // Die juengste Bewertung traegt seit AP-19 den Sollzustand: Tier samt
   // Herkunft und die eingefrorene Reichweite (E-70).
   const bewertung = bewertungen.length > 0 ? bewertungen[0] : null;
-  const eigeneStufe = { keine: 0, gering: 1, spuerbar: 2, kritisch: 3 }[prozess.ausfallfolge];
 
   return (
     <>
@@ -259,19 +258,17 @@ export function ProzessDetail() {
           wert={chipreihe(prozess.nachgelagert_ids, prozessChip, t('prozess.wirkung.leer'))}
         />
         <Zeile
+          pruefkennung="ausfallfolge"
           beschriftung={t('prozess.feld.ausfallfolge')}
           wert={t(`ausfallfolge.${prozess.ausfallfolge}` as never)}
         />
-        <Zeile
-          pruefkennung="kritikalitaet"
-          beschriftung={t('prozess.feld.kritikalitaet')}
-          wert={prozess.kritikalitaet}
-          zweitzeile={
-            prozess.kritikalitaet > eigeneStufe
-              ? t('prozess.herkunft.kritikalitaetKette')
-              : t('prozess.herkunft.kritikalitaetEigen')
-          }
-        />
+        {/*
+          Hier stand bis AP-19 die abgeleitete „Kritikalität" — die eigene
+          Ausfallfolge, hochgezogen auf das Maximum der Kette. Sie ist entfallen:
+          Was die Kette bewirkt, sagt jetzt das Tier, und zwar aus dem kompositen
+          UR der Nachfolger. Zwei Zahlen über dieselbe Kette nebeneinander wären
+          genau die zweite Ebene, die AP-19 aufgelöst hat.
+        */}
         <Zeile
           pruefkennung="mitbestimmung"
           beschriftung={t('prozess.feld.mitbestimmung')}

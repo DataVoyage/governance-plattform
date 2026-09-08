@@ -59,11 +59,11 @@ const KATEGORIE_TON: Record<string, Referenz['ton']> = {
  *
  * Die vier Randspalten des SIPOC sind Referenzen, keine Freitexte: Supplier und
  * Customer als vor- und nachgelagerte Prozesse, Input und Output als
- * Datenobjekte (A.4.1, P5). Nur so entsteht der Graph, auf dem Kritikalität,
- * Wirkungsanalyse und Erlaubnisrahmen überhaupt beruhen.
+ * Datenobjekte (A.4.1, P5). Nur so entsteht der Graph, auf dem der Kettenanteil
+ * des Tiers, die Wirkungsanalyse und der Erlaubnisrahmen überhaupt beruhen.
  *
- * Reichweite, Kritikalität und Mitbestimmungsflag fehlen hier bewusst: sie
- * werden serverseitig berechnet und erst in der Detailansicht gezeigt.
+ * Reichweite und Mitbestimmungsflag fehlen hier bewusst: sie werden
+ * serverseitig berechnet und erst in der Detailansicht gezeigt.
  */
 export function ProzessFormular() {
   const { id } = useParams();

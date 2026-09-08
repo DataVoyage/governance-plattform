@@ -66,6 +66,32 @@ async function prozessAnlegen(
   return { id: prozess.id, name: prozess.name };
 }
 
+/**
+ * Bewertet einen Prozess vollständig, ohne eine Dimension anzuheben.
+ *
+ * Seit AP-19 erbt ein Tool-Objekt aus der **gültigen Bewertung** und nicht mehr
+ * vom lebenden Prozessobjekt (E-70): Ein Prozess ohne Bewertung trägt nichts
+ * bei, sein Rahmen deckt nichts. Wer die Vererbung prüfen will, braucht die
+ * Bewertung deshalb als Vorbedingung — vorher genügte die Ausfallfolge.
+ */
+async function bewerten(anfrage: APIRequestContext, prozessId: string): Promise<void> {
+  const h = await kopf(anfrage);
+  const fragen = ['1a', '1b', '1c', '2a', '2b', '2c', '3a', '3b', '3c', '4a', '4b', '4c',
+    '5a', '5b', '5c'];
+  const antworten = Object.fromEntries(fragen.map((frage) => [frage, false]));
+  const antwort = await anfrage.post(`${API}/api/v1/prozesse/${prozessId}/bewertungen`, {
+    headers: h,
+    data: {
+      modus: 'vollstaendig',
+      antworten,
+      begruendungen: Object.fromEntries(
+        fragen.map((frage) => [frage, 'Vorbedingung des Abnahmetests.']),
+      ),
+    },
+  });
+  if (antwort.status() >= 400) throw new Error(`Bewertung: ${await antwort.text()}`);
+}
+
 /** Ein Zugang mit der Plattform-Rolle — nur sie betreibt Adapter (E-57). */
 async function plattformKopf(anfrage: APIRequestContext) {
   const marke = Math.random().toString(36).slice(2, 8);
@@ -152,6 +178,7 @@ test.describe('Phase 3 in der Oberflaeche', () => {
       },
     });
     const prozess = await prozessAnlegen(request, `Zielprozess ${externeId}`, 'kritisch');
+    await bewerten(request, prozess.id);
 
     await anmelden(page);
     await page.getByRole('link', { name: 'Tool-Objekte', exact: true }).click();
@@ -181,6 +208,8 @@ test.describe('Phase 3 in der Oberflaeche', () => {
     const kennung = Math.random().toString(36).slice(2, 8);
     const gering = await prozessAnlegen(request, `Gering ${kennung}`, 'gering');
     const kritisch = await prozessAnlegen(request, `Kritisch ${kennung}`, 'kritisch');
+    await bewerten(request, gering.id);
+    await bewerten(request, kritisch.id);
 
     await anmelden(page);
     await toolAnlegen(page, `Gemeinsames Tool ${kennung}`);

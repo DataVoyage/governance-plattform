@@ -50,6 +50,7 @@ import type {
   ToolEingabe,
   ToolObjekt,
   Umsetzung,
+  UrKompositionsfeld,
   Wirkung,
   WizardSchritt,
   Zugriffsart,
@@ -211,6 +212,19 @@ export const api = {
     daten: { bewertung: Klassenbewertung; begruendung: string },
   ) =>
     anfrage<Matrixfeld>(`/api/v1/technologiematrix/${technologie}/${klasse}`, {
+      methode: 'PUT',
+      koerper: daten,
+      token,
+    }),
+  urKomposition: (token: string) =>
+    anfrage<UrKompositionsfeld[]>('/api/v1/ur-komposition', { token }),
+  urKompositionsfeldSetzen: (
+    token: string,
+    ausfallfolge: string,
+    reichweite: string,
+    daten: { stufe: number; begruendung: string },
+  ) =>
+    anfrage<UrKompositionsfeld>(`/api/v1/ur-komposition/${ausfallfolge}/${reichweite}`, {
       methode: 'PUT',
       koerper: daten,
       token,

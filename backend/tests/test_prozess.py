@@ -60,8 +60,8 @@ def test_owner_legt_prozess_mit_allen_zehn_feldern_an(
     assert prozess["status"] == "entwurf"
     # Abgeleitete Felder erscheinen, ohne dass sie eingegeben wurden.
     assert prozess["reichweite"] == "bereich"
-    assert prozess["kritikalitaet"] == 2
     assert prozess["mitbestimmung_flag"] is False
+    assert "kritikalitaet" not in prozess, "die abgeleitete Kritikalität entfiel mit AP-19 (E-72)"
 
 
 @pytest.mark.parametrize(
@@ -95,14 +95,12 @@ def test_speichern_ohne_stellvertretung_wird_abgelehnt(
 def test_abgeleitete_felder_sind_nicht_eingebbar(
     client: TestClient, owner, vertretung, prozess_daten
 ) -> None:
-    """Reichweite und Kritikalitaet werden berechnet, nicht entgegengenommen."""
+    """Die Reichweite wird berechnet, nicht entgegengenommen."""
     daten = prozess_daten(owner.user_id, vertretung.user_id)
     daten["reichweite"] = "extern"
-    daten["kritikalitaet"] = 3
     antwort = anlegen(client, owner, daten)
     assert antwort.status_code == 201
     assert antwort.json()["reichweite"] == "bereich"
-    assert antwort.json()["kritikalitaet"] == 2
 
 
 def test_prozessgeber_muss_int_ebene_sein(
@@ -179,7 +177,7 @@ def test_prozess_aendern_und_status_setzen(
     )
     assert antwort.status_code == 200
     assert antwort.json()["name"] == "Rechnungspruefung DE"
-    assert antwort.json()["kritikalitaet"] == 3
+    assert antwort.json()["ausfallfolge"] == "kritisch"
     # Der Statuswechsel nach "aktiv" hat eigene Bedingungen; siehe test_gates.py.
     assert antwort.json()["status"] == "entwurf"
 
@@ -442,10 +440,31 @@ def test_liste_nach_fachbereich_und_status_filtern(
 # --- Prozesskette --------------------------------------------------------
 
 
-def test_kritikalitaet_wird_entlang_der_kette_vererbt(
+def ausgangslage(client: TestClient, anmeldung, prozess_id: str) -> dict:
+    """Die gerechneten Anteile, die der Wizard vor der ersten Frage zeigt.
+
+    Seit AP-19 ist das der Ort, an dem die Kette sichtbar wird: Sie steht nicht
+    mehr als abgeleitetes Feld am Prozessobjekt, sondern als Anteil am Tier
+    (E-72).
+    """
+    antwort = client.post(
+        f"/api/v1/prozesse/{prozess_id}/bewertung/wizard",
+        json={"antworten": {}},
+        headers=anmeldung.kopf,
+    )
+    assert antwort.status_code == 200, antwort.text
+    return antwort.json()["ausgangslage"]
+
+
+def test_die_kette_wirkt_auf_das_tier_des_vorgaengers(
     client: TestClient, owner, vertretung, prozess_daten
 ) -> None:
-    """Leitdokument A.4.2: wer einen kritischen Nachfolger speist, ist selbst kritisch."""
+    """Leitdokument A.4.2: wer einen kritischen Nachfolger speist, ist selbst kritisch.
+
+    Der Vorgaenger traegt ein geringes **eigenes** Risiko und bekommt den
+    Kettenanteil trotzdem — ungekappt, denn das ist Abhaengigkeit und kein
+    eigenes Betriebsrisiko (E-67).
+    """
     nachfolger = anlegen(
         client,
         owner,
@@ -464,11 +483,15 @@ def test_kritikalitaet_wird_entlang_der_kette_vererbt(
             nachgelagert_ids=[nachfolger["id"]],
         ),
     ).json()
-    assert vorgaenger["kritikalitaet"] == 3
     assert vorgaenger["nachgelagert_ids"] == [nachfolger["id"]]
 
+    lage = ausgangslage(client, owner, vorgaenger["id"])
+    assert lage["ur_stufe"] == 1, "das eigene Risiko bleibt gering"
+    assert lage["ur_kette"] == 3
+    assert lage["kette_quelle"] == "Zahlungslauf"
 
-def test_kritikalitaet_wird_nachgefuehrt(
+
+def test_der_kettenanteil_wird_nachgefuehrt(
     client: TestClient, owner, vertretung, prozess_daten
 ) -> None:
     nachfolger = anlegen(
@@ -487,14 +510,16 @@ def test_kritikalitaet_wird_nachgefuehrt(
             nachgelagert_ids=[nachfolger["id"]],
         ),
     ).json()
-    assert vorgaenger["kritikalitaet"] == 1
+    assert ausgangslage(client, owner, vorgaenger["id"])["ur_kette"] == 0
+
     client.patch(
         f"/api/v1/prozesse/{nachfolger['id']}",
         json={"ausfallfolge": "kritisch"},
         headers=owner.kopf,
     )
-    aktualisiert = client.get(f"/api/v1/prozesse/{vorgaenger['id']}", headers=owner.kopf).json()
-    assert aktualisiert["kritikalitaet"] == 3
+    lage = ausgangslage(client, owner, vorgaenger["id"])
+    assert lage["ur_kette"] == 3
+    assert lage["kette_quelle"] == "Folge"
 
 
 def test_unbekannter_kettenverweis(client: TestClient, owner, vertretung, prozess_daten) -> None:
@@ -654,23 +679,24 @@ def test_freitextfelder_haben_harte_grenzen(
     assert antwort.status_code == 422, antwort.text
 
 
-def test_kritikalitaet_faellt_zurueck_wenn_die_kante_geloest_wird(
+def test_der_kettenanteil_faellt_zurueck_wenn_die_kante_geloest_wird(
     client: TestClient, owner, vertretung, prozess_daten
 ) -> None:
     """Eine geloeste Kante muss beide Enden nachrechnen (E-59).
 
-    Die Kritikalitaet flieBt von den Nachfolgern nach oben. Wer den kritischen
+    Der Kettenanteil flieBt von den Nachfolgern nach oben. Wer den kritischen
     Nachfolger entfernt, macht den Vorgaenger wieder harmlos — und das gilt
     unabhaengig davon, an welchem Ende die Kante gepflegt wurde. Bis AP-14 lief
     die Nachfuehrung nur vom geaenderten Prozess ueber seine *aktuellen*
     Vorgaenger; der soeben abgehaengte war damit genau der, den sie nicht mehr
     erreichte, und blieb mit einer zu hohen Stufe stehen.
+
+    Seit AP-19 ist der Rueckfall eindeutig ablesbar: ohne Kante ist der
+    Kettenanteil ``0``, nicht das eigene Risiko (E-72).
     """
 
-    def stufe(prozess_id: str) -> int:
-        return client.get(f"/api/v1/prozesse/{prozess_id}", headers=owner.kopf).json()[
-            "kritikalitaet"
-        ]
+    def kette(prozess_id: str) -> int:
+        return ausgangslage(client, owner, prozess_id)["ur_kette"]
 
     harmlos = anlegen(
         client,
@@ -682,7 +708,7 @@ def test_kritikalitaet_faellt_zurueck_wenn_die_kante_geloest_wird(
         owner,
         prozess_daten(owner.user_id, vertretung.user_id, name="Kritisch", ausfallfolge="kritisch"),
     ).json()
-    assert stufe(harmlos["id"]) == 1
+    assert kette(harmlos["id"]) == 0
 
     # --- Am kritischen Prozess gepflegt ------------------------------------
     client.patch(
@@ -690,12 +716,12 @@ def test_kritikalitaet_faellt_zurueck_wenn_die_kante_geloest_wird(
         json={"vorgelagert_ids": [harmlos["id"]]},
         headers=owner.kopf,
     )
-    assert stufe(harmlos["id"]) == 3, "Setzen wirkt auch vom Nachfolger aus"
+    assert kette(harmlos["id"]) == 3, "Setzen wirkt auch vom Nachfolger aus"
 
     client.patch(
         f"/api/v1/prozesse/{kritisch['id']}", json={"vorgelagert_ids": []}, headers=owner.kopf
     )
-    assert stufe(harmlos["id"]) == 1, "Loesen muss das abgehaengte Ende nachrechnen"
+    assert kette(harmlos["id"]) == 0, "Loesen muss das abgehaengte Ende nachrechnen"
 
     # --- Und am harmlosen Prozess gepflegt ---------------------------------
     client.patch(
@@ -703,11 +729,11 @@ def test_kritikalitaet_faellt_zurueck_wenn_die_kante_geloest_wird(
         json={"nachgelagert_ids": [kritisch["id"]]},
         headers=owner.kopf,
     )
-    assert stufe(harmlos["id"]) == 3
+    assert kette(harmlos["id"]) == 3
     client.patch(
         f"/api/v1/prozesse/{harmlos['id']}", json={"nachgelagert_ids": []}, headers=owner.kopf
     )
-    assert stufe(harmlos["id"]) == 1
+    assert kette(harmlos["id"]) == 0
 
 
 def test_geloeste_kante_wirkt_transitiv_zurueck(
@@ -718,12 +744,16 @@ def test_geloeste_kante_wirkt_transitiv_zurueck(
     A -> B -> C(kritisch). Wird C von B geloest, muessen B **und** A wieder
     harmlos werden — die Nachfuehrung folgt der ganzen Kette, nicht nur einem
     Glied.
+
+    Der Rueckfall ist nicht bei beiden ``0``: B hat danach keinen Nachfolger
+    mehr, A aber immer noch B — und zaehlt dessen **eigenes** komposites UR
+    (gering x Bereich = 1). Genau das ist der Unterschied zur frueheren
+    Kritikalitaet, die auf die eigene Ausfallfolge zurueckfiel und hier
+    zufaellig dieselbe Zahl ergab (E-72).
     """
 
     def stufe(prozess_id: str) -> int:
-        return client.get(f"/api/v1/prozesse/{prozess_id}", headers=owner.kopf).json()[
-            "kritikalitaet"
-        ]
+        return ausgangslage(client, owner, prozess_id)["ur_kette"]
 
     def neu(name: str, folge: str) -> dict:
         return anlegen(
@@ -742,4 +772,4 @@ def test_geloeste_kante_wirkt_transitiv_zurueck(
     assert (stufe(a["id"]), stufe(b["id"])) == (3, 3)
 
     client.patch(f"/api/v1/prozesse/{c['id']}", json={"vorgelagert_ids": []}, headers=owner.kopf)
-    assert (stufe(a["id"]), stufe(b["id"])) == (1, 1)
+    assert (stufe(a["id"]), stufe(b["id"])) == (1, 0)

@@ -85,7 +85,7 @@ describe('Prozessdetail', () => {
     fetchAttrappe([
       {
         pfad: '/api/v1/prozesse/p-1',
-        koerper: prozess({ reichweite: 'unternehmen', kritikalitaet: 3, mitbestimmung_flag: true }),
+        koerper: prozess({ reichweite: 'unternehmen', mitbestimmung_flag: true }),
       },
       {
         pfad: /\/bewertungen$/,

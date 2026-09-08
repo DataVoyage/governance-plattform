@@ -65,9 +65,9 @@ def ableitungen() -> int:
     with get_sessionmaker()() as session:
         geaendert = 0
         for prozess in session.execute(select(Prozessobjekt)).scalars():
-            vorher = (prozess.reichweite, prozess.kritikalitaet, prozess.mitbestimmung_flag)
+            vorher = (prozess.reichweite, prozess.mitbestimmung_flag)
             ableitung.aktualisiere_ableitungen(prozess)
-            if (prozess.reichweite, prozess.kritikalitaet, prozess.mitbestimmung_flag) != vorher:
+            if (prozess.reichweite, prozess.mitbestimmung_flag) != vorher:
                 geaendert += 1
         session.commit()
     logger.info("Ableitungen: %s Prozessobjekte aktualisiert", geaendert)
